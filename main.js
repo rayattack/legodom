@@ -74,60 +74,82 @@ const Lego = (() => {
 
   const resolve = (path, obj) => {
     if (!path) return '';
-    return path.trim().split('.').reduce((o, k) => (o || {})[k], obj) ?? '';
+    const parts = path.trim().split('.');
+    let current = obj;
+    for (const part of parts) {
+      if (current == null) return '';
+      current = current[part];
+    }
+    return current ?? '';
   };
 
   const safeEval = (expr, context) => {
     try {
-      const state = context.state || {};
-      const isFunction = expr.includes('=>') || expr.startsWith('function');
-      if (isFunction) {
-        const keys = Object.keys(state);
-        const vals = Object.values(state);
-        const wrapper = new Function(...keys, 'global', 'self', 'event', `return (${expr})(event)`);
-        return wrapper(...vals, context.global, context.self, context.event);
-      } else {
-        const func = new Function('state', 'global', 'self', 'event', `with(state) { return ${expr} }`);
-        return func(state, context.global, context.self, context.event);
+      const scope = context.state || {};
+      const func = new Function('global', 'self', 'event', `with(this) { try { return ${expr} } catch(e) { return undefined; } }`);
+      const result = func.call(scope, context.global, context.self, context.event);
+      // If the expression itself returned a function (like an arrow function in @click), execute it.
+      if (typeof result === 'function') {
+        return result.call(scope, context.event);
       }
+      return result;
     } catch (e) {
-      console.error('[Lego] Eval error:', e, 'in:', expr);
       return undefined;
     }
   };
 
-  const bind = (container, componentRoot) => {
+  const syncModelValue = (el, val) => {
+    if (el.type === 'checkbox') {
+      if (el.checked !== !!val) el.checked = !!val;
+    } else {
+      const normalized = (val === undefined || val === null) ? '' : String(val);
+      if (el.value !== normalized) el.value = normalized;
+    }
+  };
+
+  const bind = (container, componentRoot, loopCtx = null) => {
     const state = componentRoot._studs;
     container.querySelectorAll('[\\@click], [l-model]').forEach(child => {
-      // Skip nodes that are inside a nested template (like l-for)
-      if (child.closest('[l-for]') && child.closest('[l-for]') !== container) return;
+      if (!loopCtx && child.closest('[l-for]') && child.closest('[l-for]') !== container) return;
 
       const childData = getPrivateData(child);
       
       if (child.hasAttribute('@click') && !childData.clickBound) {
         childData.clickBound = true;
         child.addEventListener('click', (event) => {
-          safeEval(child.getAttribute('@click'), { state, global: Lego.globals, self: child, event });
+          let evalScope = state;
+          if (loopCtx) {
+            const list = resolve(loopCtx.listName, state);
+            const item = list[loopCtx.index] || {};
+            evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
+          }
+          safeEval(child.getAttribute('@click'), { state: evalScope, global: Lego.globals, self: child, event });
         });
       }
 
       if (child.hasAttribute('l-model') && !childData.modelBound) {
         childData.modelBound = true;
         const prop = child.getAttribute('l-model');
-        const update = () => {
-          const keys = prop.split('.');
-          const last = keys.pop();
-          const target = keys.reduce((o, k) => o[k], state);
-          target[last] = child.type === 'checkbox' ? child.checked : child.value;
+        
+        const updateState = () => {
+          let target, last;
+          if (loopCtx && prop.startsWith(loopCtx.name + '.')) {
+            const list = resolve(loopCtx.listName, state);
+            const item = list[loopCtx.index];
+            if (!item) return;
+            const subPath = prop.split('.').slice(1);
+            last = subPath.pop();
+            target = subPath.reduce((o, k) => o[k], item);
+          } else {
+            const keys = prop.split('.');
+            last = keys.pop();
+            target = keys.reduce((o, k) => o[k], state);
+          }
+          const newVal = child.type === 'checkbox' ? child.checked : child.value;
+          if (target && target[last] !== newVal) target[last] = newVal;
         };
-        child.addEventListener('input', update);
-        child.addEventListener('change', update);
-      }
-      
-      if (child.hasAttribute('l-model')) {
-        const val = resolve(child.getAttribute('l-model'), state);
-        if (child.type === 'checkbox') child.checked = !!val;
-        else child.value = val;
+        child.addEventListener('input', updateState);
+        child.addEventListener('change', updateState);
       }
     });
   };
@@ -137,7 +159,6 @@ const Lego = (() => {
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
     let node;
     while (node = walker.nextNode()) {
-      // Check if this node is inside an l-for block (but isn't the l-for block itself)
       const isInsideFor = (n) => {
         let p = n.parentNode;
         while(p && p !== container) {
@@ -146,7 +167,6 @@ const Lego = (() => {
         }
         return false;
       };
-
       if (isInsideFor(node)) continue;
 
       if (node.nodeType === 1) {
@@ -164,6 +184,7 @@ const Lego = (() => {
           }
         }
         if (node.hasAttribute('l-text')) bindings.push({ type: 'l-text', node, path: node.getAttribute('l-text') });
+        if (node.hasAttribute('l-model')) bindings.push({ type: 'l-model', node });
         [...node.attributes].forEach(attr => {
           if (attr.value.includes('{{')) bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
         });
@@ -181,63 +202,68 @@ const Lego = (() => {
     if (!shadow) return;
 
     if (!data.bindings) data.bindings = scanForBindings(shadow);
-    const state = { ...Lego.globals, ...el._studs };
+    const state = el._studs;
 
     data.bindings.forEach(b => {
       if (b.type === 'l-if') b.node.style.display = safeEval(b.expr, { state }) ? '' : 'none';
       if (b.type === 'l-text') b.node.textContent = resolve(b.path, state);
       
+      if (b.type === 'l-model') {
+        const val = resolve(b.node.getAttribute('l-model'), state);
+        syncModelValue(b.node, val);
+      }
+      
       if (b.type === 'text') {
-        b.node.textContent = b.template.replace(/{{(.*?)}}/g, (_, k) => {
-          const key = k.trim();
-          return (key.includes('?') || key.includes(':') || key.includes('.')) ? safeEval(key, { state }) : resolve(key, state);
-        });
+        const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state }) ?? '');
+        if (b.node.textContent !== out) b.node.textContent = out;
       }
       
       if (b.type === 'attr') {
-        b.node.setAttribute(b.attrName, b.template.replace(/{{(.*?)}}/g, (_, k) => {
-          const key = k.trim();
-          return (key.includes('?') || key.includes(':') || key.includes('.')) ? safeEval(key, { state }) : resolve(key, state);
-        }));
+        const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state }) ?? '');
+        if (b.node.getAttribute(b.attrName) !== out) b.node.setAttribute(b.attrName, out);
       }
 
       if (b.type === 'l-for') {
         const list = resolve(b.listName, state) || [];
-        const html = list.map((item) => b.template.replace(/{{(.*?)}}/g, (_, k) => {
-          const key = k.trim();
-          const localState = { ...state, [b.itemName]: item };
-          return safeEval(key, { state: localState });
-        })).join('');
-        
-        if (b.node.innerHTML !== html) {
-          b.node.innerHTML = html;
-          
-          b.node.querySelectorAll('[l-model]').forEach(input => {
-             const modelPath = input.getAttribute('l-model');
-             if (modelPath.startsWith(b.itemName + '.')) {
-                const subPath = modelPath.split('.').slice(1).join('.');
-                const items = resolve(b.listName, state);
-                const li = input.closest('li') || input.parentNode;
-                const index = Array.from(b.node.children).indexOf(li);
-                
-                const sync = () => {
-                  const val = resolve(subPath, items[index]);
-                  if (input.type === 'checkbox') input.checked = !!val;
-                  else input.value = val;
-                };
-
-                sync();
-                
-                input.oninput = input.onchange = () => {
-                   const newVal = input.type === 'checkbox' ? input.checked : input.value;
-                   const targetPath = subPath.split('.').slice(0, -1).join('.');
-                   const target = targetPath ? resolve(targetPath, items[index]) : items[index];
-                   target[subPath.split('.').pop()] = newVal;
-                };
-             }
-          });
-          bind(b.node, el);
+        if (b.node.children.length !== list.length) {
+          b.node.innerHTML = list.map(() => b.template).join('');
         }
+
+        Array.from(b.node.children).forEach((child, i) => {
+          const item = list[i];
+          if (!item) return;
+          
+          const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
+          const loopInfo = { name: b.itemName, listName: b.listName, index: i };
+          
+          const walker = document.createTreeWalker(child, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+          let n;
+          while (n = walker.nextNode()) {
+            if (n.nodeType === 3) {
+              if (n._tpl === undefined) n._tpl = n.textContent;
+              if (n._tpl.includes('{{')) {
+                const out = n._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: localScope }) ?? '');
+                if (n.textContent !== out) n.textContent = out;
+              }
+            } else if (n.nodeType === 1) {
+              [...n.attributes].forEach(attr => {
+                if (attr._tpl === undefined) attr._tpl = attr.value;
+                if (attr._tpl.includes('{{')) {
+                  const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: localScope }) ?? '');
+                  if (attr.value !== out) attr.value = out;
+                }
+              });
+              if (n.hasAttribute('l-model')) {
+                const prop = n.getAttribute('l-model');
+                const val = prop.startsWith(b.itemName + '.') 
+                  ? resolve(prop.split('.').slice(1).join('.'), item)
+                  : resolve(prop, state);
+                syncModelValue(n, val);
+              }
+            }
+          }
+          bind(child, el, loopInfo);
+        });
       }
     });
   };
