@@ -1,6 +1,10 @@
 const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
+  
+  // NEW: Store for SFC logic and Route definitions
+  const sfcLogic = new Map();
+  const routes = [];
 
   const escapeHTML = (str) => {
     if (typeof str !== 'string') return str;
@@ -131,14 +135,12 @@ const Lego = (() => {
 
   const bind = (container, componentRoot, loopCtx = null) => {
     const state = componentRoot._studs;
-    // UPDATED: Query for any attribute starting with @ using a broader selector
     const elements = container.querySelectorAll('*');
     
     elements.forEach(child => {
       const childData = getPrivateData(child);
       if (childData.bound) return; 
 
-      // Scan all attributes for event listeners (e.g., @click, @keyup, @mouseenter)
       [...child.attributes].forEach(attr => {
         if (attr.name.startsWith('@')) {
           const eventName = attr.name.slice(1);
@@ -191,6 +193,8 @@ const Lego = (() => {
         let curr = n.parentNode;
         while (curr && curr !== container) {
           if (curr.hasAttribute && curr.hasAttribute('l-for')) return true;
+          // UPDATED: Ignore children of other lego-blocks to prevent scope leakage
+          if (curr.tagName && curr.tagName.includes('-') && registry[curr.tagName.toLowerCase()]) return true;
           curr = curr.parentNode;
         }
         return false;
@@ -294,10 +298,6 @@ const Lego = (() => {
             }
             const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
             updateNodeBindings(child, localScope);
-            child.querySelectorAll('[l-model]').forEach(input => {
-              const path = input.getAttribute('l-model');
-              syncModelValue(input, path.startsWith(b.itemName + '.') ? resolve(path.split('.').slice(1).join('.'), item) : resolve(path, state));
-            });
             if (b.node.children[i] !== child) b.node.insertBefore(child, b.node.children[i] || null);
           });
           for (const [key, node] of pool.entries()) {
@@ -314,40 +314,112 @@ const Lego = (() => {
     if (!el || el.nodeType !== 1) return;
     const data = getPrivateData(el);
     const name = el.tagName.toLowerCase();
+    
     if (registry[name] && !data.snapped) {
       data.snapped = true;
       const tpl = registry[name].content.cloneNode(true);
       const shadow = el.attachShadow({ mode: 'open' });
-      const initialState = parseJSObject(el.getAttribute('l-studs') || '{}');
-      el._studs = reactive(initialState, el);
+      
+      // NEW: Merge SFC Logic + Attribute Props
+      const defaultLogic = sfcLogic.get(name) || {};
+      const attrLogic = parseJSObject(el.getAttribute('l-studs') || '{}');
+      el._studs = reactive({ ...defaultLogic, ...attrLogic }, el);
+      
       shadow.appendChild(tpl);
       const style = shadow.querySelector('style');
       if (style) style.textContent = style.textContent.replace(/\bself\b/g, ':host');
+      
       bind(shadow, el);
       render(el);
-      if (typeof el._studs.mounted === 'function') el._studs.mounted.call(el._studs);
+
+      // Lifecycle Error Boundary for mounted
+      if (typeof el._studs.mounted === 'function') {
+        try {
+          el._studs.mounted.call(el._studs);
+        } catch (e) {
+          console.error(`[Lego] Error in mounted hook for <${name}>:`, e);
+        }
+      }
     }
+    
+    // Support nested binding for non-shadow children (Slots)
+    let provider = el.parentElement;
+    while(provider && !provider._studs) provider = provider.parentElement;
+    if (provider && provider._studs) bind(el, provider);
+
     [...el.children].forEach(snap);
   };
 
   const unsnap = (el) => {
-    if (el._studs && typeof el._studs.unmounted === 'function') el._studs.unmounted.call(el._studs);
+    if (el._studs && typeof el._studs.unmounted === 'function') {
+      try {
+        el._studs.unmounted.call(el._studs);
+      } catch (e) {
+        console.error(`[Lego] Error in unmounted hook:`, e);
+      }
+    }
     [...el.children].forEach(unsnap);
+  };
+
+  // NEW: Router Logic
+  const _matchRoute = async () => {
+    const path = window.location.pathname;
+    const match = routes.find(r => r.regex.test(path));
+    const outlet = document.querySelector('lego-router');
+    if (!outlet || !match) return;
+
+    const values = path.match(match.regex).slice(1);
+    const params = Object.fromEntries(match.paramNames.map((n, i) => [n, values[i]]));
+
+    if (match.middleware) {
+      const allowed = await match.middleware(params, Lego.globals);
+      if (!allowed) return; 
+    }
+
+    Lego.globals.params = params;
+    outlet.innerHTML = `<${match.tagName}></${match.tagName}>`;
   };
 
   return {
     init: () => {
       document.querySelectorAll('template[lego-block]').forEach(t => registry[t.getAttribute('lego-block')] = t);
-      const observer = new MutationObserver(m => m.forEach(r => { r.addedNodes.forEach(snap); r.removedNodes.forEach(unsnap); }));
+      const observer = new MutationObserver(m => m.forEach(r => { 
+        r.addedNodes.forEach(n => n.nodeType === 1 && snap(n)); 
+        r.removedNodes.forEach(n => n.nodeType === 1 && unsnap(n)); 
+      }));
       observer.observe(document.body, { childList: true, subtree: true });
       snap(document.body);
+
+      if (routes.length > 0) {
+        window.addEventListener('popstate', _matchRoute);
+        document.addEventListener('click', e => {
+          const link = e.target.closest('a[l-link]');
+          if (link) {
+            e.preventDefault();
+            history.pushState({}, '', link.getAttribute('href'));
+            _matchRoute();
+          }
+        });
+        _matchRoute();
+      }
     },
     globals: reactive({}, document.body),
-    define: (tagName, templateHTML) => {
+    define: (tagName, templateHTML, logic = {}) => {
       const t = document.createElement('template');
       t.setAttribute('lego-block', tagName);
       t.innerHTML = templateHTML;
       registry[tagName] = t;
+      sfcLogic.set(tagName, logic);
+      // Re-scan if defined after init
+      document.querySelectorAll(tagName).forEach(snap);
+    },
+    route: (path, tagName, middleware = null) => {
+      const paramNames = [];
+      const regexPath = path.replace(/:([^\/]+)/g, (_, name) => {
+        paramNames.push(name);
+        return '([^/]+)';
+      });
+      routes.push({ regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
     }
   };
 })();
