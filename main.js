@@ -1,49 +1,73 @@
 const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
-  const forPools = new WeakMap(); // Tracks DOM nodes for l-for items
+  const forPools = new WeakMap();
 
   const createBatcher = () => {
     let queued = false;
-    const callbacks = new Set();
+    const componentsToUpdate = new Set();
+    let isProcessing = false;
+    
     return {
-      add: (cb) => {
-        callbacks.add(cb);
+      add: (el) => {
+        if (!el || isProcessing) return; // Prevent re-entry during the actual batch phase
+        componentsToUpdate.add(el);
         if (queued) return;
         queued = true;
+        
         requestAnimationFrame(() => {
-          const cbs = Array.from(callbacks);
-          callbacks.clear();
+          isProcessing = true;
+          const batch = Array.from(componentsToUpdate);
+          componentsToUpdate.clear();
           queued = false;
-          cbs.forEach(fn => fn());
+          
+          // Phase 1: DOM Reconcilliation
+          batch.forEach(el => render(el));
+          
+          // Phase 2: Lifecycle hooks (deferred to next task to prevent stack overflow)
+          setTimeout(() => {
+            batch.forEach(el => {
+              const state = el._studs;
+              if (state && typeof state.updated === 'function') {
+                try {
+                  state.updated.call(state);
+                } catch (e) {
+                  console.error(`[Lego] Error in updated hook for <${el.tagName.toLowerCase()}>:`, e);
+                }
+              }
+            });
+            isProcessing = false;
+          }, 0);
         });
       }
     };
   };
 
-  const reactive = (obj, cb, batcher = null) => {
+  const globalBatcher = createBatcher();
+
+  const reactive = (obj, el, batcher = globalBatcher) => {
     if (obj === null || typeof obj !== 'object' || obj instanceof Node) return obj;
     if (proxyCache.has(obj)) return proxyCache.get(obj);
-    if (!batcher) batcher = createBatcher();
 
     const handler = {
       get: (t, k) => {
         const val = Reflect.get(t, k);
         if (val !== null && typeof val === 'object' && !(val instanceof Node)) {
-          return reactive(val, cb, batcher);
+          return reactive(val, el, batcher);
         }
         return val;
       },
       set: (t, k, v) => {
         const old = t[k];
         const r = Reflect.set(t, k, v);
+        // Deep equality check for primitives to prevent noise
         if (old !== v) {
-          batcher.add(cb);
+          batcher.add(el);
         }
         return r;
       },
       deleteProperty: (t, k) => {
         const r = Reflect.deleteProperty(t, k);
-        batcher.add(cb);
+        batcher.add(el);
         return r;
       }
     };
@@ -64,7 +88,7 @@ const Lego = (() => {
 
   const getPrivateData = (el) => {
     if (!privateData.has(el)) {
-      privateData.set(el, { snapped: false, bindings: null, bound: false });
+      privateData.set(el, { snapped: false, bindings: null, bound: false, rendering: false });
     }
     return privateData.get(el);
   };
@@ -94,14 +118,10 @@ const Lego = (() => {
 
   const syncModelValue = (el, val) => {
     if (el.type === 'checkbox') {
-      if (el.checked !== !!val) {
-        el.checked = !!val;
-      }
+      if (el.checked !== !!val) el.checked = !!val;
     } else {
       const normalized = (val === undefined || val === null) ? '' : String(val);
-      if (el.value !== normalized) {
-        el.value = normalized;
-      }
+      if (el.value !== normalized) el.value = normalized;
     }
   };
 
@@ -158,7 +178,15 @@ const Lego = (() => {
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
     let node;
     while (node = walker.nextNode()) {
-      if (node.parentNode && node.parentNode.hasAttribute && node.parentNode.hasAttribute('l-for')) continue;
+      const isInsideLFor = (n) => {
+        let curr = n.parentNode;
+        while (curr && curr !== container) {
+          if (curr.hasAttribute && curr.hasAttribute('l-for')) return true;
+          curr = curr.parentNode;
+        }
+        return false;
+      };
+      if (isInsideLFor(node)) continue;
 
       if (node.nodeType === 1) {
         if (node.hasAttribute('l-if')) bindings.push({ type: 'l-if', node, expr: node.getAttribute('l-if') });
@@ -177,7 +205,6 @@ const Lego = (() => {
         }
         if (node.hasAttribute('l-text')) bindings.push({ type: 'l-text', node, path: node.getAttribute('l-text') });
         if (node.hasAttribute('l-model')) bindings.push({ type: 'l-model', node });
-        
         [...node.attributes].forEach(attr => {
           if (attr.value.includes('{{')) bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
         });
@@ -192,19 +219,13 @@ const Lego = (() => {
     const processNode = (node) => {
       if (node.nodeType === 3) {
         if (node._tpl === undefined) node._tpl = node.textContent;
-        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => {
-          const val = safeEval(k.trim(), { state: scope });
-          return val !== undefined && val !== null ? val : '';
-        });
+        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope }) ?? '');
         if (node.textContent !== out) node.textContent = out;
       } else if (node.nodeType === 1) {
         [...node.attributes].forEach(attr => {
           if (attr._tpl === undefined) attr._tpl = attr.value;
           if (attr._tpl.includes('{{')) {
-            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => {
-              const res = safeEval(k.trim(), { state: scope });
-              return (res === undefined || res === null) ? '' : res;
-            });
+            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope }) ?? '');
             if (attr.value !== out) {
               attr.value = out;
               if (attr.name === 'class') node.className = out;
@@ -213,7 +234,6 @@ const Lego = (() => {
         });
       }
     };
-
     processNode(root);
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
     let n;
@@ -221,110 +241,101 @@ const Lego = (() => {
   };
 
   const render = (el) => {
-    if (!el._studs) return;
-    const data = getPrivateData(el);
-    const shadow = el.shadowRoot;
-    if (!shadow) return;
-
-    if (!data.bindings) data.bindings = scanForBindings(shadow);
     const state = el._studs;
+    if (!state) return;
+    const data = getPrivateData(el);
+    
+    if (data.rendering) return;
+    data.rendering = true;
 
-    data.bindings.forEach(b => {
-      if (b.type === 'l-if') b.node.style.display = safeEval(b.expr, { state }) ? '' : 'none';
-      if (b.type === 'l-text') b.node.textContent = resolve(b.path, state);
-      if (b.type === 'l-model') syncModelValue(b.node, resolve(b.node.getAttribute('l-model'), state));
-      
-      if (b.type === 'text') {
-        const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state }) ?? '');
-        if (b.node.textContent !== out) b.node.textContent = out;
-      }
-      
-      if (b.type === 'attr') {
-        const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state }) ?? '');
-        if (b.node.getAttribute(b.attrName) !== out) {
-          b.node.setAttribute(b.attrName, out);
-          if (b.attrName === 'class') b.node.className = out;
+    try {
+      const shadow = el.shadowRoot;
+      if (!shadow) return;
+
+      if (!data.bindings) data.bindings = scanForBindings(shadow);
+
+      data.bindings.forEach(b => {
+        if (b.type === 'l-if') b.node.style.display = safeEval(b.expr, { state }) ? '' : 'none';
+        if (b.type === 'l-text') b.node.textContent = resolve(b.path, state);
+        if (b.type === 'l-model') syncModelValue(b.node, resolve(b.node.getAttribute('l-model'), state));
+        if (b.type === 'text') {
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state }) ?? '');
+          if (b.node.textContent !== out) b.node.textContent = out;
         }
-      }
-
-      if (b.type === 'l-for') {
-        const list = resolve(b.listName, state) || [];
-        if (!forPools.has(b.node)) forPools.set(b.node, new Map());
-        const pool = forPools.get(b.node);
-        
-        const currentItems = new Set();
-        list.forEach((item, i) => {
-          const key = (item && typeof item === 'object') ? item : `${i}-${item}`;
-          currentItems.add(key);
-
-          let child = pool.get(key);
-          if (!child) {
-            const temp = document.createElement('div');
-            temp.innerHTML = b.template;
-            child = temp.firstElementChild;
-            pool.set(key, child);
-            bind(child, el, { name: b.itemName, listName: b.listName, index: i });
+        if (b.type === 'attr') {
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state }) ?? '');
+          if (b.node.getAttribute(b.attrName) !== out) {
+            b.node.setAttribute(b.attrName, out);
+            if (b.attrName === 'class') b.node.className = out;
           }
-
-          const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
-          updateNodeBindings(child, localScope);
-
-          // Fix: Ensure checkboxes and inputs inside l-for are synced during initial render
-          child.querySelectorAll('[l-model]').forEach(input => {
-            const path = input.getAttribute('l-model');
-            if (path.startsWith(b.itemName + '.')) {
-              syncModelValue(input, resolve(path.split('.').slice(1).join('.'), item));
-            } else {
-              syncModelValue(input, resolve(path, state));
+        }
+        if (b.type === 'l-for') {
+          const list = resolve(b.listName, state) || [];
+          if (!forPools.has(b.node)) forPools.set(b.node, new Map());
+          const pool = forPools.get(b.node);
+          const currentItems = new Set();
+          list.forEach((item, i) => {
+            const key = (item && typeof item === 'object') ? (item.__id || (item.__id = Math.random())) : `${i}-${item}`;
+            currentItems.add(key);
+            let child = pool.get(key);
+            if (!child) {
+              const temp = document.createElement('div');
+              temp.innerHTML = b.template;
+              child = temp.firstElementChild;
+              pool.set(key, child);
+              bind(child, el, { name: b.itemName, listName: b.listName, index: i });
             }
+            const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
+            updateNodeBindings(child, localScope);
+            child.querySelectorAll('[l-model]').forEach(input => {
+              const path = input.getAttribute('l-model');
+              syncModelValue(input, path.startsWith(b.itemName + '.') ? resolve(path.split('.').slice(1).join('.'), item) : resolve(path, state));
+            });
+            if (b.node.children[i] !== child) b.node.insertBefore(child, b.node.children[i] || null);
           });
-
-          if (b.node.children[i] !== child) {
-            b.node.insertBefore(child, b.node.children[i] || null);
-          }
-        });
-
-        for (const [key, node] of pool.entries()) {
-          if (!currentItems.has(key)) {
-            node.remove();
-            pool.delete(key);
+          for (const [key, node] of pool.entries()) {
+            if (!currentItems.has(key)) { node.remove(); pool.delete(key); }
           }
         }
-      }
-    });
+      });
+    } finally {
+      data.rendering = false;
+    }
   };
 
   const snap = (el) => {
     if (!el || el.nodeType !== 1) return;
     const data = getPrivateData(el);
     const name = el.tagName.toLowerCase();
-
     if (registry[name] && !data.snapped) {
       data.snapped = true;
       const tpl = registry[name].content.cloneNode(true);
       const shadow = el.attachShadow({ mode: 'open' });
       const initialState = parseJSObject(el.getAttribute('l-studs') || '{}');
-      
-      el._studs = reactive(initialState, () => render(el));
+      el._studs = reactive(initialState, el);
       shadow.appendChild(tpl);
-      
       const style = shadow.querySelector('style');
       if (style) style.textContent = style.textContent.replace(/\bself\b/g, ':host');
-      
       bind(shadow, el);
       render(el);
+      if (typeof el._studs.mounted === 'function') el._studs.mounted.call(el._studs);
     }
     [...el.children].forEach(snap);
+  };
+
+  const unsnap = (el) => {
+    if (el._studs && typeof el._studs.unmounted === 'function') el._studs.unmounted.call(el._studs);
+    [...el.children].forEach(unsnap);
   };
 
   return {
     init: () => {
       document.querySelectorAll('template[lego-block]').forEach(t => registry[t.getAttribute('lego-block')] = t);
-      const observer = new MutationObserver(m => m.forEach(r => r.addedNodes.forEach(snap)));
+      const observer = new MutationObserver(m => m.forEach(r => { r.addedNodes.forEach(snap); r.removedNodes.forEach(unsnap); }));
       observer.observe(document.body, { childList: true, subtree: true });
       snap(document.body);
     },
-    globals: reactive({}, () => document.querySelectorAll('*').forEach(el => el._studs && render(el)))
+    globals: reactive({}, document.body) // Dummy root for globals
   };
 })();
 
