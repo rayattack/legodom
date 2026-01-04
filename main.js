@@ -1,12 +1,7 @@
-/**
- * Lego JS - A tiny, reactive component library.
- * Designed for rapid prototyping with a focus on ease-of-use.
- */
 const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
 
-  // Utility to prevent XSS in text interpolations
   const escapeHTML = (str) => {
     if (typeof str !== 'string') return str;
     return str.replace(/[&<>"']/g, m => ({
@@ -41,7 +36,7 @@ const Lego = (() => {
                 try {
                   state.updated.call(state);
                 } catch (e) {
-                  console.error(`[Lego] Error in updated hook for <${el.tagName.toLowerCase()}>:`, e);
+                  console.error(`[Lego] Error in updated hook:`, e);
                 }
               }
             });
@@ -88,10 +83,6 @@ const Lego = (() => {
 
   const parseJSObject = (raw) => {
     try {
-      // Basic check for obvious malicious patterns
-      if (raw.includes('window.') || raw.includes('document.') || raw.includes('fetch')) {
-        console.warn('[Lego Security] Potentially unsafe l-studs detected.');
-      }
       return (new Function(`return (${raw})`))();
     } catch (e) {
       console.error(`[Lego] Failed to parse l-studs:`, raw, e);
@@ -120,7 +111,6 @@ const Lego = (() => {
   const safeEval = (expr, context) => {
     try {
       const scope = context.state || {};
-      // Wrap expression to prevent access to sensitive globals if possible
       const func = new Function('global', 'self', 'event', `with(this) { try { return ${expr} } catch(e) { return undefined; } }`);
       const result = func.call(scope, context.global, context.self, context.event);
       if (typeof result === 'function') return result.call(scope, context.event);
@@ -141,23 +131,28 @@ const Lego = (() => {
 
   const bind = (container, componentRoot, loopCtx = null) => {
     const state = componentRoot._studs;
-    const elements = container.querySelectorAll('[\\@click], [l-model]');
+    // UPDATED: Query for any attribute starting with @ using a broader selector
+    const elements = container.querySelectorAll('*');
     
     elements.forEach(child => {
       const childData = getPrivateData(child);
       if (childData.bound) return; 
 
-      if (child.hasAttribute('@click')) {
-        child.addEventListener('click', (event) => {
-          let evalScope = state;
-          if (loopCtx) {
-            const list = resolve(loopCtx.listName, state);
-            const item = list[loopCtx.index];
-            evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
-          }
-          safeEval(child.getAttribute('@click'), { state: evalScope, global: Lego.globals, self: child, event });
-        });
-      }
+      // Scan all attributes for event listeners (e.g., @click, @keyup, @mouseenter)
+      [...child.attributes].forEach(attr => {
+        if (attr.name.startsWith('@')) {
+          const eventName = attr.name.slice(1);
+          child.addEventListener(eventName, (event) => {
+            let evalScope = state;
+            if (loopCtx) {
+              const list = resolve(loopCtx.listName, state);
+              const item = list[loopCtx.index];
+              evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
+            }
+            safeEval(attr.value, { state: evalScope, global: Lego.globals, self: child, event });
+          });
+        }
+      });
 
       if (child.hasAttribute('l-model')) {
         const prop = child.getAttribute('l-model');
@@ -258,14 +253,12 @@ const Lego = (() => {
     const state = el._studs;
     if (!state) return;
     const data = getPrivateData(el);
-    
     if (data.rendering) return;
     data.rendering = true;
 
     try {
       const shadow = el.shadowRoot;
       if (!shadow) return;
-
       if (!data.bindings) data.bindings = scanForBindings(shadow);
 
       data.bindings.forEach(b => {
@@ -350,7 +343,6 @@ const Lego = (() => {
       snap(document.body);
     },
     globals: reactive({}, document.body),
-    // Method to manually define a component via JS
     define: (tagName, templateHTML) => {
       const t = document.createElement('template');
       t.setAttribute('lego-block', tagName);
@@ -360,7 +352,6 @@ const Lego = (() => {
   };
 })();
 
-// Auto-init for browser usage
 if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', Lego.init);
   window.Lego = Lego;
