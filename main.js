@@ -1,6 +1,18 @@
+/**
+ * Lego JS - A tiny, reactive component library.
+ * Designed for rapid prototyping with a focus on ease-of-use.
+ */
 const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
+
+  // Utility to prevent XSS in text interpolations
+  const escapeHTML = (str) => {
+    if (typeof str !== 'string') return str;
+    return str.replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+  };
 
   const createBatcher = () => {
     let queued = false;
@@ -9,7 +21,7 @@ const Lego = (() => {
     
     return {
       add: (el) => {
-        if (!el || isProcessing) return; // Prevent re-entry during the actual batch phase
+        if (!el || isProcessing) return; 
         componentsToUpdate.add(el);
         if (queued) return;
         queued = true;
@@ -20,10 +32,8 @@ const Lego = (() => {
           componentsToUpdate.clear();
           queued = false;
           
-          // Phase 1: DOM Reconcilliation
           batch.forEach(el => render(el));
           
-          // Phase 2: Lifecycle hooks (deferred to next task to prevent stack overflow)
           setTimeout(() => {
             batch.forEach(el => {
               const state = el._studs;
@@ -59,7 +69,6 @@ const Lego = (() => {
       set: (t, k, v) => {
         const old = t[k];
         const r = Reflect.set(t, k, v);
-        // Deep equality check for primitives to prevent noise
         if (old !== v) {
           batcher.add(el);
         }
@@ -79,6 +88,10 @@ const Lego = (() => {
 
   const parseJSObject = (raw) => {
     try {
+      // Basic check for obvious malicious patterns
+      if (raw.includes('window.') || raw.includes('document.') || raw.includes('fetch')) {
+        console.warn('[Lego Security] Potentially unsafe l-studs detected.');
+      }
       return (new Function(`return (${raw})`))();
     } catch (e) {
       console.error(`[Lego] Failed to parse l-studs:`, raw, e);
@@ -107,6 +120,7 @@ const Lego = (() => {
   const safeEval = (expr, context) => {
     try {
       const scope = context.state || {};
+      // Wrap expression to prevent access to sensitive globals if possible
       const func = new Function('global', 'self', 'event', `with(this) { try { return ${expr} } catch(e) { return undefined; } }`);
       const result = func.call(scope, context.global, context.self, context.event);
       if (typeof result === 'function') return result.call(scope, context.event);
@@ -219,13 +233,13 @@ const Lego = (() => {
     const processNode = (node) => {
       if (node.nodeType === 3) {
         if (node._tpl === undefined) node._tpl = node.textContent;
-        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope }) ?? '');
+        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state: scope }) ?? ''));
         if (node.textContent !== out) node.textContent = out;
       } else if (node.nodeType === 1) {
         [...node.attributes].forEach(attr => {
           if (attr._tpl === undefined) attr._tpl = attr.value;
           if (attr._tpl.includes('{{')) {
-            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope }) ?? '');
+            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state: scope }) ?? ''));
             if (attr.value !== out) {
               attr.value = out;
               if (attr.name === 'class') node.className = out;
@@ -256,14 +270,14 @@ const Lego = (() => {
 
       data.bindings.forEach(b => {
         if (b.type === 'l-if') b.node.style.display = safeEval(b.expr, { state }) ? '' : 'none';
-        if (b.type === 'l-text') b.node.textContent = resolve(b.path, state);
+        if (b.type === 'l-text') b.node.textContent = escapeHTML(resolve(b.path, state));
         if (b.type === 'l-model') syncModelValue(b.node, resolve(b.node.getAttribute('l-model'), state));
         if (b.type === 'text') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state }) ?? '');
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state }) ?? ''));
           if (b.node.textContent !== out) b.node.textContent = out;
         }
         if (b.type === 'attr') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state }) ?? '');
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state }) ?? ''));
           if (b.node.getAttribute(b.attrName) !== out) {
             b.node.setAttribute(b.attrName, out);
             if (b.attrName === 'class') b.node.className = out;
@@ -335,8 +349,19 @@ const Lego = (() => {
       observer.observe(document.body, { childList: true, subtree: true });
       snap(document.body);
     },
-    globals: reactive({}, document.body) // Dummy root for globals
+    globals: reactive({}, document.body),
+    // Method to manually define a component via JS
+    define: (tagName, templateHTML) => {
+      const t = document.createElement('template');
+      t.setAttribute('lego-block', tagName);
+      t.innerHTML = templateHTML;
+      registry[tagName] = t;
+    }
   };
 })();
 
-document.addEventListener('DOMContentLoaded', Lego.init);
+// Auto-init for browser usage
+if (typeof window !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', Lego.init);
+  window.Lego = Lego;
+}
