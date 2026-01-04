@@ -86,9 +86,11 @@ const Lego = (() => {
   const safeEval = (expr, context) => {
     try {
       const scope = context.state || {};
+      // We wrap in a function that uses the reactive proxy as 'this'
       const func = new Function('global', 'self', 'event', `with(this) { try { return ${expr} } catch(e) { return undefined; } }`);
       const result = func.call(scope, context.global, context.self, context.event);
-      // If the expression itself returned a function (like an arrow function in @click), execute it.
+      
+      // THE FIX: If the result is a function (like an arrow function), call it immediately
       if (typeof result === 'function') {
         return result.call(scope, context.event);
       }
@@ -121,6 +123,7 @@ const Lego = (() => {
           if (loopCtx) {
             const list = resolve(loopCtx.listName, state);
             const item = list[loopCtx.index] || {};
+            // Create a temporary scope that includes the loop item
             evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
           }
           safeEval(child.getAttribute('@click'), { state: evalScope, global: Lego.globals, self: child, event });
