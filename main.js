@@ -111,7 +111,7 @@ const Lego = (() => {
     
     elements.forEach(child => {
       const childData = getPrivateData(child);
-      if (childData.bound) return; // Prevent infinite re-binding and rerender loops
+      if (childData.bound) return; 
 
       if (child.hasAttribute('@click')) {
         child.addEventListener('click', (event) => {
@@ -172,7 +172,7 @@ const Lego = (() => {
               listName: match[2].trim(), 
               template: node.innerHTML 
             });
-            node.innerHTML = ''; // Clear template from DOM
+            node.innerHTML = ''; 
           }
         }
         if (node.hasAttribute('l-text')) bindings.push({ type: 'l-text', node, path: node.getAttribute('l-text') });
@@ -268,6 +268,16 @@ const Lego = (() => {
 
           const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
           updateNodeBindings(child, localScope);
+
+          // Fix: Ensure checkboxes and inputs inside l-for are synced during initial render
+          child.querySelectorAll('[l-model]').forEach(input => {
+            const path = input.getAttribute('l-model');
+            if (path.startsWith(b.itemName + '.')) {
+              syncModelValue(input, resolve(path.split('.').slice(1).join('.'), item));
+            } else {
+              syncModelValue(input, resolve(path, state));
+            }
+          });
 
           if (b.node.children[i] !== child) {
             b.node.insertBefore(child, b.node.children[i] || null);
