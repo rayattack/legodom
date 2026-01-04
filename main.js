@@ -2,7 +2,7 @@ const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
   
-  // NEW: Store for SFC logic and Route definitions
+  // Enterprise Extensions
   const sfcLogic = new Map();
   const routes = [];
 
@@ -68,9 +68,7 @@ const Lego = (() => {
       set: (t, k, v) => {
         const old = t[k];
         const r = Reflect.set(t, k, v);
-        if (old !== v) {
-          batcher.add(el);
-        }
+        if (old !== v) batcher.add(el);
         return r;
       },
       deleteProperty: (t, k) => {
@@ -135,7 +133,7 @@ const Lego = (() => {
 
   const bind = (container, componentRoot, loopCtx = null) => {
     const state = componentRoot._studs;
-    const elements = container.querySelectorAll('*');
+    const elements = container instanceof Element ? [container, ...container.querySelectorAll('*')] : container.querySelectorAll('*');
     
     elements.forEach(child => {
       const childData = getPrivateData(child);
@@ -173,9 +171,7 @@ const Lego = (() => {
             target = keys.reduce((o, k) => o[k], state);
           }
           const newVal = child.type === 'checkbox' ? child.checked : child.value;
-          if (target && target[last] !== newVal) {
-            target[last] = newVal;
-          }
+          if (target && target[last] !== newVal) target[last] = newVal;
         };
         child.addEventListener('input', updateState);
         child.addEventListener('change', updateState);
@@ -193,7 +189,6 @@ const Lego = (() => {
         let curr = n.parentNode;
         while (curr && curr !== container) {
           if (curr.hasAttribute && curr.hasAttribute('l-for')) return true;
-          // UPDATED: Ignore children of other lego-blocks to prevent scope leakage
           if (curr.tagName && curr.tagName.includes('-') && registry[curr.tagName.toLowerCase()]) return true;
           curr = curr.parentNode;
         }
@@ -284,10 +279,10 @@ const Lego = (() => {
           const list = resolve(b.listName, state) || [];
           if (!forPools.has(b.node)) forPools.set(b.node, new Map());
           const pool = forPools.get(b.node);
-          const currentItems = new Set();
+          const currentKeys = new Set();
           list.forEach((item, i) => {
             const key = (item && typeof item === 'object') ? (item.__id || (item.__id = Math.random())) : `${i}-${item}`;
-            currentItems.add(key);
+            currentKeys.add(key);
             let child = pool.get(key);
             if (!child) {
               const temp = document.createElement('div');
@@ -298,10 +293,17 @@ const Lego = (() => {
             }
             const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
             updateNodeBindings(child, localScope);
+            // Fix: Re-sync l-model for list items during render
+            child.querySelectorAll('[l-model]').forEach(input => {
+                const path = input.getAttribute('l-model');
+                if (path.startsWith(b.itemName + '.')) {
+                    syncModelValue(input, resolve(path.split('.').slice(1).join('.'), item));
+                }
+            });
             if (b.node.children[i] !== child) b.node.insertBefore(child, b.node.children[i] || null);
           });
           for (const [key, node] of pool.entries()) {
-            if (!currentItems.has(key)) { node.remove(); pool.delete(key); }
+            if (!currentKeys.has(key)) { node.remove(); pool.delete(key); }
           }
         }
       });
@@ -320,7 +322,6 @@ const Lego = (() => {
       const tpl = registry[name].content.cloneNode(true);
       const shadow = el.attachShadow({ mode: 'open' });
       
-      // NEW: Merge SFC Logic + Attribute Props
       const defaultLogic = sfcLogic.get(name) || {};
       const attrLogic = parseJSObject(el.getAttribute('l-studs') || '{}');
       el._studs = reactive({ ...defaultLogic, ...attrLogic }, el);
@@ -332,17 +333,11 @@ const Lego = (() => {
       bind(shadow, el);
       render(el);
 
-      // Lifecycle Error Boundary for mounted
       if (typeof el._studs.mounted === 'function') {
-        try {
-          el._studs.mounted.call(el._studs);
-        } catch (e) {
-          console.error(`[Lego] Error in mounted hook for <${name}>:`, e);
-        }
+        try { el._studs.mounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in mounted <${name}>:`, e); }
       }
     }
     
-    // Support nested binding for non-shadow children (Slots)
     let provider = el.parentElement;
     while(provider && !provider._studs) provider = provider.parentElement;
     if (provider && provider._studs) bind(el, provider);
@@ -352,16 +347,11 @@ const Lego = (() => {
 
   const unsnap = (el) => {
     if (el._studs && typeof el._studs.unmounted === 'function') {
-      try {
-        el._studs.unmounted.call(el._studs);
-      } catch (e) {
-        console.error(`[Lego] Error in unmounted hook:`, e);
-      }
+      try { el._studs.unmounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in unmounted:`, e); }
     }
     [...el.children].forEach(unsnap);
   };
 
-  // NEW: Router Logic
   const _matchRoute = async () => {
     const path = window.location.pathname;
     const match = routes.find(r => r.regex.test(path));
@@ -410,7 +400,6 @@ const Lego = (() => {
       t.innerHTML = templateHTML;
       registry[tagName] = t;
       sfcLogic.set(tagName, logic);
-      // Re-scan if defined after init
       document.querySelectorAll(tagName).forEach(snap);
     },
     route: (path, tagName, middleware = null) => {
