@@ -410,7 +410,31 @@ const Lego = (() => {
         return '([^/]+)';
       });
       routes.push({ regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
-    }
+    },
+    // Vite Plugin Implementation
+    vitePlugin: () => ({
+      name: 'lego-sfc',
+      transform(code, id) {
+        if (!id.endsWith('.lego')) return null;
+        const name = id.split('/').pop().replace('.lego', '');
+        const template = (code.match(/<template>([\s\S]*?)<\/template>/) || [])[1] || '';
+        const script = (code.match(/<script>([\s\S]*?)<\/script>/) || [])[1] || 'export default {}';
+        const style = (code.match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+        
+        const cleanScript = script.replace(/export default/, 'const logic =');
+        const fullTemplate = `<style>${style}</style>${template}`.replace(/`/g, '\\`');
+
+        return {
+          code: `
+            import { Lego } from 'lego-js';
+            ${cleanScript}
+            Lego.define('${name}', \`${fullTemplate}\`, logic);
+            export default logic;
+          `,
+          map: null
+        };
+      }
+    })
   };
 })();
 
