@@ -109,11 +109,44 @@ const Lego = (() => {
     return current ?? '';
   };
 
+  // Helper to find ancestor Lego state
+  const findAncestorState = (el, tagName) => {
+    let parent = el.parentElement || el.getRootNode().host;
+    while (parent) {
+      if (parent.tagName && parent.tagName.toLowerCase() === tagName.toLowerCase()) {
+        return parent._studs;
+      }
+      parent = parent.parentElement || (parent.getRootNode && parent.getRootNode().host);
+    }
+    return undefined;
+  };
+
   const safeEval = (expr, context) => {
     try {
       const scope = context.state || {};
-      const func = new Function('global', 'self', 'event', `with(this) { try { return ${expr} } catch(e) { return undefined; } }`);
-      const result = func.call(scope, context.global, context.self, context.event);
+      
+      // Inject $ helpers into the evaluation scope
+      const helpers = {
+        $ancestors: (tag) => findAncestorState(context.self, tag),
+        $element: context.self,
+        $emit: (name, detail) => {
+          context.self.dispatchEvent(new CustomEvent(name, {
+            detail,
+            bubbles: true,
+            composed: true
+          }));
+        }
+      };
+
+      const func = new Function('global', 'self', 'event', 'helpers', `
+        with(helpers) {
+          with(this) { 
+            try { return ${expr} } catch(e) { return undefined; } 
+          }
+        }
+      `);
+      
+      const result = func.call(scope, context.global, context.self, context.event, helpers);
       if (typeof result === 'function') return result.call(scope, context.event);
       return result;
     } catch (e) {
@@ -226,13 +259,13 @@ const Lego = (() => {
     const processNode = (node) => {
       if (node.nodeType === 3) {
         if (node._tpl === undefined) node._tpl = node.textContent;
-        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state: scope }) ?? ''));
+        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state: scope, self: node }) ?? ''));
         if (node.textContent !== out) node.textContent = out;
       } else if (node.nodeType === 1) {
         [...node.attributes].forEach(attr => {
           if (attr._tpl === undefined) attr._tpl = attr.value;
           if (attr._tpl.includes('{{')) {
-            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state: scope }) ?? ''));
+            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state: scope, self: node }) ?? ''));
             if (attr.value !== out) {
               attr.value = out;
               if (attr.name === 'class') node.className = out;
@@ -260,15 +293,15 @@ const Lego = (() => {
       if (!data.bindings) data.bindings = scanForBindings(shadow);
 
       data.bindings.forEach(b => {
-        if (b.type === 'b-if') b.node.style.display = safeEval(b.expr, { state }) ? '' : 'none';
+        if (b.type === 'b-if') b.node.style.display = safeEval(b.expr, { state, self: b.node }) ? '' : 'none';
         if (b.type === 'b-text') b.node.textContent = escapeHTML(resolve(b.path, state));
         if (b.type === 'b-sync') syncModelValue(b.node, resolve(b.node.getAttribute('b-sync'), state));
         if (b.type === 'text') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state }) ?? ''));
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state, self: b.node }) ?? ''));
           if (b.node.textContent !== out) b.node.textContent = out;
         }
         if (b.type === 'attr') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state }) ?? ''));
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state, self: b.node }) ?? ''));
           if (b.node.getAttribute(b.attrName) !== out) {
             b.node.setAttribute(b.attrName, out);
             if (b.attrName === 'class') b.node.className = out;
@@ -327,7 +360,6 @@ const Lego = (() => {
       
       shadow.appendChild(tpl);
       
-      // Fix: Improved selector support for ::slotted and :host
       const style = shadow.querySelector('style');
       if (style) {
         style.textContent = style.textContent.replace(/\bself\b/g, ':host');
@@ -345,7 +377,6 @@ const Lego = (() => {
     while(provider && !provider._studs) provider = provider.parentElement;
     if (provider && provider._studs) bind(el, provider);
 
-    // Recursively snap children, ensuring Slots project correctly
     [...el.children].forEach(snap);
   };
 
