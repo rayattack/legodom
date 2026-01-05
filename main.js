@@ -3,6 +3,7 @@ const Lego = (() => {
   const forPools = new WeakMap();
   
   const sfcLogic = new Map();
+  const sharedStates = new Map(); // Track singleton states for $registry
   const routes = [];
 
   const escapeHTML = (str) => {
@@ -109,7 +110,6 @@ const Lego = (() => {
     return current ?? '';
   };
 
-  // Helper to find ancestor Lego state
   const findAncestorState = (el, tagName) => {
     let parent = el.parentElement || el.getRootNode().host;
     while (parent) {
@@ -125,9 +125,10 @@ const Lego = (() => {
     try {
       const scope = context.state || {};
       
-      // Inject $ helpers into the evaluation scope
       const helpers = {
         $ancestors: (tag) => findAncestorState(context.self, tag),
+        // Helper to access shared state by tag name
+        $registry: (tag) => sharedStates.get(tag.toLowerCase()),
         $element: context.self,
         $emit: (name, detail) => {
           context.self.dispatchEvent(new CustomEvent(name, {
@@ -435,6 +436,10 @@ const Lego = (() => {
       t.innerHTML = templateHTML;
       registry[tagName] = t;
       sfcLogic.set(tagName, logic);
+      
+      // Initialize shared state for $registry singleton
+      sharedStates.set(tagName.toLowerCase(), reactive({ ...logic }, document.body));
+      
       document.querySelectorAll(tagName).forEach(snap);
     },
     route: (path, tagName, middleware = null) => {
