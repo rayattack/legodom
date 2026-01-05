@@ -87,7 +87,7 @@ const Lego = (() => {
     try {
       return (new Function(`return (${raw})`))();
     } catch (e) {
-      console.error(`[Lego] Failed to parse l-studs:`, raw, e);
+      console.error(`[Lego] Failed to parse b-block:`, raw, e);
       return {};
     }
   };
@@ -154,8 +154,8 @@ const Lego = (() => {
         }
       });
 
-      if (child.hasAttribute('l-model')) {
-        const prop = child.getAttribute('l-model');
+      if (child.hasAttribute('b-sync')) {
+        const prop = child.getAttribute('b-sync');
         const updateState = () => {
           let target, last;
           if (loopCtx && prop.startsWith(loopCtx.name + '.')) {
@@ -185,24 +185,24 @@ const Lego = (() => {
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
     let node;
     while (node = walker.nextNode()) {
-      const isInsideLFor = (n) => {
+      const isInsideBFor = (n) => {
         let curr = n.parentNode;
         while (curr && curr !== container) {
-          if (curr.hasAttribute && curr.hasAttribute('l-for')) return true;
+          if (curr.hasAttribute && curr.hasAttribute('b-for')) return true;
           if (curr.tagName && curr.tagName.includes('-') && registry[curr.tagName.toLowerCase()]) return true;
           curr = curr.parentNode;
         }
         return false;
       };
-      if (isInsideLFor(node)) continue;
+      if (isInsideBFor(node)) continue;
 
       if (node.nodeType === 1) {
-        if (node.hasAttribute('l-if')) bindings.push({ type: 'l-if', node, expr: node.getAttribute('l-if') });
-        if (node.hasAttribute('l-for')) {
-          const match = node.getAttribute('l-for').match(/^\s*(\w+)\s+in\s+(.+)\s*$/);
+        if (node.hasAttribute('b-if')) bindings.push({ type: 'b-if', node, expr: node.getAttribute('b-if') });
+        if (node.hasAttribute('b-for')) {
+          const match = node.getAttribute('b-for').match(/^\s*(\w+)\s+in\s+(.+)\s*$/);
           if (match) {
             bindings.push({ 
-              type: 'l-for', 
+              type: 'b-for', 
               node, 
               itemName: match[1], 
               listName: match[2].trim(), 
@@ -211,8 +211,8 @@ const Lego = (() => {
             node.innerHTML = ''; 
           }
         }
-        if (node.hasAttribute('l-text')) bindings.push({ type: 'l-text', node, path: node.getAttribute('l-text') });
-        if (node.hasAttribute('l-model')) bindings.push({ type: 'l-model', node });
+        if (node.hasAttribute('b-text')) bindings.push({ type: 'b-text', node, path: node.getAttribute('b-text') });
+        if (node.hasAttribute('b-sync')) bindings.push({ type: 'b-sync', node });
         [...node.attributes].forEach(attr => {
           if (attr.value.includes('{{')) bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
         });
@@ -261,9 +261,9 @@ const Lego = (() => {
       if (!data.bindings) data.bindings = scanForBindings(shadow);
 
       data.bindings.forEach(b => {
-        if (b.type === 'l-if') b.node.style.display = safeEval(b.expr, { state }) ? '' : 'none';
-        if (b.type === 'l-text') b.node.textContent = escapeHTML(resolve(b.path, state));
-        if (b.type === 'l-model') syncModelValue(b.node, resolve(b.node.getAttribute('l-model'), state));
+        if (b.type === 'b-if') b.node.style.display = safeEval(b.expr, { state }) ? '' : 'none';
+        if (b.type === 'b-text') b.node.textContent = escapeHTML(resolve(b.path, state));
+        if (b.type === 'b-sync') syncModelValue(b.node, resolve(b.node.getAttribute('b-sync'), state));
         if (b.type === 'text') {
           const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state }) ?? ''));
           if (b.node.textContent !== out) b.node.textContent = out;
@@ -275,7 +275,7 @@ const Lego = (() => {
             if (b.attrName === 'class') b.node.className = out;
           }
         }
-        if (b.type === 'l-for') {
+        if (b.type === 'b-for') {
           const list = resolve(b.listName, state) || [];
           if (!forPools.has(b.node)) forPools.set(b.node, new Map());
           const pool = forPools.get(b.node);
@@ -293,9 +293,10 @@ const Lego = (() => {
             }
             const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
             updateNodeBindings(child, localScope);
-            // Fix: Re-sync l-model for list items during render
-            child.querySelectorAll('[l-model]').forEach(input => {
-                const path = input.getAttribute('l-model');
+            
+            // Re-sync b-sync for list items during render
+            child.querySelectorAll('[b-sync]').forEach(input => {
+                const path = input.getAttribute('b-sync');
                 if (path.startsWith(b.itemName + '.')) {
                     syncModelValue(input, resolve(path.split('.').slice(1).join('.'), item));
                 }
@@ -323,7 +324,7 @@ const Lego = (() => {
       const shadow = el.attachShadow({ mode: 'open' });
       
       const defaultLogic = sfcLogic.get(name) || {};
-      const attrLogic = parseJSObject(el.getAttribute('l-studs') || '{}');
+      const attrLogic = parseJSObject(el.getAttribute('b-block') || '{}');
       el._studs = reactive({ ...defaultLogic, ...attrLogic }, el);
       
       shadow.appendChild(tpl);
@@ -372,7 +373,7 @@ const Lego = (() => {
 
   return {
     init: () => {
-      document.querySelectorAll('template[lego-block]').forEach(t => registry[t.getAttribute('lego-block')] = t);
+      document.querySelectorAll('template[b-id]').forEach(t => registry[t.getAttribute('b-id')] = t);
       const observer = new MutationObserver(m => m.forEach(r => { 
         r.addedNodes.forEach(n => n.nodeType === 1 && snap(n)); 
         r.removedNodes.forEach(n => n.nodeType === 1 && unsnap(n)); 
@@ -383,7 +384,7 @@ const Lego = (() => {
       if (routes.length > 0) {
         window.addEventListener('popstate', _matchRoute);
         document.addEventListener('click', e => {
-          const link = e.target.closest('a[l-link]');
+          const link = e.target.closest('a[b-link]');
           if (link) {
             e.preventDefault();
             history.pushState({}, '', link.getAttribute('href'));
@@ -396,7 +397,7 @@ const Lego = (() => {
     globals: reactive({}, document.body),
     define: (tagName, templateHTML, logic = {}) => {
       const t = document.createElement('template');
-      t.setAttribute('lego-block', tagName);
+      t.setAttribute('b-id', tagName);
       t.innerHTML = templateHTML;
       registry[tagName] = t;
       sfcLogic.set(tagName, logic);
