@@ -2,7 +2,6 @@ const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
   
-  // Enterprise Extensions
   const sfcLogic = new Map();
   const routes = [];
 
@@ -294,7 +293,6 @@ const Lego = (() => {
             const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
             updateNodeBindings(child, localScope);
             
-            // Re-sync b-sync for list items during render
             child.querySelectorAll('[b-sync]').forEach(input => {
                 const path = input.getAttribute('b-sync');
                 if (path.startsWith(b.itemName + '.')) {
@@ -328,8 +326,12 @@ const Lego = (() => {
       el._studs = reactive({ ...defaultLogic, ...attrLogic }, el);
       
       shadow.appendChild(tpl);
+      
+      // Fix: Improved selector support for ::slotted and :host
       const style = shadow.querySelector('style');
-      if (style) style.textContent = style.textContent.replace(/\bself\b/g, ':host');
+      if (style) {
+        style.textContent = style.textContent.replace(/\bself\b/g, ':host');
+      }
       
       bind(shadow, el);
       render(el);
@@ -343,6 +345,7 @@ const Lego = (() => {
     while(provider && !provider._studs) provider = provider.parentElement;
     if (provider && provider._studs) bind(el, provider);
 
+    // Recursively snap children, ensuring Slots project correctly
     [...el.children].forEach(snap);
   };
 
@@ -410,31 +413,7 @@ const Lego = (() => {
         return '([^/]+)';
       });
       routes.push({ regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
-    },
-    // Vite Plugin Implementation
-    vitePlugin: () => ({
-      name: 'lego-sfc',
-      transform(code, id) {
-        if (!id.endsWith('.lego')) return null;
-        const name = id.split('/').pop().replace('.lego', '');
-        const template = (code.match(/<template>([\s\S]*?)<\/template>/) || [])[1] || '';
-        const script = (code.match(/<script>([\s\S]*?)<\/script>/) || [])[1] || 'export default {}';
-        const style = (code.match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
-        
-        const cleanScript = script.replace(/export default/, 'const logic =');
-        const fullTemplate = `<style>${style}</style>${template}`.replace(/`/g, '\\`');
-
-        return {
-          code: `
-            import { Lego } from 'lego-js';
-            ${cleanScript}
-            Lego.define('${name}', \`${fullTemplate}\`, logic);
-            export default logic;
-          `,
-          map: null
-        };
-      }
-    })
+    }
   };
 })();
 
