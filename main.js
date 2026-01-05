@@ -87,7 +87,7 @@ const Lego = (() => {
     try {
       return (new Function(`return (${raw})`))();
     } catch (e) {
-      console.error(`[Lego] Failed to parse b-block:`, raw, e);
+      console.error(`[Lego] Failed to parse b-data:`, raw, e);
       return {};
     }
   };
@@ -324,7 +324,7 @@ const Lego = (() => {
       const shadow = el.attachShadow({ mode: 'open' });
       
       const defaultLogic = sfcLogic.get(name) || {};
-      const attrLogic = parseJSObject(el.getAttribute('b-block') || '{}');
+      const attrLogic = parseJSObject(el.getAttribute('b-data') || '{}');
       el._studs = reactive({ ...defaultLogic, ...attrLogic }, el);
       
       shadow.appendChild(tpl);
