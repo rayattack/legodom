@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import path from 'path';
 import legoPlugin from 'lego-dom/vite-plugin';
 
 export default defineConfig({
@@ -10,7 +11,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      'lego-dom/main.js': new URL('../../main.js', import.meta.url).pathname
+      'lego-dom/main.js': path.resolve(__dirname, '../../lego.js')
     }
   }
 });

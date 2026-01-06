@@ -6,8 +6,9 @@
   "main": "main.js",
   "type": "module",
   "exports": {
-    ".": "./main.js",
+    ".": "./lego.js",
     "./main.js": "./main.js",
+    "./lego.js": "./lego.js",
     "./vite-plugin": "./vite-plugin.js",
     "./parse-lego": "./parse-lego.js"
   },

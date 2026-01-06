@@ -414,7 +414,13 @@ const Lego = (() => {
         r.removedNodes.forEach(n => n.nodeType === 1 && unsnap(n));
       }));
       observer.observe(document.body, { childList: true, subtree: true });
+
+      // Also snap the root element (body) to catch attributes like @event
       snap(document.body);
+
+      // Bind body specifically to catch global listeners like @todo-added in go.html
+      // We pass a mock componentRoot that points to Lego.globals
+      bind(document.body, { _studs: Lego.globals, _data: { bound: false } });
 
       if (routes.length > 0) {
         window.addEventListener('popstate', _matchRoute);
@@ -457,5 +463,3 @@ if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', Lego.init);
   window.Lego = Lego;
 }
-
-export { Lego };
