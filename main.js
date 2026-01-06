@@ -178,7 +178,7 @@ const Lego = (() => {
           child.addEventListener(eventName, (event) => {
             let evalScope = state;
             if (loopCtx) {
-              const list = resolve(loopCtx.listName, state);
+              const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: componentRoot });
               const item = list[loopCtx.index];
               evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
             }
@@ -192,7 +192,7 @@ const Lego = (() => {
         const updateState = () => {
           let target, last;
           if (loopCtx && prop.startsWith(loopCtx.name + '.')) {
-            const list = resolve(loopCtx.listName, state);
+            const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: componentRoot });
             const item = list[loopCtx.index];
             if (!item) return;
             const subPath = prop.split('.').slice(1);
@@ -309,7 +309,7 @@ const Lego = (() => {
           }
         }
         if (b.type === 'b-for') {
-          const list = resolve(b.listName, state) || [];
+          const list = safeEval(b.listName, { state, global: Lego.globals, self: el }) || [];
           if (!forPools.has(b.node)) forPools.set(b.node, new Map());
           const pool = forPools.get(b.node);
           const currentKeys = new Set();
@@ -330,7 +330,8 @@ const Lego = (() => {
             child.querySelectorAll('[b-sync]').forEach(input => {
               const path = input.getAttribute('b-sync');
               if (path.startsWith(b.itemName + '.')) {
-                syncModelValue(input, resolve(path.split('.').slice(1).join('.'), item));
+                const list = safeEval(b.listName, { state, global: Lego.globals, self: el });
+                syncModelValue(input, resolve(path.split('.').slice(1).join('.'), list[i]));
               }
             });
             if (b.node.children[i] !== child) b.node.insertBefore(child, b.node.children[i] || null);
