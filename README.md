@@ -14,6 +14,7 @@ Lego embraces the web platform. It turns standard HTML `<template>` tags into re
 - 📦 **Zero Dependencies** – Weighs less than 4kb gzipped.
 - 🛠️ **No Build Step** – Works directly in the browser with standard `<script>` tags.
 - 🧩 **Native Web Components** – Real Custom Elements, real Shadow DOM.
+- 🌐 **Built-in Routing** – Lego Router included for client-side routing.
 - 📝 **Familiar Mentals** – Plain JavaScript objects for state, plain HTML for templates.
 
 ---
