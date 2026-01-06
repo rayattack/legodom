@@ -350,15 +350,28 @@ const Lego = (() => {
     if (!el || el.nodeType !== 1) return;
     const data = getPrivateData(el);
     const name = el.tagName.toLowerCase();
+    const templateNode = registry[name];
 
-    if (registry[name] && !data.snapped) {
+    if (templateNode && !data.snapped) {
       data.snapped = true;
-      const tpl = registry[name].content.cloneNode(true);
+      const tpl = templateNode.content.cloneNode(true);
       const shadow = el.attachShadow({ mode: 'open' });
 
-      const defaultLogic = sfcLogic.get(name) || {};
-      const attrLogic = parseJSObject(el.getAttribute('b-data') || '{}');
-      el._studs = reactive({ ...defaultLogic, ...attrLogic }, el);
+      // TIER 1: Logic from Lego.define (SFC)
+      const scriptLogic = sfcLogic.get(name) || {};
+
+      // TIER 2: Logic from the <template b-data="..."> attribute
+      const templateLogic = parseJSObject(templateNode.getAttribute('b-data') || '{}');
+
+      // TIER 3: Logic from the <my-comp b-data="..."> tag
+      const instanceLogic = parseJSObject(el.getAttribute('b-data') || '{}');
+
+      // Priority: Script < Template < Instance
+      el._studs = reactive({
+        ...scriptLogic,
+        ...templateLogic,
+        ...instanceLogic
+      }, el);
 
       shadow.appendChild(tpl);
 
@@ -409,7 +422,9 @@ const Lego = (() => {
 
   return {
     init: () => {
-      document.querySelectorAll('template[b-id]').forEach(t => registry[t.getAttribute('b-id')] = t);
+      document.querySelectorAll('template[b-id]').forEach(t => {
+        registry[t.getAttribute('b-id')] = t;
+      });
       const observer = new MutationObserver(m => m.forEach(r => {
         r.addedNodes.forEach(n => n.nodeType === 1 && snap(n));
         r.removedNodes.forEach(n => n.nodeType === 1 && unsnap(n));

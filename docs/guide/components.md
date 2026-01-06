@@ -36,10 +36,14 @@ A component is a reusable, self-contained piece of UI with its own template, sty
 Define components directly in your HTML with `<template b-id>`:
 
 ```html
-<template b-id="hello-world">
+<template b-id="hello-world" b-data="{ name: 'Default User' }">
   <h1>Hello {{ name }}!</h1>
 </template>
 
+<!-- Uses the default "Default User" -->
+<hello-world></hello-world>
+
+<!-- Overrides the default with "Alice" -->
 <hello-world b-data="{ name: 'Alice' }"></hello-world>
 ```
 
@@ -113,23 +117,37 @@ Access state in templates using `{{ }}`:
 }"></user-card>
 ```
 
-### Merging with Defaults
+### Data Merging (The Three Tiers)
 
-Component defaults are merged with `b-data`:
+Lego uses a sophisticated three-tier merging strategy to initialize component state. This allows you to define defaults at the library level, customize them for a component type, and then override them for specific instances.
 
-```js
-Lego.define('user-card', `...`, {
-  name: 'Guest',      // Default
-  email: '',          // Default
-  role: 'user'        // Default
-});
-```
+The priority is as follows (**last one wins**):
+
+1.  **Tier 1: Script Logic** - Data defined in `Lego.define()` or exported from a `.lego` SFC.
+2.  **Tier 2: Template Defaults** - Data defined on the `<template b-data="...">` attribute.
+3.  **Tier 3: Instance Overrides** - Data defined on the actual component tag `<my-comp b-data="...">`.
+
+### Example of Merging
 
 ```html
-<!-- Only name is overridden -->
+<!-- 1. Script Logic (Defined in JS) -->
+<script>
+  Lego.define('user-card', `...`, { role: 'guest', theme: 'light' });
+</script>
+
+<!-- 2. Template Defaults (Defined in HTML) -->
+<template b-id="user-card" b-data="{ role: 'member', name: 'Anonymous' }">
+  ...
+</template>
+
+<!-- 3. Instance Overrides -->
 <user-card b-data="{ name: 'Alice' }"></user-card>
-<!-- email and role use defaults -->
 ```
+
+In the example above, the final state for the component will be:
+- `role`: `'member'` (Template override beats Script)
+- `theme`: `'light'` (Only defined in Script)
+- `name`: `'Alice'` (Instance override beats Template)
 
 ## Component Communication
 

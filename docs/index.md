@@ -61,7 +61,10 @@ features:
 
 ```html
 <!-- Define a component -->
-<template b-id="counter-button">
+<template b-id="counter-button" b-data="{
+  title: 'My counter',
+  count: 0
+}">
   <style>
     self {
       display: block;
@@ -80,7 +83,7 @@ features:
 </template>
 
 <!-- Use it -->
-<counter-button b-data="{ title: 'My Counter', count: 0 }"></counter-button>
+<counter-button b-data="{ title: 'Override b-data title' }"></counter-button>
 
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 ```
@@ -119,8 +122,6 @@ Lego works in all modern browsers that support:
 This includes Chrome 63+, Firefox 63+, Safari 11.1+, and Edge 79+.
 
 ## Community
-
-- 📖 [Documentation](https://rayattack.github.io/Lego/)
-- 💬 [Discussions](https://github.com/rayattack/Lego/discussions)
-- 🐛 [Issue Tracker](https://github.com/rayattack/Lego/issues)
+- 💬 [Discussions](https://github.com/rayattack/LegoDOM/discussions)
+- 🐛 [Issue Tracker](https://github.com/rayattack/LegoDOM/issues)
 - 📦 [npm Package](https://www.npmjs.com/package/lego-dom)

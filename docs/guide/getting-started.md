@@ -73,7 +73,7 @@ Let's create a simple counter component.
 ### Using HTML Templates
 
 ```html
-<template b-id="click-counter">
+<template b-id="click-counter" b-data="{ message: 'Welcome!', count: 0 }">
   <style>
     self {
       display: block;
@@ -96,12 +96,15 @@ Let's create a simple counter component.
     }
   </style>
   
-  <h2>{{ message }}</h2>
-  <p>Count: <strong>{{ count }}</strong></p>
-  <button @click="count++">Click Me!</button>
-</template>
+  <template b-id="click-counter" b-data="{ message: 'Welcome!', count: 0 }">
+    ... markup ...
+  </template>
+  
+  <!-- Uses defaults: message="Welcome!", count=0 -->
+  <click-counter></click-counter>
 
-<click-counter b-data="{ message: 'Welcome!', count: 0 }"></click-counter>
+  <!-- Overrides message, keeps count=0 -->
+  <click-counter b-data="{ message: 'Bienvenido!' }"></click-counter>
 
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 ```
