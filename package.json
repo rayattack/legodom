@@ -1,6 +1,7 @@
 {
   "name": "lego-dom",
-  "version": "0.0.7",
+  "version": "0.0.8",
+  "license": "MIT",
   "description": "A feature-rich web components + SFC frontend framework",
   "main": "main.js",
   "type": "module",
@@ -19,11 +20,15 @@
   ],
   "author": "",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
-    "vitest": "^1.0.0",
-    "jsdom": "^22.0.0"
+    "jsdom": "^22.0.0",
+    "vitepress": "^1.6.4",
+    "vitest": "^1.0.0"
   },
   "peerDependencies": {
     "vite": "^4.0.0 || ^5.0.0"
