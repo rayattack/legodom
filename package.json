@@ -1,0 +1,44 @@
+{
+  "name": "lego-dom",
+  "version": "0.0.8",
+  "license": "MIT",
+  "description": "A feature-rich web components + SFC frontend framework",
+  "main": "main.js",
+  "type": "module",
+  "exports": {
+    ".": "./main.js",
+    "./main.js": "./main.js",
+    "./vite-plugin": "./vite-plugin.js",
+    "./parse-lego": "./parse-lego.js"
+  },
+  "keywords": [
+    "framework",
+    "sfc",
+    "components",
+    "lego",
+    "legokit"
+  ],
+  "author": "",
+  "scripts": {
+    "test": "vitest run",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "jsdom": "^22.0.0",
+    "vitepress": "^1.6.4",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "vite": "^4.0.0 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.2"
+  }
+}
