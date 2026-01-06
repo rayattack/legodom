@@ -19,7 +19,7 @@
     "lego",
     "legokit"
   ],
-  "author": "",
+  "author": "Tersoo Ortserga",
   "scripts": {
     "test": "vitest run",
     "docs:dev": "vitepress dev docs",
@@ -41,5 +41,9 @@
   },
   "dependencies": {
     "fast-glob": "^3.3.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rayattack/legodom.git"
   }
 }

@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
   title: 'Lego',
   description: 'A feature-rich web components + SFC frontend framework',
-  base: '/LegoJS/',
+  base: '/legodom/',
 
   themeConfig: {
     logo: '/logo.svg',
