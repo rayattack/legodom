@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LegoJS Vite Example</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #f9fafb;
+    }
+
+    h1 {
+      color: #1f2937;
+      border-bottom: 3px solid #4f46e5;
+      padding-bottom: 0.5rem;
+    }
+
+    .info {
+      background: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+      border-left: 4px solid #10b981;
+    }
+  </style>
+</head>
+<body>
+  <h1>LegoJS + Vite Example</h1>
+  
+  <div class="info">
+    <p><strong>✨ These components are auto-discovered from .lego files!</strong></p>
+    <p>The Vite plugin automatically finds all .lego files in <code>src/components/</code> and registers them.</p>
+  </div>
+
+  <!-- These components are automatically discovered and hydrated -->
+  <sample-component></sample-component>
+  <greeting-card></greeting-card>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
