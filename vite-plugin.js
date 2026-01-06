@@ -13,8 +13,8 @@ const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID;
 /**
  * Vite plugin for LegoJS SFC support
  * @param {object} options - Plugin options
- * @param {string} options.componentsDir - Directory to search for .lego files (default: './src/components')
- * @param {string[]} options.include - Glob patterns to include (default: ['**/*.lego'])
+ * @param {string} options.componentsDir - Directory to search for .lego files
+ * @param {string[]} options.include - Glob patterns to include
  * @returns {import('vite').Plugin}
  */
 export default function legoPlugin(options = {}) {
