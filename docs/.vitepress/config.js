@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
-  title: 'LegoJS',
-  description: 'A tiny, zero-dependency JavaScript library for building reactive Web Components',
+  title: 'Lego',
+  description: 'A feature-rich web components + SFC frontend framework',
   base: '/LegoJS/',
 
   themeConfig: {
@@ -15,8 +15,8 @@ export default defineConfig({
       {
         text: 'v0.0.7',
         items: [
-          { text: 'Changelog', link: 'https://github.com/yourusername/LegoJS/releases' },
-          { text: 'Contributing', link: '/guide/contributing' }
+          { text: 'Changelog', link: 'https://github.com/rayattack/LegoJS/releases' }
+
         ]
       }
     ],
@@ -26,9 +26,10 @@ export default defineConfig({
         {
           text: 'Introduction',
           items: [
-            { text: 'What is LegoJS?', link: '/guide/' },
+            { text: 'What is Lego?', link: '/guide/' },
             { text: 'Getting Started', link: '/guide/getting-started' },
-            { text: 'Quick Start', link: '/guide/quick-start' }
+            { text: 'Quick Start', link: '/guide/quick-start' },
+            { text: 'Contributing', link: '/guide/contributing' }
           ]
         },
         {
@@ -59,7 +60,8 @@ export default defineConfig({
             { text: 'Lego.route()', link: '/api/route' },
             { text: 'Lego.globals', link: '/api/globals' },
             { text: 'Directives', link: '/api/directives' },
-            { text: 'Lifecycle Hooks', link: '/api/lifecycle' }
+            { text: 'Lifecycle Hooks', link: '/api/lifecycle' },
+            { text: 'Vite Plugin', link: '/api/vite-plugin' }
           ]
         }
       ],
@@ -78,7 +80,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/yourusername/LegoJS' }
+      { icon: 'github', link: 'https://github.com/rayattack/LegoJS' }
     ],
 
     footer: {
@@ -91,7 +93,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/yourusername/LegoJS/edit/main/docs/:path',
+      pattern: 'https://github.com/rayattack/LegoJS/edit/main/docs/:path',
       text: 'Edit this page on GitHub'
     }
   },

@@ -43,43 +43,6 @@ Here's a complete example (`user-card.lego`):
 
 ```html
 <template>
-  <style>
-    self {
-      display: block;
-      padding: 1.5rem;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      max-width: 300px;
-    }
-    
-    .avatar {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-    
-    .name {
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin: 0.5rem 0;
-    }
-    
-    .bio {
-      color: #666;
-      margin: 0.5rem 0;
-    }
-    
-    button {
-      background: #4CAF50;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-  </style>
-  
   <img class="avatar" src="{{ avatarUrl }}" alt="{{ name }}">
   <h2 class="name">{{ name }}</h2>
   <p class="bio">{{ bio }}</p>
@@ -88,6 +51,43 @@ Here's a complete example (`user-card.lego`):
     {{ isFollowing ? 'Unfollow' : 'Follow' }}
   </button>
 </template>
+
+<style>
+  self {
+    display: block;
+    padding: 1.5rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    max-width: 300px;
+  }
+  
+  .avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .name {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+  }
+  
+  .bio {
+    color: #666;
+    margin: 0.5rem 0;
+  }
+  
+  button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
 
 <script>
 export default {
@@ -173,7 +173,7 @@ In your `index.html`:
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My LegoJS App</title>
+  <title>My Lego App</title>
 </head>
 <body>
   <div id="app">
@@ -210,7 +210,7 @@ Component names **must**:
 
 ### Template Section
 
-Contains your component's HTML markup with LegoJS directives:
+Contains your component's HTML markup with Lego directives:
 
 ```html
 <template>

@@ -1,6 +1,6 @@
 # Todo App Example
 
-A complete todo application demonstrating LegoJS features.
+A complete todo application demonstrating Lego features.
 
 ## Live Demo
 
@@ -14,7 +14,7 @@ A complete todo application demonstrating LegoJS features.
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Todo App - LegoJS</title>
+  <title>Todo App - Lego</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;

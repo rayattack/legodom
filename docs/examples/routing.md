@@ -10,7 +10,7 @@ A multi-page application demonstrating client-side routing.
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Routing Demo - LegoJS</title>
+  <title>Routing Demo - Lego</title>
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -87,7 +87,7 @@ A multi-page application demonstrating client-side routing.
     </style>
     
     <div class="hero">
-      <h1>Welcome to LegoJS Routing Demo</h1>
+      <h1>Welcome to Lego Routing Demo</h1>
       <p>Navigate between pages using client-side routing</p>
     </div>
     
@@ -113,8 +113,8 @@ A multi-page application demonstrating client-side routing.
       self { display: block; }
     </style>
     
-    <h1>About LegoJS</h1>
-    <p>LegoJS is a tiny, zero-dependency JavaScript library for building reactive Web Components.</p>
+    <h1>About Lego</h1>
+    <p>Lego is a tiny, zero-dependency JavaScript library for building reactive Web Components.</p>
     
     <h2>Features</h2>
     <ul>

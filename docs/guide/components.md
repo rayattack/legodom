@@ -1,6 +1,6 @@
 # Components
 
-Learn how to create and use components in LegoJS.
+Learn how to create and use components in Lego.
 
 ## What is a Component?
 

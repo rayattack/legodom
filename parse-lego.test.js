@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseLego, generateDefineCall, validateLego, deriveComponentName } from './parse-lego.js';
 
-describe('LegoJS SFC Parser', () => {
+describe('Lego SFC Parser', () => {
   describe('deriveComponentName', () => {
     it('should derive component name from filename', () => {
       expect(deriveComponentName('sample-component.lego')).toBe('sample-component');

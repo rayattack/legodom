@@ -2,19 +2,19 @@
 layout: home
 
 hero:
-  name: LegoJS
+  name: LegoDOM
   text: Build Reactive Web Components
-  tagline: A tiny, zero-dependency JavaScript library for creating reactive Web Components directly in the browser
+  tagline: A tiny, zero-dependency Web library for creating reactive Web Components directly in the browser
   image:
     src: /logo.svg
-    alt: LegoJS
+    alt: Lego
   actions:
     - theme: brand
       text: Get Started
       link: /guide/getting-started
     - theme: alt
       text: View on GitHub
-      link: https://github.com/yourusername/LegoJS
+      link: https://github.com/rayattack/Lego
     - theme: alt
       text: Try Examples
       link: /examples/
@@ -87,7 +87,7 @@ features:
 
 That's it. No build step, no npm, no configuration.
 
-## Why LegoJS?
+## Why Lego?
 
 **For small projects**, you get reactive components without the overhead of a full framework.
 
@@ -97,7 +97,7 @@ That's it. No build step, no npm, no configuration.
 
 ## Comparison
 
-| Feature | LegoJS | Vue | React |
+| Feature | Lego | Vue | React |
 |---------|--------|-----|-------|
 | Size | < 17KB | ~33KB | ~40KB |
 | Dependencies | 0 | Many | Many |
@@ -110,7 +110,7 @@ That's it. No build step, no npm, no configuration.
 
 ## Browser Support
 
-LegoJS works in all modern browsers that support:
+Lego works in all modern browsers that support:
 - Web Components
 - Shadow DOM
 - ES6 Proxy
@@ -120,7 +120,7 @@ This includes Chrome 63+, Firefox 63+, Safari 11.1+, and Edge 79+.
 
 ## Community
 
-- 📖 [Documentation](https://yourusername.github.io/LegoJS/)
-- 💬 [Discussions](https://github.com/yourusername/LegoJS/discussions)
-- 🐛 [Issue Tracker](https://github.com/yourusername/LegoJS/issues)
+- 📖 [Documentation](https://rayattack.github.io/Lego/)
+- 💬 [Discussions](https://github.com/rayattack/Lego/discussions)
+- 🐛 [Issue Tracker](https://github.com/rayattack/Lego/issues)
 - 📦 [npm Package](https://www.npmjs.com/package/lego-dom)

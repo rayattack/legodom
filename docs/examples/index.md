@@ -1,6 +1,6 @@
 # Examples
 
-Explore these hands-on examples to learn LegoJS patterns and best practices.
+Explore these hands-on examples to learn Lego patterns and best practices.
 
 ## Quick Examples
 
@@ -49,7 +49,7 @@ Lists with `b-for`.
 
 <todo-list b-data="{
   todos: [
-    { text: 'Learn LegoJS', done: true },
+    { text: 'Learn Lego', done: true },
     { text: 'Build an app', done: false }
   ]
 }"></todo-list>
@@ -93,12 +93,12 @@ Advanced form handling:
 
 Try these examples directly in your browser:
 
-- [Simple Counter](https://codepen.io/youruser/pen/counter)
-- [Todo App](https://codepen.io/youruser/pen/todo)
-- [Dynamic Form](https://codepen.io/youruser/pen/form)
+- [Simple Counter](https://codepen.io/ortserga/pen/XJKdMJm)
+- [Todo App](https://codepen.io/ortserga/pen/todo)
+- [Dynamic Form](https://codepen.io/ortserga/pen/form)
 
 ## Next Steps
 
 - Check the [API Reference](/api/)
 - Read the [Guide](/guide/)
-- View the [source code](https://github.com/yourusername/LegoJS)
+- View the [source code](https://github.com/rayattack/Lego)

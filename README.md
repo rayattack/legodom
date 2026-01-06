@@ -1,17 +1,17 @@
-# LegoJS
+# Lego
 
-LegoJS is a tiny, zero-dependency JavaScript library for building reactive Web Components directly in the browser.
+Lego is a tiny, zero-dependency JavaScript library for building reactive Web Components directly in the browser.
 
-The goal of LegoJS is **mental model simplicity**:
+The goal of Lego is **mental model simplicity**:
 
 * No virtual DOM
 * No compilation step required
 * No JSX
 * No framework-specific syntax to learn
 
-You write **HTML**, add a few **directives**, and LegoJS takes care of reactivity and updates.
+You write **HTML**, add a few **directives**, and Lego takes care of reactivity and updates.
 
-This README is intentionally designed so that a developer can understand **everything they need** about LegoJS by reading this file alone.
+This README is intentionally designed so that a developer can understand **everything they need** about Lego by reading this file alone.
 
 ---
 
@@ -35,7 +35,7 @@ Once loaded, `Lego` is available globally.
 
 ## The Mental Model
 
-Think of LegoJS like real Lego blocks:
+Think of Lego like real Lego blocks:
 
 * **Templates** define how a block looks
 * **Studs** define the data attached to a block
@@ -44,7 +44,7 @@ Think of LegoJS like real Lego blocks:
 
 There is no mounting, diffing, or reconciliation engine.
 
-You change JavaScript objects → LegoJS updates the DOM.
+You change JavaScript objects → Lego updates the DOM.
 
 ---
 
@@ -256,7 +256,7 @@ Useful for global configuration or app-wide state.
 
 ## Router
 
-LegoJS includes a minimal client-side router.
+Lego includes a minimal client-side router.
 
 Add a router outlet:
 
@@ -313,7 +313,7 @@ Lego.define(
 
 ## Initialization
 
-LegoJS initializes automatically on `DOMContentLoaded`.
+Lego initializes automatically on `DOMContentLoaded`.
 
 You usually do **not** need to call anything manually.
 
@@ -321,20 +321,20 @@ You usually do **not** need to call anything manually.
 
 ## Design Philosophy
 
-LegoJS is intentionally small and opinionated:
+Lego is intentionally small and opinionated:
 
 * The DOM is the source of truth
 * JavaScript objects are the state
 * HTML stays HTML
 * Complexity is avoided unless absolutely necessary
 
-If you can explain your UI with plain objects and markup, LegoJS will feel natural.
+If you can explain your UI with plain objects and markup, Lego will feel natural.
 
 ---
 
 ## Single File Components (SFC)
 
-LegoJS supports **Single File Components** using `.lego` files when using a build tool like Vite.
+Lego supports **Single File Components** using `.lego` files when using a build tool like Vite.
 
 ### .lego File Format
 
@@ -423,13 +423,13 @@ In your HTML:
 <user-card></user-card>
 ```
 
-**Auto-discovery**: The Vite plugin automatically finds all `.lego` files and registers them with LegoJS!
+**Auto-discovery**: The Vite plugin automatically finds all `.lego` files and registers them with Lego!
 
 ---
 
 ## Two Usage Modes
 
-LegoJS works in **two modes**:
+Lego works in **two modes**:
 
 ### 1. Without Build Tooling
 
@@ -450,7 +450,7 @@ Use `.lego` files that are auto-discovered and compiled:
 npm run dev
 ```
 
-Both modes use the same LegoJS runtime and support all the same features!
+Both modes use the same Lego runtime and support all the same features!
 
 ---
 

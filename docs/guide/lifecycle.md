@@ -1,6 +1,6 @@
 # Lifecycle Hooks
 
-Learn about component lifecycle hooks in LegoJS.
+Learn about component lifecycle hooks in Lego.
 
 ## Overview
 

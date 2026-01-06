@@ -243,7 +243,7 @@ Initialize component state.
 ```html
 <todo-list b-data="{
   todos: [
-    { text: 'Learn LegoJS', done: true },
+    { text: 'Learn Lego', done: true },
     { text: 'Build app', done: false }
   ],
   filter: 'all'
@@ -426,5 +426,5 @@ Paginate large lists:
 ## Next Steps
 
 - See [directive examples](/examples/)
-- Learn about [event handling](/guide/events)
+- Learn about [event handling](/guide/directives#event)
 - Explore [form patterns](/examples/form)

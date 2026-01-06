@@ -1,5 +1,5 @@
 /**
- * Vite plugin for LegoJS Single File Components
+ * Vite plugin for Lego Single File Components
  * Auto-discovers and transforms .lego files
  */
 
@@ -11,7 +11,7 @@ const VIRTUAL_MODULE_ID = 'virtual:lego-components';
 const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID;
 
 /**
- * Vite plugin for LegoJS SFC support
+ * Vite plugin for Lego SFC support
  * @param {object} options - Plugin options
  * @param {string} options.componentsDir - Directory to search for .lego files
  * @param {string[]} options.include - Glob patterns to include

@@ -1,6 +1,6 @@
 # Reactivity
 
-Understand how LegoJS makes your UI automatically update when data changes.
+Understand how Lego makes your UI automatically update when data changes.
 
 ## The Core Concept
 
@@ -15,7 +15,7 @@ No `setState()`, no `dispatch()`, no special syntax. Just mutate the data.
 
 ## How It Works
 
-LegoJS uses **ES6 Proxies** to track changes:
+Lego uses **ES6 Proxies** to track changes:
 
 ```js
 const reactive = (obj, el) => {
@@ -62,7 +62,7 @@ this.items.sort();            // ✅ Reactive
 this.user.profile.age = 30;   // ✅ Reactive
 ```
 
-LegoJS recursively wraps nested objects in proxies.
+Lego recursively wraps nested objects in proxies.
 
 ### ✅ Object Deletion
 
@@ -112,7 +112,7 @@ Initialize all properties upfront:
 
 ## Batching Updates
 
-LegoJS batches updates using `requestAnimationFrame`:
+Lego batches updates using `requestAnimationFrame`:
 
 ```js
 this.count = 1;
@@ -296,7 +296,7 @@ console.log(component._studs.count);  // Actual value
 const count = ref(0);
 count.value++;
 
-// LegoJS
+// Lego
 this.count++;
 ```
 
@@ -307,7 +307,7 @@ this.count++;
 const [count, setCount] = useState(0);
 setCount(count + 1);
 
-// LegoJS
+// Lego
 this.count++;
 ```
 
@@ -318,11 +318,11 @@ this.count++;
 let count = 0;
 count++;
 
-// LegoJS
+// Lego
 this.count++;
 ```
 
-LegoJS is closest to Svelte's model but uses Proxies instead of compilation.
+Lego is closest to Svelte's model but uses Proxies instead of compilation.
 
 ## Advanced Patterns
 

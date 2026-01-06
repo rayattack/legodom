@@ -1,12 +1,12 @@
-# What is LegoJS?
+# What is Lego?
 
-LegoJS is a tiny, zero-dependency JavaScript library for building reactive Web Components directly in the browser.
+LegoDOM is a tiny, zero-dependency JavaScript library for building reactive Web Components directly in the browser.
 
 ## The Philosophy
 
-LegoJS is built on a simple belief: **the DOM is not your enemy**.
+LegoDOM is built on a simple belief: **the DOM is not your enemy**.
 
-Modern frameworks introduced virtual DOMs and compilation steps to solve problems that arose from trying to make the DOM do things it wasn't designed for. LegoJS takes a different approach—it embraces the DOM and Web Components as they were intended to be used.
+Modern frameworks introduced virtual DOMs and compilation steps to solve problems that arose from trying to make the DOM do things it wasn't designed for. Lego takes a different approach—it embraces the DOM and Web Components as they were intended to be used.
 
 ## Key Principles
 
@@ -17,7 +17,7 @@ There are no new concepts to learn. If you know:
 - JavaScript objects
 - Basic DOM events
 
-You already know LegoJS.
+You already know Lego.
 
 ### 2. No Build Step Required
 
@@ -34,7 +34,7 @@ component._studs.count++;
 
 ### 4. Web Standards First
 
-LegoJS uses:
+Lego uses:
 - **Web Components** - Standard custom elements
 - **Shadow DOM** - Native encapsulation
 - **ES6 Proxies** - For reactivity
@@ -42,9 +42,9 @@ LegoJS uses:
 
 No proprietary APIs. Everything is built on web standards.
 
-## When to Use LegoJS
+## When to Use Lego
 
-### ✅ LegoJS is Great For:
+### ✅ Lego is Great For:
 
 - **Small to medium applications** where framework overhead isn't worth it
 - **Embedded widgets** that need to work anywhere
@@ -74,7 +74,7 @@ Compare that to:
 
 ## What Makes It Different?
 
-| Aspect | LegoJS | Traditional Frameworks |
+| Aspect | Lego | Traditional Frameworks |
 |--------|--------|----------------------|
 | **Reactivity** | Direct object mutation | setState / dispatch / ref() |
 | **Templates** | HTML with `{{ }}` | JSX / template syntax |

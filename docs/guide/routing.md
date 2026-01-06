@@ -1,6 +1,6 @@
 # Routing
 
-LegoJS includes a built-in client-side router for building single-page applications.
+Lego includes a built-in client-side router for building single-page applications.
 
 ## Basic Setup
 
@@ -234,7 +234,7 @@ matchRoute(); // Initial check
 
 ## Nested Routes
 
-While LegoJS doesn't have built-in nested routing, you can implement it:
+While Lego doesn't have built-in nested routing, you can implement it:
 
 ```html
 <template b-id="blog-layout">
@@ -271,7 +271,7 @@ Example: `/search?q=legojs&page=2`
 
 ## Hash vs History Mode
 
-LegoJS uses History API (pushState) by default, giving you clean URLs:
+Lego uses History API (pushState) by default, giving you clean URLs:
 
 ✅ `/about`  
 ✅ `/user/123`  
@@ -370,4 +370,4 @@ For complex routing needs, consider integrating a dedicated router library.
 
 - See [routing examples](/examples/routing)
 - Learn about [lifecycle hooks](/guide/lifecycle)
-- Explore [state management patterns](/guide/state-management)
+- Explore [state management patterns](/guide/reactivity)

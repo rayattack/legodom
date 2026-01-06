@@ -1,6 +1,6 @@
-# LegoJS SFC and Vite Plugin Example
+# Lego SFC and Vite Plugin Example
 
-This example demonstrates how to use LegoJS with Single File Components (.lego files) and the Vite plugin.
+This example demonstrates how to use Lego with Single File Components (.lego files) and the Vite plugin.
 
 ## Setup
 

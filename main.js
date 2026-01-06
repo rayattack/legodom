@@ -1,7 +1,7 @@
 const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
-  
+
   const sfcLogic = new Map();
   const sharedStates = new Map(); // Track singleton states for $registry
   const routes = [];
@@ -17,22 +17,22 @@ const Lego = (() => {
     let queued = false;
     const componentsToUpdate = new Set();
     let isProcessing = false;
-    
+
     return {
       add: (el) => {
-        if (!el || isProcessing) return; 
+        if (!el || isProcessing) return;
         componentsToUpdate.add(el);
         if (queued) return;
         queued = true;
-        
+
         requestAnimationFrame(() => {
           isProcessing = true;
           const batch = Array.from(componentsToUpdate);
           componentsToUpdate.clear();
           queued = false;
-          
+
           batch.forEach(el => render(el));
-          
+
           setTimeout(() => {
             batch.forEach(el => {
               const state = el._studs;
@@ -124,7 +124,7 @@ const Lego = (() => {
   const safeEval = (expr, context) => {
     try {
       const scope = context.state || {};
-      
+
       const helpers = {
         $ancestors: (tag) => findAncestorState(context.self, tag),
         // Helper to access shared state by tag name
@@ -146,7 +146,7 @@ const Lego = (() => {
           }
         }
       `);
-      
+
       const result = func.call(scope, context.global, context.self, context.event, helpers);
       if (typeof result === 'function') return result.call(scope, context.event);
       return result;
@@ -167,10 +167,10 @@ const Lego = (() => {
   const bind = (container, componentRoot, loopCtx = null) => {
     const state = componentRoot._studs;
     const elements = container instanceof Element ? [container, ...container.querySelectorAll('*')] : container.querySelectorAll('*');
-    
+
     elements.forEach(child => {
       const childData = getPrivateData(child);
-      if (childData.bound) return; 
+      if (childData.bound) return;
 
       [...child.attributes].forEach(attr => {
         if (attr.name.startsWith('@')) {
@@ -234,14 +234,14 @@ const Lego = (() => {
         if (node.hasAttribute('b-for')) {
           const match = node.getAttribute('b-for').match(/^\s*(\w+)\s+in\s+(.+)\s*$/);
           if (match) {
-            bindings.push({ 
-              type: 'b-for', 
-              node, 
-              itemName: match[1], 
-              listName: match[2].trim(), 
-              template: node.innerHTML 
+            bindings.push({
+              type: 'b-for',
+              node,
+              itemName: match[1],
+              listName: match[2].trim(),
+              template: node.innerHTML
             });
-            node.innerHTML = ''; 
+            node.innerHTML = '';
           }
         }
         if (node.hasAttribute('b-text')) bindings.push({ type: 'b-text', node, path: node.getAttribute('b-text') });
@@ -326,12 +326,12 @@ const Lego = (() => {
             }
             const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
             updateNodeBindings(child, localScope);
-            
+
             child.querySelectorAll('[b-sync]').forEach(input => {
-                const path = input.getAttribute('b-sync');
-                if (path.startsWith(b.itemName + '.')) {
-                    syncModelValue(input, resolve(path.split('.').slice(1).join('.'), item));
-                }
+              const path = input.getAttribute('b-sync');
+              if (path.startsWith(b.itemName + '.')) {
+                syncModelValue(input, resolve(path.split('.').slice(1).join('.'), item));
+              }
             });
             if (b.node.children[i] !== child) b.node.insertBefore(child, b.node.children[i] || null);
           });
@@ -349,23 +349,23 @@ const Lego = (() => {
     if (!el || el.nodeType !== 1) return;
     const data = getPrivateData(el);
     const name = el.tagName.toLowerCase();
-    
+
     if (registry[name] && !data.snapped) {
       data.snapped = true;
       const tpl = registry[name].content.cloneNode(true);
       const shadow = el.attachShadow({ mode: 'open' });
-      
+
       const defaultLogic = sfcLogic.get(name) || {};
       const attrLogic = parseJSObject(el.getAttribute('b-data') || '{}');
       el._studs = reactive({ ...defaultLogic, ...attrLogic }, el);
-      
+
       shadow.appendChild(tpl);
-      
+
       const style = shadow.querySelector('style');
       if (style) {
         style.textContent = style.textContent.replace(/\bself\b/g, ':host');
       }
-      
+
       bind(shadow, el);
       render(el);
 
@@ -373,9 +373,9 @@ const Lego = (() => {
         try { el._studs.mounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in mounted <${name}>:`, e); }
       }
     }
-    
+
     let provider = el.parentElement;
-    while(provider && !provider._studs) provider = provider.parentElement;
+    while (provider && !provider._studs) provider = provider.parentElement;
     if (provider && provider._studs) bind(el, provider);
 
     [...el.children].forEach(snap);
@@ -399,7 +399,7 @@ const Lego = (() => {
 
     if (match.middleware) {
       const allowed = await match.middleware(params, Lego.globals);
-      if (!allowed) return; 
+      if (!allowed) return;
     }
 
     Lego.globals.params = params;
@@ -409,9 +409,9 @@ const Lego = (() => {
   return {
     init: () => {
       document.querySelectorAll('template[b-id]').forEach(t => registry[t.getAttribute('b-id')] = t);
-      const observer = new MutationObserver(m => m.forEach(r => { 
-        r.addedNodes.forEach(n => n.nodeType === 1 && snap(n)); 
-        r.removedNodes.forEach(n => n.nodeType === 1 && unsnap(n)); 
+      const observer = new MutationObserver(m => m.forEach(r => {
+        r.addedNodes.forEach(n => n.nodeType === 1 && snap(n));
+        r.removedNodes.forEach(n => n.nodeType === 1 && unsnap(n));
       }));
       observer.observe(document.body, { childList: true, subtree: true });
       snap(document.body);
@@ -436,10 +436,10 @@ const Lego = (() => {
       t.innerHTML = templateHTML;
       registry[tagName] = t;
       sfcLogic.set(tagName, logic);
-      
+
       // Initialize shared state for $registry singleton
       sharedStates.set(tagName.toLowerCase(), reactive({ ...logic }, document.body));
-      
+
       document.querySelectorAll(tagName).forEach(snap);
     },
     route: (path, tagName, middleware = null) => {
@@ -457,3 +457,5 @@ if (typeof window !== 'undefined') {
   document.addEventListener('DOMContentLoaded', Lego.init);
   window.Lego = Lego;
 }
+
+export { Lego };

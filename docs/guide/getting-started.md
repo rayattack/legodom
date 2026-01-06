@@ -1,25 +1,25 @@
 # Getting Started
 
-Get up and running with LegoJS in under 5 minutes.
+Get up and running with Lego in under 5 minutes.
 
 ## Installation
 
 ### Option 1: CDN (No Build Tools)
 
-The fastest way to try LegoJS is via CDN:
+The fastest way to try Lego is via CDN:
 
 ```html
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My LegoJS App</title>
+  <title>My Lego App</title>
 </head>
 <body>
   <my-component></my-component>
   
   <script src="https://unpkg.com/lego-dom/main.js"></script>
   <template b-id="my-component">
-    <h1>Hello LegoJS!</h1>
+    <h1>Hello Lego!</h1>
   </template>
 </body>
 </html>
@@ -41,7 +41,7 @@ Then import it:
 import { Lego } from 'lego-dom';
 
 Lego.define('my-component', `
-  <h1>Hello LegoJS!</h1>
+  <h1>Hello Lego!</h1>
 `);
 ```
 
@@ -220,7 +220,7 @@ Special attributes for common patterns:
 
 ## What You've Learned
 
-- ✅ Three different ways to install LegoJS
+- ✅ Three different ways to install Lego
 - ✅ How to create your first component
 - ✅ The basics of templates, state, and events
 - ✅ Available directives

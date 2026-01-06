@@ -1,6 +1,6 @@
 # CDN Usage
 
-LegoJS works perfectly without any build tools. Just include it via CDN and start building!
+Lego works perfectly without any build tools. Just include it via CDN and start building!
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ LegoJS works perfectly without any build tools. Just include it via CDN and star
   <!-- Use it -->
   <hello-world b-data="{ message: 'Hello from CDN!' }"></hello-world>
   
-  <!-- Include LegoJS -->
+  <!-- Include Lego -->
   <script src="https://unpkg.com/lego-dom/main.js"></script>
 </body>
 </html>
@@ -65,7 +65,7 @@ Here's a full working application using only CDN:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Todo App - LegoJS</title>
+  <title>Todo App - Lego</title>
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -146,7 +146,7 @@ Here's a full working application using only CDN:
     Lego.define('todo-app', Lego.registry['todo-app'].innerHTML, {
       newTodo: '',
       todos: [
-        { text: 'Learn LegoJS', done: true },
+        { text: 'Learn Lego', done: true },
         { text: 'Build something awesome', done: false }
       ],
       addTodo() {
@@ -169,7 +169,7 @@ Here's a full working application using only CDN:
 
 ## Progressive Enhancement
 
-LegoJS is perfect for progressively enhancing existing sites:
+Lego is perfect for progressively enhancing existing sites:
 
 ```html
 <!-- Your existing page -->
@@ -213,14 +213,14 @@ LegoJS is perfect for progressively enhancing existing sites:
 
 ## Embedding in Existing Apps
 
-LegoJS components work alongside other frameworks:
+Lego components work alongside other frameworks:
 
 ```html
 <!-- Works fine with jQuery, Bootstrap, etc. -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 
-<!-- Your LegoJS component -->
+<!-- Your Lego component -->
 <my-component></my-component>
 
 <!-- Your jQuery code -->
@@ -271,7 +271,7 @@ For maximum security:
 
 ## Browser Compatibility
 
-LegoJS works in all modern browsers:
+Lego works in all modern browsers:
 
 - ✅ Chrome 63+
 - ✅ Firefox 63+

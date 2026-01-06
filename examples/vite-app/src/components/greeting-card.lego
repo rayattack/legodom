@@ -1,31 +1,31 @@
+<style>
+  self {
+    display: block;
+    padding: 1rem;
+    background: #f3f4f6;
+    border-radius: 0.5rem;
+    margin: 0.5rem 0;
+  }
+
+  input {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    margin-right: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .greeting {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 0.25rem;
+    font-size: 1.25rem;
+    color: #1f2937;
+  }
+</style>
+
 <template>
-  <style>
-    self {
-      display: block;
-      padding: 1rem;
-      background: #f3f4f6;
-      border-radius: 0.5rem;
-      margin: 0.5rem 0;
-    }
-
-    input {
-      padding: 0.5rem;
-      border: 1px solid #d1d5db;
-      border-radius: 0.25rem;
-      margin-right: 0.5rem;
-      font-size: 1rem;
-    }
-
-    .greeting {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: white;
-      border-radius: 0.25rem;
-      font-size: 1.25rem;
-      color: #1f2937;
-    }
-  </style>
-
   <div>
     <input b-sync="name" type="text" placeholder="Enter your name">
     <div class="greeting" b-if="name">

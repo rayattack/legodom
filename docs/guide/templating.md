@@ -1,6 +1,6 @@
 # Templating
 
-Learn about LegoJS templating features and syntax.
+Learn about Lego templating features and syntax.
 
 ## Interpolation
 
@@ -72,7 +72,7 @@ Interpolate in any attribute:
 
 ## Escaping
 
-LegoJS automatically escapes HTML to prevent XSS:
+Lego automatically escapes HTML to prevent XSS:
 
 ```js
 {
