@@ -74,8 +74,7 @@ export default defineConfig({
             { text: 'Basic Routing', link: '/router/basic-routing' },
             { text: 'Surgical Swaps', link: '/router/surgical-swaps' },
             { text: 'Cold Entry', link: '/router/cold-entry' },
-            { text: 'History', link: '/router/history' },
-            { text: 'Cold Entry', link: '/router/cold-entry' },
+            { text: 'History', link: '/router/history' }
           ]
         }
       ],

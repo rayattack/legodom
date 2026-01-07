@@ -1,5 +1,5 @@
 
-# 05. Smart History & The Back Button
+# Smart History & The Back Button
 
 One of the biggest frustrations in modern web development is "breaking the back button." When you use JavaScript to update only part of a page, the browser often doesn't realize a navigation event occurred. If the user hits "Back," they might be booted out of your app entirely.
 
@@ -31,7 +31,7 @@ When you use `b-link` with a `b-target`, LegoJS does two things simultaneously:
 
 Every time a surgical swap happens, LegoJS saves the target selector in the `history.state`. It looks something like this:
 
-```
+```js
 // Internal representation
 history.pushState({ 
   legoTargets: '#chat-window' 
