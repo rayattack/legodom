@@ -13,6 +13,24 @@ const Lego = (() => {
     }[m]));
   };
 
+  /**
+   * Enterprise Target Resolver
+   * Resolves strings (#id, tag-name) or functions into DOM Elements.
+   */
+  const resolveTargets = (query, contextEl) => {
+    if (typeof query === 'function') {
+      const all = Array.from(document.querySelectorAll('*')).filter(n => n.tagName.includes('-'));
+      return [].concat(query(all));
+    }
+    if (query.startsWith('#')) {
+      const el = document.getElementById(query.slice(1));
+      return el ? [el] : [];
+    }
+    // Scoped search first (within the calling component), then global fallback
+    const scoped = contextEl?.querySelectorAll(query) || [];
+    return scoped.length > 0 ? [...scoped] : [...document.querySelectorAll(query)];
+  };
+
   const createBatcher = () => {
     let queued = false;
     const componentsToUpdate = new Set();
@@ -127,9 +145,20 @@ const Lego = (() => {
 
       const helpers = {
         $ancestors: (tag) => findAncestorState(context.self, tag),
-        // Helper to access shared state by tag name
         $registry: (tag) => sharedStates.get(tag.toLowerCase()),
         $element: context.self,
+        $params: Lego.globals.params,
+        /**
+         * The $go helper for surgical routing
+         * @param {string} path - URL to navigate to
+         * @param {...(string|function)} targets - Specific components or IDs to swap
+         */
+        $go: (path, ...targets) => {
+          // Store string-based targets in history state for 'popstate' restoration
+          const serializedTargets = targets.filter(t => typeof t === 'string');
+          history.pushState({ legoTargets: serializedTargets }, '', path);
+          _matchRoute(targets.length ? targets : null, context.self);
+        },
         $emit: (name, detail) => {
           context.self.dispatchEvent(new CustomEvent(name, {
             detail,
@@ -402,11 +431,21 @@ const Lego = (() => {
     [...el.children].forEach(unsnap);
   };
 
-  const _matchRoute = async () => {
+  const _matchRoute = async (targetQueries = null, contextEl = null) => {
     const path = window.location.pathname;
     const match = routes.find(r => r.regex.test(path));
-    const outlet = document.querySelector('lego-router');
-    if (!outlet || !match) return;
+    if (!match) return;
+
+    // Resolve targets: Functional selectors > List of queries > History State > Default lego-router
+    let resolvedElements = [];
+    if (targetQueries) {
+      resolvedElements = targetQueries.flatMap(query => resolveTargets(query, contextEl));
+    } else {
+      const defaultOutlet = document.querySelector('lego-router');
+      if (defaultOutlet) resolvedElements = [defaultOutlet];
+    }
+
+    if (resolvedElements.length === 0) return;
 
     const values = path.match(match.regex).slice(1);
     const params = Object.fromEntries(match.paramNames.map((n, i) => [n, values[i]]));
@@ -417,7 +456,13 @@ const Lego = (() => {
     }
 
     Lego.globals.params = params;
-    outlet.innerHTML = `<${match.tagName}></${match.tagName}>`;
+
+    // Surgical swap into resolved targets
+    resolvedElements.forEach(el => {
+      if (el) {
+        el.innerHTML = `<${match.tagName}></${match.tagName}>`;
+      }
+    });
   };
 
   return {
@@ -431,21 +476,27 @@ const Lego = (() => {
       }));
       observer.observe(document.body, { childList: true, subtree: true });
 
-      // Also snap the root element (body) to catch attributes like @event
       snap(document.body);
 
-      // Bind body specifically to catch global listeners like @todo-added in go.html
-      // We pass a mock componentRoot that points to Lego.globals
       bind(document.body, { _studs: Lego.globals, _data: { bound: false } });
 
       if (routes.length > 0) {
-        window.addEventListener('popstate', _matchRoute);
+        // Smart History: Restore surgical targets on Back button
+        window.addEventListener('popstate', (event) => {
+          const targets = event.state?.legoTargets || null;
+          _matchRoute(targets);
+        });
+
         document.addEventListener('click', e => {
           const link = e.target.closest('a[b-link]');
           if (link) {
             e.preventDefault();
-            history.pushState({}, '', link.getAttribute('href'));
-            _matchRoute();
+            const href = link.getAttribute('href');
+            const targetAttr = link.getAttribute('b-target');
+            const targets = targetAttr ? targetAttr.split(' ') : [];
+
+            // Execute navigation via $go logic
+            Lego.globals.$go(href, ...targets);
           }
         });
         _matchRoute();
@@ -459,7 +510,6 @@ const Lego = (() => {
       registry[tagName] = t;
       sfcLogic.set(tagName, logic);
 
-      // Initialize shared state for $registry singleton
       sharedStates.set(tagName.toLowerCase(), reactive({ ...logic }, document.body));
 
       document.querySelectorAll(tagName).forEach(snap);

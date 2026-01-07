@@ -1,3 +1,9 @@
 node_modules/
 examples/vite-app/package-lock.json
-docs/.vitepress/cache
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# Editor/OS
+.vscode/
+.DS_Store
+*.log

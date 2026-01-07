@@ -12,6 +12,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
+      { text: 'Router', link: '/router/' },
       {
         text: 'v0.0.7',
         items: [
@@ -62,6 +63,19 @@ export default defineConfig({
             { text: 'Directives', link: '/api/directives' },
             { text: 'Lifecycle Hooks', link: '/api/lifecycle' },
             { text: 'Vite Plugin', link: '/api/vite-plugin' }
+          ]
+        }
+      ],
+      '/router/': [
+        {
+          text: 'LegoDOM Router',
+          items: [
+            { text: 'About', link: '/router/' },
+            { text: 'Basic Routing', link: '/router/basic-routing' },
+            { text: 'Surgical Swaps', link: '/router/surgical-swaps' },
+            { text: 'Cold Entry', link: '/router/cold-entry' },
+            { text: 'History', link: '/router/history' },
+            { text: 'Cold Entry', link: '/router/cold-entry' },
           ]
         }
       ],

@@ -1,0 +1,124 @@
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lego Test</title>
+  <script src="./main.js"></script>
+</head>
+
+<body @todo-added="() => {console.log('Todo added!')}">
+  <template b-id="todo-list" b-data="{
+      title: 'My Todo List',
+      items: [],
+      newItem: '',
+      mounted() {
+        console.log('Todo list mounted!');
+      }
+    }">
+    <style>
+      :host {
+        display: block;
+        font-family: system-ui, sans-serif;
+        padding: 20px;
+      }
+
+      .done {
+        text-decoration: line-through;
+        color: #888;
+      }
+
+      .input {
+        padding: .4em;
+        border: 1px solid #ccc;
+        border-radius: 0.1em;
+      }
+
+      .item-row {
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      button {
+        cursor: pointer;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 0px;
+        background-color: #404;
+        color: #fff;
+      }
+
+      h3 {
+        color: #318d8d;
+        margin-top: 0;
+      }
+    </style>
+
+    <h3>{{title}}</h3>
+    <p>{{ items.filter(t => !t.done).length }} of {{ items.length }} items remaining</p>
+    <div style="margin-bottom: 20px;">
+      <input b-sync="newItem" placeholder="Add task..." class="input">
+      <button @click="() => {
+            if(!newItem.trim()) return;
+            items.push({text: `${newItem} - ${items.length + 1}`, done: false});
+            newItem = '';
+            $emit('todo-added', { item: newItem });
+          }">Add</button>
+    </div>
+
+    <div b-for="todo in items">
+      <div class="item-row {{todo.done ? 'done' : ''}}">
+        <input type="checkbox" b-sync="todo.done">
+        <span>{{todo.text}}</span>
+      </div>
+    </div>
+  </template>
+
+  <template b-id="user-card" b-data="{
+      name: 'Anonymous',
+      bio: 'No bio provided'
+    }">
+    <style>
+      :host {
+        display: block;
+        font-family: system-ui, sans-serif;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      h3 {
+        color: #62318d;
+        margin-top: 0;
+      }
+    </style>
+
+    <h3>{{name}}</h3>
+    <p>{{bio}}</p>
+    <slot></slot>
+  </template>
+
+  <!-- Using defaults -->
+  <user-card>
+    <p>This user uses default data from the template.</p>
+  </user-card>
+
+  <!-- Overriding defaults -->
+  <user-card b-data="{
+        name: 'John Doe',
+        bio: 'Software Engineer'
+      }">
+    <p>This user overrides the defaults.</p>
+
+    <todo-list b-data="{
+          title: 'Work Tasks',
+          items: [{text: 'Implement template defaults', done: true}]
+        }">
+    </todo-list>
+  </user-card>
+</body>
+
+</html>
