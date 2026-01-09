@@ -36,6 +36,29 @@ const Lego = (() => {
     return scoped.length > 0 ? [...scoped] : [...document.querySelectorAll(query)];
   };
 
+  /**
+   * Universal Routing Helper
+   * Shared between Lego.globals.$go and template helpers
+   */
+  const _go = (path, ...targets) => (contextEl) => {
+    const execute = async (method, body = null, pushState = true, options = {}) => {
+      if (pushState) {
+        const serializedTargets = targets.filter(t => typeof t === 'string');
+        const state = { legoTargets: serializedTargets, method, body };
+        history.pushState(state, '', path);
+      }
+      await _matchRoute(targets.length ? targets : null, contextEl);
+    };
+
+    return {
+      get: (push = true, opt = {}) => execute('GET', null, push, opt),
+      post: (data, push = true, opt = {}) => execute('POST', data, push, opt),
+      put: (data, push = true, opt = {}) => execute('PUT', data, push, opt),
+      patch: (data, push = true, opt = {}) => execute('PATCH', data, push, opt),
+      delete: (push = true, opt = {}) => execute('DELETE', null, push, opt)
+    };
+  };
+
   const createBatcher = () => {
     let queued = false;
     const componentsToUpdate = new Set();
@@ -158,23 +181,7 @@ const Lego = (() => {
          * @param {string} path - URL to navigate to
          * @param {...(string|function)} targets - Specific components or IDs to swap
          */
-        $go: (path, ...targets) => {
-          const execute = async (method, body = null, pushState = true, options = {}) => {
-            if (pushState) {
-              const serializedTargets = targets.filter(t => typeof t === 'string');
-              history.pushState({ legoTargets: serializedTargets }, '', path);
-            }
-            await _matchRoute(targets.length ? targets : null, context.self);
-          };
-
-          return {
-            get: (push = true, opt = {}) => execute('GET', null, push, opt),
-            post: (data, push = true, opt = {}) => execute('POST', data, push, opt),
-            put: (data, push = true, opt = {}) => execute('PUT', data, push, opt),
-            patch: (data, push = true, opt = {}) => execute('PATCH', data, push, opt),
-            delete: (push = true, opt = {}) => execute('DELETE', null, push, opt)
-          };
-        },
+        $go: (path, ...targets) => _go(path, ...targets)(context.self),
         $emit: (name, detail) => {
           context.self.dispatchEvent(new CustomEvent(name, {
             detail,
@@ -576,7 +583,6 @@ const Lego = (() => {
             const targetAttr = link.getAttribute('b-target');
             const targets = targetAttr ? targetAttr.split(/\s+/).filter(Boolean) : [];
 
-            // Flag logic: if b-link attribute exists, we push to history
             const shouldPush = link.getAttribute('b-link') !== 'false';
 
             // Execute via the chainable API
@@ -594,7 +600,8 @@ const Lego = (() => {
         query: {},
         method: 'GET',
         body: null
-      }
+      },
+      $go: (path, ...targets) => _go(path, ...targets)(document.body)
     }, document.body),
     define: (tagName, templateHTML, logic = {}, styles = "") => {
       const t = document.createElement('template');
