@@ -31,6 +31,7 @@
 </head>
 
 <body>
+  <app-navbar></app-navbar>
   <h1>Lego + Vite Example</h1>
 
   <div class="info">
@@ -41,7 +42,9 @@
   <!-- These components are automatically discovered and hydrated -->
   <sample-component></sample-component>
   <greeting-card></greeting-card>
-  <todo-list></todo-list>
+  <div id="todo-container">
+    <todo-list></todo-list>
+  </div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

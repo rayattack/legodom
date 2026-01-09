@@ -160,26 +160,9 @@ const Lego = (() => {
          */
         $go: (path, ...targets) => {
           const execute = async (method, body = null, pushState = true, options = {}) => {
-            const isAbsolute = /^(http|https):\/\//.test(path);
-            const defaultCreds = isAbsolute ? 'include' : 'same-origin';
-            const serializedTargets = targets.filter(t => typeof t === 'string');
-            if (pushState) history.pushState({ legoTargets: serializedTargets }, '', path);
-
-            try {
-              await fetch(path, {
-                method,
-                credentials: options.credentials || defaultCreds,
-                headers: {
-                  'Accept': 'text/html',
-                  'X-Lego-Request': 'true',
-                  ...(options.headers || {})
-                },
-                body: body instanceof Object && !(body instanceof FormData)
-                  ? JSON.stringify(body)
-                  : body
-              });
-            } catch (e) {
-              console.error(`[Lego] Routing fetch failed:`, e);
+            if (pushState) {
+              const serializedTargets = targets.filter(t => typeof t === 'string');
+              history.pushState({ legoTargets: serializedTargets }, '', path);
             }
             await _matchRoute(targets.length ? targets : null, context.self);
           };
@@ -524,6 +507,8 @@ const Lego = (() => {
     Lego.globals.$route.route = match.path;
     Lego.globals.$route.params = params;
     Lego.globals.$route.query = query;
+    Lego.globals.$route.method = history.state?.method || 'GET';
+    Lego.globals.$route.body = history.state?.body || null;
 
     resolvedElements.forEach(el => {
       if (el) {
@@ -578,8 +563,13 @@ const Lego = (() => {
           _matchRoute(targets);
         });
 
+        document.addEventListener('submit', e => {
+          e.preventDefault();
+        })
+
         document.addEventListener('click', e => {
-          const link = e.target.closest('a[b-target]');
+          const path = e.composedPath();
+          const link = path.find(el => el.tagName === 'A' && (el.hasAttribute('b-target') || el.hasAttribute('b-link')));
           if (link) {
             e.preventDefault();
             const href = link.getAttribute('href');
@@ -587,7 +577,7 @@ const Lego = (() => {
             const targets = targetAttr ? targetAttr.split(/\s+/).filter(Boolean) : [];
 
             // Flag logic: if b-link attribute exists, we push to history
-            const shouldPush = link.hasAttribute('b-link') && link.getAttribute('b-link') !== 'false';
+            const shouldPush = link.getAttribute('b-link') !== 'false';
 
             // Execute via the chainable API
             Lego.globals.$go(href, ...targets).get(shouldPush);
@@ -601,7 +591,9 @@ const Lego = (() => {
         url: window.location.pathname,
         route: '',
         params: {},
-        query: {}
+        query: {},
+        method: 'GET',
+        body: null
       }
     }, document.body),
     define: (tagName, templateHTML, logic = {}, styles = "") => {
