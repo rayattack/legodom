@@ -8,7 +8,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lego-dom": "file:../.."
+    "@tailwindcss/vite": "^4.1.18",
+    "lego-dom": "file:../..",
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
     "vite": "^5.0.0"

@@ -7,20 +7,28 @@
  * Parse a .lego file content into structured sections
  * @param {string} content - Raw .lego file content
  * @param {string} filename - Filename for error reporting
- * @returns {{template: string, script: string, style: string, componentName: string}}
+ * @returns {{template: string, script: string, style: string, stylesAttr: string, componentName: string}}
  */
 export function parseLego(content, filename = 'component.lego') {
   const result = {
     template: '',
     script: '',
     style: '',
+    stylesAttr: '', // Stores the value of the b-styles attribute
     componentName: deriveComponentName(filename)
   };
 
-  // Extract template section
-  const templateMatch = content.match(/<template>([\s\S]*?)<\/template>/);
+  // Updated to capture attributes on the template tag (like b-styles)
+  const templateMatch = content.match(/<template([\s\S]*?)>([\s\S]*?)<\/template>/);
   if (templateMatch) {
-    result.template = templateMatch[1].trim();
+    const attrs = templateMatch[1];
+    result.template = templateMatch[2].trim();
+
+    // Extract b-styles value from the attributes string
+    const bStylesMatch = attrs.match(/b-styles=["']([^"']+)["']/);
+    if (bStylesMatch) {
+      result.stylesAttr = bStylesMatch[1];
+    }
   }
 
   // Extract script section
@@ -51,11 +59,12 @@ export function deriveComponentName(filename) {
 
 /**
  * Generate Lego.define() code from parsed .lego file
+ * Updated to include the 4th argument for styles
  * @param {object} parsed - Parsed .lego file object
  * @returns {string} - JavaScript code string
  */
 export function generateDefineCall(parsed) {
-  const { componentName, template, script, style } = parsed;
+  const { componentName, template, script, style, stylesAttr } = parsed;
 
   // Build template HTML
   let templateHTML = '';
@@ -79,8 +88,8 @@ export function generateDefineCall(parsed) {
     }
   }
 
-  // Generate the Lego.define call
-  return `Lego.define('${componentName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode});`;
+  // Generate the Lego.define call with the new 4th argument (stylesAttr)
+  return `Lego.define('${componentName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, '${stylesAttr}');`;
 }
 
 /**

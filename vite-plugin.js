@@ -82,16 +82,17 @@ export default function legoPlugin(options = {}) {
         const content = fs.readFileSync(filePath, 'utf-8');
         const filename = path.basename(filePath);
 
-        const parsed = parseLego(content, filename);
+        const parsed = parseLego(content, filename); // Now captures b-styles attribute
         const validation = validateLego(parsed);
 
         if (!validation.valid) {
           throw new Error(`Invalid .lego file "${filename}":\n${validation.errors.join('\n')}`);
         }
 
+        // generateDefineCall now includes the extracted stylesAttr as the 4th argument
         const defineCall = generateDefineCall(parsed);
 
-        // Return as module that executes the define call
+        // Return as module that executes the define call with style support
         return `
 import { Lego } from 'lego-dom/main.js';
 
@@ -105,7 +106,7 @@ export default '${parsed.componentName}';
     handleHotUpdate({ file, server }) {
       if (file.endsWith('.lego')) {
         console.log(`[vite-plugin-lego] Hot reload: ${path.basename(file)}`);
-        // Trigger full reload for .lego files
+        // Trigger full reload for .lego files to re-initialize styles and registry
         server.ws.send({
           type: 'full-reload',
           path: '*'
@@ -124,6 +125,7 @@ export default '${parsed.componentName}';
         }
 
         return {
+          // code now includes Lego.define(tag, html, logic, styles)
           code: generateDefineCall(parsed),
           map: null
         };

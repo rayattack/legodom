@@ -4,6 +4,10 @@ const Lego = (() => {
 
   const sfcLogic = new Map();
   const sharedStates = new Map();
+
+  const styleRegistry = new Map();
+  let styleConfig = {};
+
   const routes = [];
 
   const escapeHTML = (str) => {
@@ -327,13 +331,13 @@ const Lego = (() => {
     const processNode = (node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         if (node._tpl === undefined) node._tpl = node.textContent;
-        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state: scope, self: node }) ?? ''));
+        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope, self: node }) ?? '');
         if (node.textContent !== out) node.textContent = out;
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         [...node.attributes].forEach(attr => {
           if (attr._tpl === undefined) attr._tpl = attr.value;
           if (attr._tpl.includes('{{')) {
-            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state: scope, self: node }) ?? ''));
+            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope, self: node }) ?? '');
             if (attr.value !== out) {
               attr.value = out;
               if (attr.name === 'class') node.className = out;
@@ -377,14 +381,14 @@ const Lego = (() => {
           }
         }
         if (b.type === 'b-show') b.node.style.display = safeEval(b.expr, { state, self: b.node }) ? '' : 'none';
-        if (b.type === 'b-text') b.node.textContent = escapeHTML(resolve(b.path, state));
+        if (b.type === 'b-text') b.node.textContent = resolve(b.path, state);
         if (b.type === 'b-sync') syncModelValue(b.node, resolve(b.node.getAttribute('b-sync'), state));
         if (b.type === 'text') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state, self: b.node }) ?? ''));
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state, self: b.node }) ?? '');
           if (b.node.textContent !== out) b.node.textContent = out;
         }
         if (b.type === 'attr') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state, self: b.node }) ?? ''));
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state, self: b.node }) ?? '');
           if (b.node.getAttribute(b.attrName) !== out) {
             b.node.setAttribute(b.attrName, out);
             if (b.attrName === 'class') b.node.className = out;
@@ -439,13 +443,19 @@ const Lego = (() => {
       const tpl = templateNode.content.cloneNode(true);
       const shadow = el.attachShadow({ mode: 'open' });
 
+      const styleKeys = (templateNode.getAttribute('b-styles') || "").split(/\s+/).filter(Boolean);
+      if (styleKeys.length > 0) {
+        const sheetsToApply = styleKeys.flatMap(key => styleRegistry.get(key) || []);
+        if (sheetsToApply.length > 0) {
+          shadow.adoptedStyleSheets = [...sheetsToApply];
+        }
+      }
+
       // TIER 1: Logic from Lego.define (SFC)
-      const scriptLogic = sfcLogic.get(name) || {};
-
       // TIER 2: Logic from the <template b-data="..."> attribute
-      const templateLogic = parseJSObject(templateNode.getAttribute('b-data') || '{}');
-
       // TIER 3: Logic from the <my-comp b-data="..."> tag
+      const scriptLogic = sfcLogic.get(name) || {};
+      const templateLogic = parseJSObject(templateNode.getAttribute('b-data') || '{}');
       const instanceLogic = parseJSObject(el.getAttribute('b-data') || '{}');
 
       // Priority: Script < Template < Instance
@@ -525,18 +535,41 @@ const Lego = (() => {
   };
 
   return {
-    init: () => {
+    init: async (root = document.body, styles = {}) => {
+      // If called as an event listener or with invalid root, fail over to document.body
+      if (!root || typeof root.nodeType !== 'number') root = document.body;
+      styleConfig = styles;
+
+      // Pre-load all defined style sets into Constructable Stylesheets
+      const loadPromises = Object.entries(styles).map(async ([key, urls]) => {
+        const sheets = await Promise.all(urls.map(async (url) => {
+          try {
+            const response = await fetch(url);
+            const cssText = await response.text();
+            const sheet = new CSSStyleSheet();
+            await sheet.replace(cssText);
+            return sheet;
+          } catch (e) {
+            console.error(`[Lego] Failed to load stylesheet: ${url}`, e);
+            return null;
+          }
+        }));
+        styleRegistry.set(key, sheets.filter(s => s !== null));
+      });
+      await Promise.all(loadPromises);
+
       document.querySelectorAll('template[b-id]').forEach(t => {
         registry[t.getAttribute('b-id')] = t;
       });
+
       const observer = new MutationObserver(m => m.forEach(r => {
         r.addedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && snap(n));
         r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
       }));
-      observer.observe(document.body, { childList: true, subtree: true });
+      observer.observe(root, { childList: true, subtree: true });
 
-      snap(document.body);
-      bind(document.body, { _studs: Lego.globals, _data: { bound: false } });
+      snap(root);
+      bind(root, { _studs: Lego.globals, _data: { bound: false } });
 
       if (routes.length > 0) {
         // Smart History: Restore surgical targets on Back button
@@ -571,9 +604,10 @@ const Lego = (() => {
         query: {}
       }
     }, document.body),
-    define: (tagName, templateHTML, logic = {}) => {
+    define: (tagName, templateHTML, logic = {}, styles = "") => {
       const t = document.createElement('template');
       t.setAttribute('b-id', tagName);
+      t.setAttribute('b-styles', styles);
       t.innerHTML = templateHTML;
       registry[tagName] = t;
       sfcLogic.set(tagName, logic);
@@ -594,6 +628,5 @@ const Lego = (() => {
 })();
 
 if (typeof window !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', Lego.init);
   window.Lego = Lego;
 }
