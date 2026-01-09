@@ -3,7 +3,7 @@ const Lego = (() => {
   const forPools = new WeakMap();
 
   const sfcLogic = new Map();
-  const sharedStates = new Map(); // Track singleton states for $registry
+  const sharedStates = new Map();
   const routes = [];
 
   const escapeHTML = (str) => {
@@ -16,6 +16,7 @@ const Lego = (() => {
   /**
    * Enterprise Target Resolver
    * Resolves strings (#id, tag-name) or functions into DOM Elements.
+   * This is crucial for the $go router helper to know where to inject content
    */
   const resolveTargets = (query, contextEl) => {
     if (typeof query === 'function') {
@@ -112,7 +113,7 @@ const Lego = (() => {
 
   const getPrivateData = (el) => {
     if (!privateData.has(el)) {
-      privateData.set(el, { snapped: false, bindings: null, bound: false, rendering: false });
+      privateData.set(el, { snapped: false, bindings: null, bound: false, rendering: false, anchor: null });
     }
     return privateData.get(el);
   };
@@ -147,17 +148,45 @@ const Lego = (() => {
         $ancestors: (tag) => findAncestorState(context.self, tag),
         $registry: (tag) => sharedStates.get(tag.toLowerCase()),
         $element: context.self,
-        $params: Lego.globals.params,
+        $route: Lego.globals.$route,
         /**
          * The $go helper for surgical routing
          * @param {string} path - URL to navigate to
          * @param {...(string|function)} targets - Specific components or IDs to swap
          */
         $go: (path, ...targets) => {
-          // Store string-based targets in history state for 'popstate' restoration
-          const serializedTargets = targets.filter(t => typeof t === 'string');
-          history.pushState({ legoTargets: serializedTargets }, '', path);
-          _matchRoute(targets.length ? targets : null, context.self);
+          const execute = async (method, body = null, pushState = true, options = {}) => {
+            const isAbsolute = /^(http|https):\/\//.test(path);
+            const defaultCreds = isAbsolute ? 'include' : 'same-origin';
+            const serializedTargets = targets.filter(t => typeof t === 'string');
+            if (pushState) history.pushState({ legoTargets: serializedTargets }, '', path);
+
+            try {
+              await fetch(path, {
+                method,
+                credentials: options.credentials || defaultCreds,
+                headers: {
+                  'Accept': 'text/html',
+                  'X-Lego-Request': 'true',
+                  ...(options.headers || {})
+                },
+                body: body instanceof Object && !(body instanceof FormData)
+                  ? JSON.stringify(body)
+                  : body
+              });
+            } catch (e) {
+              console.error(`[Lego] Routing fetch failed:`, e);
+            }
+            await _matchRoute(targets.length ? targets : null, context.self);
+          };
+
+          return {
+            get: (push = true, opt = {}) => execute('GET', null, push, opt),
+            post: (data, push = true, opt = {}) => execute('POST', data, push, opt),
+            put: (data, push = true, opt = {}) => execute('PUT', data, push, opt),
+            patch: (data, push = true, opt = {}) => execute('PATCH', data, push, opt),
+            delete: (push = true, opt = {}) => execute('DELETE', null, push, opt)
+          };
         },
         $emit: (name, detail) => {
           context.self.dispatchEvent(new CustomEvent(name, {
@@ -258,8 +287,17 @@ const Lego = (() => {
       };
       if (isInsideBFor(node)) continue;
 
-      if (node.nodeType === 1) {
-        if (node.hasAttribute('b-if')) bindings.push({ type: 'b-if', node, expr: node.getAttribute('b-if') });
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        if (node.hasAttribute('b-if')) {
+          const expr = node.getAttribute('b-if');
+          // Create an anchor point to keep track of where the element belongs in the DOM
+          const anchor = document.createComment(`b-if: ${expr}`);
+          const data = getPrivateData(node);
+          data.anchor = anchor;
+          bindings.push({ type: 'b-if', node, anchor, expr });
+        }
+
+        if (node.hasAttribute('b-show')) bindings.push({ type: 'b-show', node, expr: node.getAttribute('b-show') });
         if (node.hasAttribute('b-for')) {
           const match = node.getAttribute('b-for').match(/^\s*(\w+)\s+in\s+(.+)\s*$/);
           if (match) {
@@ -278,7 +316,7 @@ const Lego = (() => {
         [...node.attributes].forEach(attr => {
           if (attr.value.includes('{{')) bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
         });
-      } else if (node.nodeType === 3 && node.textContent.includes('{{')) {
+      } else if (node.nodeType === Node.TEXT_NODE && node.textContent.includes('{{')) {
         bindings.push({ type: 'text', node, template: node.textContent });
       }
     }
@@ -287,11 +325,11 @@ const Lego = (() => {
 
   const updateNodeBindings = (root, scope) => {
     const processNode = (node) => {
-      if (node.nodeType === 3) {
+      if (node.nodeType === Node.TEXT_NODE) {
         if (node._tpl === undefined) node._tpl = node.textContent;
         const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state: scope, self: node }) ?? ''));
         if (node.textContent !== out) node.textContent = out;
-      } else if (node.nodeType === 1) {
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
         [...node.attributes].forEach(attr => {
           if (attr._tpl === undefined) attr._tpl = attr.value;
           if (attr._tpl.includes('{{')) {
@@ -323,7 +361,22 @@ const Lego = (() => {
       if (!data.bindings) data.bindings = scanForBindings(shadow);
 
       data.bindings.forEach(b => {
-        if (b.type === 'b-if') b.node.style.display = safeEval(b.expr, { state, self: b.node }) ? '' : 'none';
+        if (b.type === 'b-if') {
+          // If condition is false, the node is swapped with its anchor comment
+          const condition = !!safeEval(b.expr, { state, self: b.node });
+          const isAttached = !!b.node.parentNode;
+
+          if (condition && !isAttached) {
+            // Anchor must be in DOM to replace it
+            if (b.anchor.parentNode) {
+              b.anchor.parentNode.replaceChild(b.node, b.anchor);
+            }
+          } else if (!condition && isAttached) {
+            // Node must be in DOM to replace it
+            b.node.parentNode.replaceChild(b.anchor, b.node);
+          }
+        }
+        if (b.type === 'b-show') b.node.style.display = safeEval(b.expr, { state, self: b.node }) ? '' : 'none';
         if (b.type === 'b-text') b.node.textContent = escapeHTML(resolve(b.path, state));
         if (b.type === 'b-sync') syncModelValue(b.node, resolve(b.node.getAttribute('b-sync'), state));
         if (b.type === 'text') {
@@ -376,7 +429,7 @@ const Lego = (() => {
   };
 
   const snap = (el) => {
-    if (!el || el.nodeType !== 1) return;
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
     const data = getPrivateData(el);
     const name = el.tagName.toLowerCase();
     const templateNode = registry[name];
@@ -433,6 +486,7 @@ const Lego = (() => {
 
   const _matchRoute = async (targetQueries = null, contextEl = null) => {
     const path = window.location.pathname;
+    const search = window.location.search;
     const match = routes.find(r => r.regex.test(path));
     if (!match) return;
 
@@ -449,18 +503,23 @@ const Lego = (() => {
 
     const values = path.match(match.regex).slice(1);
     const params = Object.fromEntries(match.paramNames.map((n, i) => [n, values[i]]));
+    const query = Object.fromEntries(new URLSearchParams(search));
 
     if (match.middleware) {
       const allowed = await match.middleware(params, Lego.globals);
       if (!allowed) return;
     }
 
-    Lego.globals.params = params;
+    Lego.globals.$route.url = path + search;
+    Lego.globals.$route.route = match.path;
+    Lego.globals.$route.params = params;
+    Lego.globals.$route.query = query;
 
-    // Surgical swap into resolved targets
     resolvedElements.forEach(el => {
       if (el) {
-        el.innerHTML = `<${match.tagName}></${match.tagName}>`;
+        const component = document.createElement(match.tagName);
+        // Atomic swap: MutationObserver in init() will pick this up
+        el.replaceChildren(component);
       }
     });
   };
@@ -471,13 +530,12 @@ const Lego = (() => {
         registry[t.getAttribute('b-id')] = t;
       });
       const observer = new MutationObserver(m => m.forEach(r => {
-        r.addedNodes.forEach(n => n.nodeType === 1 && snap(n));
-        r.removedNodes.forEach(n => n.nodeType === 1 && unsnap(n));
+        r.addedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && snap(n));
+        r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
       }));
       observer.observe(document.body, { childList: true, subtree: true });
 
       snap(document.body);
-
       bind(document.body, { _studs: Lego.globals, _data: { bound: false } });
 
       if (routes.length > 0) {
@@ -488,21 +546,31 @@ const Lego = (() => {
         });
 
         document.addEventListener('click', e => {
-          const link = e.target.closest('a[b-link]');
+          const link = e.target.closest('a[b-target]');
           if (link) {
             e.preventDefault();
             const href = link.getAttribute('href');
             const targetAttr = link.getAttribute('b-target');
-            const targets = targetAttr ? targetAttr.split(' ') : [];
+            const targets = targetAttr ? targetAttr.split(/\s+/).filter(Boolean) : [];
 
-            // Execute navigation via $go logic
-            Lego.globals.$go(href, ...targets);
+            // Flag logic: if b-link attribute exists, we push to history
+            const shouldPush = link.hasAttribute('b-link') && link.getAttribute('b-link') !== 'false';
+
+            // Execute via the chainable API
+            Lego.globals.$go(href, ...targets).get(shouldPush);
           }
         });
         _matchRoute();
       }
     },
-    globals: reactive({}, document.body),
+    globals: reactive({
+      $route: {
+        url: window.location.pathname,
+        route: '',
+        params: {},
+        query: {}
+      }
+    }, document.body),
     define: (tagName, templateHTML, logic = {}) => {
       const t = document.createElement('template');
       t.setAttribute('b-id', tagName);
@@ -520,7 +588,7 @@ const Lego = (() => {
         paramNames.push(name);
         return '([^/]+)';
       });
-      routes.push({ regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
+      routes.push({ path, regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
     }
   };
 })();

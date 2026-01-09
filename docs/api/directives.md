@@ -2,13 +2,13 @@
 
 Special attributes that control DOM behavior.
 
-## b-if
+## b-show
 
 Conditionally render an element.
 
 ```html
-<div b-if="loading">Loading...</div>
-<div b-if="!loading">Content loaded!</div>
+<div b-show="loading">Loading...</div>
+<div b-show="!loading">Content loaded!</div>
 ```
 
 ## b-for

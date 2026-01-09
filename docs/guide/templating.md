@@ -343,8 +343,8 @@ If a calculation is expensive, cache it:
 ### Show/Hide Based on Condition
 
 ```html
-<p b-if="user">Welcome, {{ user.name }}!</p>
-<p b-if="!user">Please log in</p>
+<p b-show="user">Welcome, {{ user.name }}!</p>
+<p b-show="!user">Please log in</p>
 ```
 
 ### List with Index

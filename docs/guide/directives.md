@@ -2,34 +2,34 @@
 
 Directives are special attributes that add reactive behavior to elements.
 
-## b-if
+## b-show
 
 Conditional rendering using `display: none`.
 
 ### Basic Usage
 
 ```html
-<p b-if="isLoggedIn">Welcome back!</p>
-<p b-if="!isLoggedIn">Please log in</p>
+<p b-show="isLoggedIn">Welcome back!</p>
+<p b-show="!isLoggedIn">Please log in</p>
 ```
 
 ### With Expressions
 
 ```html
-<div b-if="count > 0">Count is {{ count }}</div>
-<div b-if="items.length === 0">No items</div>
-<div b-if="user && user.role === 'admin'">Admin panel</div>
+<div b-show="count > 0">Count is {{ count }}</div>
+<div b-show="items.length === 0">No items</div>
+<div b-show="user && user.role === 'admin'">Admin panel</div>
 ```
 
 ### Multiple Conditions
 
 ```html
-<p b-if="isLoggedIn && isPremium">Premium content</p>
-<p b-if="age >= 18 || hasParentConsent">Access granted</p>
+<p b-show="isLoggedIn && isPremium">Premium content</p>
+<p b-show="age >= 18 || hasParentConsent">Access granted</p>
 ```
 
 ::: tip How it Works
-`b-if` sets `display: none` when the condition is false. The element stays in the DOM but is hidden.
+`b-show` sets `display: none` when the condition is false. The element stays in the DOM but is hidden.
 :::
 
 ## b-for
@@ -83,8 +83,8 @@ Use `$index` (implicit variable):
 
 ```html
 <li b-for="user in users">
-  <span b-if="user.active">✅ {{ user.name }}</span>
-  <span b-if="!user.active">❌ {{ user.name }}</span>
+  <span b-show="user.active">✅ {{ user.name }}</span>
+  <span b-show="!user.active">❌ {{ user.name }}</span>
 </li>
 ```
 
@@ -103,7 +103,7 @@ Two-way data binding for form inputs.
 
 ```html
 <input type="checkbox" b-sync="agreed">
-<p b-if="agreed">You agreed to the terms</p>
+<p b-show="agreed">You agreed to the terms</p>
 ```
 
 ### Radio Buttons
@@ -268,10 +268,10 @@ Lego.define('user-card', `...`, {
 
 ## Combining Directives
 
-### b-if + b-for
+### b-show + b-for
 
 ```html
-<li b-for="item in items" b-if="item.visible">
+<li b-for="item in items" b-show="item.visible">
   {{ item.name }}
 </li>
 ```
@@ -296,11 +296,11 @@ Lego.define('user-card', `...`, {
 
 ## Best Practices
 
-### 1. Use b-if for Show/Hide
+### 1. Use b-show for Show/Hide
 
 ```html
 <!-- ✅ Clean -->
-<div b-if="showPanel">Panel content</div>
+<div b-show="showPanel">Panel content</div>
 
 <!-- ❌ Verbose -->
 <div style="display: {{ showPanel ? 'block' : 'none' }}">Panel content</div>
@@ -344,9 +344,9 @@ Move complex logic to methods.
 
 ## Performance Tips
 
-### b-if vs CSS
+### b-show vs CSS
 
-`b-if` is fine for most cases, but for frequently toggled elements, use CSS:
+`b-show` is fine for most cases, but for frequently toggled elements, use CSS:
 
 ```html
 <!-- For frequent toggling -->
@@ -386,7 +386,7 @@ Paginate large lists:
 
 ```html
 <button @click="visible = !visible">Toggle</button>
-<div b-if="visible">Content</div>
+<div b-show="visible">Content</div>
 ```
 
 ### Counter
@@ -418,9 +418,9 @@ Paginate large lists:
   <button @click="activeTab = 'settings'">Settings</button>
 </nav>
 
-<div b-if="activeTab === 'home'">Home content</div>
-<div b-if="activeTab === 'profile'">Profile content</div>
-<div b-if="activeTab === 'settings'">Settings content</div>
+<div b-show="activeTab === 'home'">Home content</div>
+<div b-show="activeTab === 'profile'">Profile content</div>
+<div b-show="activeTab === 'settings'">Settings content</div>
 ```
 
 ## Next Steps

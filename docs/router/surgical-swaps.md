@@ -15,18 +15,67 @@ If the sidebar reloads:
 2.  Any search text in the sidebar is cleared.
     
 3.  The UI "flickers," making the app feel slow.
-    
+
 
 ## The Solution: `b-target`
 
 The `b-target` directive allows a link to specify exactly where the new component should be rendered.
+
+
+### Example: messaging-shell.html
+
+In this SFC, we define a layout with a sidebar and a main content area. Clicking a contact updates _only_ the `<main>` area.
+
+```html
+<!-- messaging-shell.html -->
+<template>
+  <div class="messaging-layout">
+    <aside class="sidebar">
+      <h2>Contacts</h2>
+      <nav>
+        <a href="/chat/alice" b-link b-target="#chat-window">Alice</a>
+        <a href="/chat/bob" b-link b-target="#chat-window">Bob</a>
+      </nav>
+    </aside>
+
+    <main id="chat-window">
+      <p>Select a contact to start chatting.</p>
+    </main>
+  </div>
+</template>
+
+<script>
+  export default {
+    mounted() {
+      console.log("Messaging shell ready.");
+    }
+  }
+</script>
+
+<style>
+  .messaging-layout {
+    display: flex;
+    height: 100vh;
+  }
+  .sidebar {
+    width: 300px;
+    border-right: 1px solid #ccc;
+  }
+  #chat-window {
+    flex: 1;
+    padding: 20px;
+  }
+</style>
+
+```
 
 ### 1. Targeting by ID
 
 You can tell Lego to find a specific element by its ID and replace its contents.
 
 ```html
-<template b-id="messaging-shell">
+<!-- messaging-shell.html -->
+<template>
   <div class="layout">
     <aside class="sidebar">
       <div b-for="chat in threads">

@@ -10,11 +10,12 @@ export default defineConfig({
 
     nav: [
       { text: 'Guide', link: '/guide/' },
+      { text: 'Contributing', link: '/contributing/' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
       { text: 'Router', link: '/router/' },
       {
-        text: 'v0.0.7',
+        text: 'v1.0.0',
         items: [
           { text: 'Changelog', link: 'https://github.com/rayattack/LegoJS/releases' }
 
@@ -23,6 +24,30 @@ export default defineConfig({
     ],
 
     sidebar: {
+      '/contributing/': [
+        {
+          text: 'Contributing',
+          items: [
+            { text: 'Topic 1 - Welcome', link: '/contributing/01-welcome' },
+            { text: 'Topic 2 - The Registry', link: '/contributing/02-registry' },
+            { text: 'Topic 3 - Batching', link: '/contributing/03-batcher' },
+            { text: 'Topic 4 - Reactivity', link: '/contributing/04-reactivity' },
+            { text: 'Topic 5 - Caching', link: '/contributing/05-caching' },
+            { text: 'Topic 6 - LegoDOM Init', link: '/contributing/06-init' },
+            { text: 'Topic 7 - Observer', link: '/contributing/07-observer' },
+            { text: 'Topic 8 - Snap', link: '/contributing/08-snap' },
+            { text: 'Topic 9 - Diffing', link: '/contributing/09-diffing' },
+            { text: 'Topic 10 - State', 'link': '/contributing/10-studs' },
+            { text: 'Topic 11 - Scanner', 'link': '/contributing/11-scanner' },
+            { text: 'Topic 12 - Render', 'link': '/contributing/12-render' },
+            { text: 'Topic 13 - Directives', 'link': '/contributing/13-directives' },
+            { text: 'Topic 14 - Events', 'link': '/contributing/14-events' },
+            { text: 'Topic 15 - Router', 'link': '/contributing/15-router' },
+            { text: 'Topic 16 - State', 'link': '/contributing/16-state' },
+            { text: 'Topic 17 - LegoDOM', 'link': '/contributing/17-legodom' },
+          ]
+        }
+      ],
       '/guide/': [
         {
           text: 'Introduction',

@@ -27,7 +27,7 @@ Two-way data binding with `b-sync`.
 ```html
 <template b-id="name-input">
   <input b-sync="name" placeholder="Enter your name">
-  <p b-if="name">Hello, {{ name }}!</p>
+  <p b-show="name">Hello, {{ name }}!</p>
 </template>
 
 <name-input b-data="{ name: '' }"></name-input>

@@ -11,7 +11,7 @@ Welcome to the Lego API documentation.
 
 ## Templates & Binding
 
-- [Directives](/api/directives) - `b-if`, `b-for`, `b-sync`
+- [Directives](/api/directives) - `b-show`, `b-for`, `b-sync`
 
 ## Browser Support
 

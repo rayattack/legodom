@@ -243,8 +243,8 @@ While Lego doesn't have built-in nested routing, you can implement it:
     <a href="/blog/authors" b-link>Authors</a>
   </aside>
   <main>
-    <blog-posts b-if="global.params.section === 'posts'"></blog-posts>
-    <blog-authors b-if="global.params.section === 'authors'"></blog-authors>
+    <blog-posts b-show="global.params.section === 'posts'"></blog-posts>
+    <blog-authors b-show="global.params.section === 'authors'"></blog-authors>
   </main>
 </template>
 ```
@@ -330,8 +330,8 @@ Object.entries(routes).forEach(([path, component]) => {
 
 ```html
 <template b-id="user-profile">
-  <div b-if="loading">Loading...</div>
-  <div b-if="!loading">
+  <div b-show="loading">Loading...</div>
+  <div b-show="!loading">
     <h1>{{ user.name }}</h1>
     <p>{{ user.bio }}</p>
   </div>

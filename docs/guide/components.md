@@ -344,12 +344,12 @@ Clear timers, remove listeners:
 ### Loading States
 
 ```html
-<div b-if="loading">Loading...</div>
-<div b-if="!loading && data">
+<div b-show="loading">Loading...</div>
+<div b-show="!loading && data">
   <h2>{{ data.title }}</h2>
   <p>{{ data.content }}</p>
 </div>
-<div b-if="!loading && error">
+<div b-show="!loading && error">
   Error: {{ error }}
 </div>
 ```

@@ -40,16 +40,21 @@ In Lego, you just change the **Target**. Because the components are agnostic, th
 
 ### Defining with SFCs
 
-Instead of defining logic and templates in separate JavaScript strings, we use Single File Components via the `<template>` tag. This keeps our architectural "Shells" clean and readable.
+LegoDOM supports the use of Single File Components and this works seamlessly with the Router. You can define your Shell components via the `<template>` tag. This keeps our architectural "Shells" clean and readable.
 
 ```html
+<style></style>
 <template b-id="home-shell">
   <div class="layout">
     <nav-bar></nav-bar>
     <lego-router></lego-router> <!-- The global outlet -->
   </div>
 </template>
-
+<script>
+  export default {
+    name: 'HomeShell'
+  }
+</script>
 ```
 
 ### Key Vocabulary for the Tutorial

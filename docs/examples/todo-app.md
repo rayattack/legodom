@@ -212,7 +212,7 @@ A complete todo application demonstrating Lego features.
       <span>{{ remaining() }} item{{ remaining() === 1 ? '' : 's' }} left</span>
       <button 
         class="clear-completed" 
-        b-if="completedCount() > 0"
+        b-show="completedCount() > 0"
         @click="clearCompleted()">
         Clear completed ({{ completedCount() }})
       </button>

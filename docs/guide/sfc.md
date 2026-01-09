@@ -215,7 +215,7 @@ Contains your component's HTML markup with Lego directives:
 ```html
 <template>
   <h1>{{ title }}</h1>
-  <p b-if="showContent">{{ content }}</p>
+  <p b-show="showContent">{{ content }}</p>
   <ul>
     <li b-for="item in items">{{ item }}</li>
   </ul>

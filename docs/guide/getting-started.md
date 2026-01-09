@@ -211,12 +211,12 @@ Use `@eventname` to handle events:
 
 Special attributes for common patterns:
 
-- `b-if` - Conditional rendering
+- `b-show` - Conditional rendering
 - `b-for` - List rendering
 - `b-sync` - Two-way binding
 
 ```html
-<p b-if="isLoggedIn">Welcome back!</p>
+<p b-show="isLoggedIn">Welcome back!</p>
 <li b-for="item in items">{{ item.name }}</li>
 <input b-sync="username" />
 ```

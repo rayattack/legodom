@@ -176,11 +176,11 @@ A multi-page application demonstrating client-side routing.
       }
     </style>
     
-    <div b-if="loading" class="loading">
+    <div b-show="loading" class="loading">
       Loading user...
     </div>
     
-    <div b-if="!loading && user" class="profile">
+    <div b-show="!loading && user" class="profile">
       <h1>{{ user.name }}</h1>
       <p><strong>Email:</strong> {{ user.email }}</p>
       <p><strong>Phone:</strong> {{ user.phone }}</p>
@@ -243,7 +243,7 @@ A multi-page application demonstrating client-side routing.
     
     <h1>Contact Us</h1>
     
-    <form b-if="!submitted" @submit="handleSubmit(event)">
+    <form b-show="!submitted" @submit="handleSubmit(event)">
       <div class="form-group">
         <label>Name</label>
         <input b-sync="form.name" required>
@@ -262,7 +262,7 @@ A multi-page application demonstrating client-side routing.
       <button type="submit">Send Message</button>
     </form>
     
-    <div b-if="submitted" class="success">
+    <div b-show="submitted" class="success">
       <h3>✅ Message Sent!</h3>
       <p>Thank you for contacting us, {{ form.name }}. We'll respond to {{ form.email }} soon.</p>
       <button @click="submitted = false">Send Another</button>
