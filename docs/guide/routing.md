@@ -12,12 +12,12 @@ Lego includes a built-in client-side router for building single-page application
 
 This is where your routed components will render.
 
-### 2. Define Routes
-
-```js
 Lego.route('/', 'home-page');
 Lego.route('/about', 'about-page');
 Lego.route('/contact', 'contact-page');
+
+// 3. Initialize the Engine
+Lego.init();
 ```
 
 ### 3. Create Page Components
@@ -93,6 +93,9 @@ The `b-link` attribute hijacks clicks to prevent page reloads.
     Lego.route('/', 'home-page');
     Lego.route('/blog', 'blog-page');
     Lego.route('/about', 'about-page');
+
+    // Start the routing engine
+    Lego.init();
   </script>
 </body>
 </html>

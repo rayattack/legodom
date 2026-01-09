@@ -49,27 +49,27 @@
 <template>
   <div class="header">{{ title }}</div>
   <div class="content">
-    <p>This is a sample Lego component loaded from a .lego file!</p>
+    <p class="gobe">This is a sample Lego component loaded from a .lego file!</p>
     <p>Message: {{ message }}</p>
   </div>
   <button @click="incrementCount()">
-    Click me! 
+    Click me!
     <span class="count">{{ count }}</span>
   </button>
 </template>
 
 <script>
-export default {
-  title: 'Sample Component',
-  message: 'Hello from .lego file!',
-  count: 0,
-  
-  incrementCount() {
-    this.count++;
-  },
-  
-  mounted() {
-    console.log('Sample component mounted!');
+  export default {
+    title: 'Sample Component',
+    message: 'Hello from .lego file!',
+    count: 0,
+
+    incrementCount() {
+      this.count++;
+    },
+
+    mounted() {
+      console.log('Sample component mounted!');
+    }
   }
-}
 </script>

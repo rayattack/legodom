@@ -86,9 +86,21 @@ features:
 <counter-button b-data="{ title: 'Override b-data title' }"></counter-button>
 
 <script src="https://unpkg.com/lego-dom/main.js"></script>
+<script>
+  // Complete the initialization
+  Lego.init();
+</script>
 ```
 
 That's it. No build step, no npm, no configuration.
+
+> [!IMPORTANT]
+> **Why call `Lego.init()`?**
+> While `Lego.define()` will "snap" your components into the page immediately, you must call `Lego.init()` to start the background engine. Without it:
+> - **Reactivity** to data changes won't work.
+> - **Mustaches** (`{{...}}`) outside of components won't hydrate.
+> - **Single Page Routing** won't be activated.
+> - **New components** added to the DOM dynamically won't be auto-initialized.
 
 ## Why Lego?
 

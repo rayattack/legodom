@@ -22,4 +22,6 @@ Lego.route('/admin', 'admin-panel', async (params, globals) => {
 });
 
 // Initialize Lego
-console.log('Lego initialized with SPA routes!');
+await Lego.init(document.body, {
+  tailwind: ['/src/app.css']
+})

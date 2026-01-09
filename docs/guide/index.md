@@ -64,8 +64,8 @@ No proprietary APIs. Everything is built on web standards.
 The core library (`main.js`) is **under 500 lines** of well-commented JavaScript.
 
 - **No dependencies** - Zero `node_modules` bloat
-- **~17KB** - Unminified, human-readable code
-- **~6KB** - Minified and gzipped
+- **~22KB** - Unminified, human-readable code
+- **~7KB** - Minified and gzipped
 
 Compare that to:
 - Vue 3: ~33KB (minified + gzipped)
@@ -77,7 +77,7 @@ Compare that to:
 | Aspect | Lego | Traditional Frameworks |
 |--------|--------|----------------------|
 | **Reactivity** | Direct object mutation | setState / dispatch / ref() |
-| **Templates** | HTML with `{{ }}` | JSX / template syntax |
+| **Templates** | HTML with <code v-pre>{{ }}</code> | JSX / template syntax |
 | **Styles** | Shadow DOM (native) | CSS-in-JS / scoped CSS |
 | **Build** | Optional | Required |
 | **Learning Curve** | Hours | Days/Weeks |

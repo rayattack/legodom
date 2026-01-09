@@ -21,6 +21,9 @@ Lego works perfectly without any build tools. Just include it via CDN and start 
   
   <!-- Include Lego -->
   <script src="https://unpkg.com/lego-dom/main.js"></script>
+  <script>
+    Lego.init();
+  </script>
 </body>
 </html>
 ```
@@ -162,6 +165,9 @@ Here's a full working application using only CDN:
         return this.todos.filter(t => !t.done).length;
       }
     });
+
+    // Don't forget to init!
+    Lego.init();
   </script>
 </body>
 </html>
@@ -208,6 +214,8 @@ Lego is perfect for progressively enhancing existing sites:
       window.location.href = '/logout';
     }
   });
+
+  Lego.init();
 </script>
 ```
 

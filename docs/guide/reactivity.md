@@ -145,9 +145,30 @@ This prevents unnecessary DOM updates and improves performance.
   
   updated() {
     console.log('DOM updated with:', this.count);
-    // DOM is updated now!
   }
 }
+```
+
+## Global Reactivity
+
+Lego also supports **Global State** available to all components and the main document.
+
+```js
+// src/main.js
+Lego.globals.isLoggedIn = true;
+```
+
+For global state to automatically update mustaches in your `index.html`, you must initialize the engine:
+
+```js
+// Enables global reactivity and the MutationObserver
+Lego.init();
+```
+
+Inside any component, you can access global state via `global`:
+
+```html
+<p b-show="global.isLoggedIn">Welcome!</p>
 ```
 
 ## Deep Reactivity

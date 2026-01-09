@@ -27,7 +27,7 @@ The fastest way to get started with Lego is using the CDN. No build tools requir
     <!-- 4. Load Lego -->
     <script src="https://unpkg.com/lego-dom/main.js"></script>
     
-    <!-- 5. Define logic (Optional) -->
+    <!-- 5. Define logic & Init -->
     <script>
         document.querySelector('hello-world').state = {
             name: 'World',
@@ -35,6 +35,9 @@ The fastest way to get started with Lego is using the CDN. No build tools requir
                 this.name = this.name === 'World' ? 'Lego' : 'World';
             }
         };
+
+        // Start the engine
+        Lego.init();
     </script>
 </body>
 </html>

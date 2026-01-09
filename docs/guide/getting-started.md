@@ -18,8 +18,10 @@ The fastest way to try Lego is via CDN:
   <my-component></my-component>
   
   <script src="https://unpkg.com/lego-dom/main.js"></script>
-  <template b-id="my-component">
+  <template b-id="my-component" b-data="{ count: 0 }">
     <h1>Hello Lego!</h1>
+    <button @click="count++">Click me</button>
+    <p>Count: {{ count }}</p>
   </template>
 </body>
 </html>
@@ -42,7 +44,11 @@ import { Lego } from 'lego-dom';
 
 Lego.define('my-component', `
   <h1>Hello Lego!</h1>
-`);
+  <button @click="count++">Click me</button>
+  <p>Count: {{ count }}</p>
+`, {
+  count: 0,
+});
 ```
 
 ### Option 3: With Vite (Recommended for Larger Projects)
@@ -64,6 +70,21 @@ import legoPlugin from 'lego-dom/vite-plugin';
 export default defineConfig({
   plugins: [legoPlugin()]
 });
+```
+
+### The Runtime Engine
+
+Crucially, you must initialize the Lego background engine in your entry file (`src/main.js`):
+
+```js
+import { Lego } from 'lego-dom';
+import registerComponents from 'virtual:lego-components';
+
+// 1. Register SFCs
+registerComponents();
+
+// 2. Start the Engine (Async)
+await Lego.init();
 ```
 
 ## Your First Component
@@ -227,6 +248,7 @@ Special attributes for common patterns:
 - ✅ How to create your first component
 - ✅ The basics of templates, state, and events
 - ✅ Available directives
+- ✅ The importance of the `Lego.init()` engine
 
 ## Next Steps
 
