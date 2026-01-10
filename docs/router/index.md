@@ -3,7 +3,7 @@
 
 Traditional Single Page Application (SPA) routers (like React Router, Vue Router, or Angular's Router) rely on a **Centralized Configuration Tree**. As your project grows, this JSON or JavaScript object becomes a "source of truth" that is fragile, hard to maintain, and forces a rigid hierarchy on your UI.
 
-**LegoJS breaks this pattern.**
+**LegoDOM breaks this pattern.**
 
 In Lego, we don't nest routes in a config file. Instead, we use the **URL as the Data Source** and the **DOM as the Layout Engine**.
 

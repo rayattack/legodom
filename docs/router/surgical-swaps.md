@@ -1,6 +1,6 @@
 # Surgical Swaps: Mastering b-target
 
-The true power of LegoJS lies in its ability to perform **Surgical Swaps**. In a traditional application, clicking a link often causes the entire page to re-render, destroying the state of your sidebar, header, or scroll position.
+The true power of LegoDOM lies in its ability to perform **Surgical Swaps**. In a traditional application, clicking a link often causes the entire page to re-render, destroying the state of your sidebar, header, or scroll position.
 
 With `b-target` (and optionally `b-link`), we can choose to update only a specific "fragment" of the page.
 
@@ -110,7 +110,7 @@ Because Lego is built on Custom Elements, you can target a component tag directl
 
 ## How the Target Resolver Works
 
-When you click a link with a `b-target`, the LegoJS **Target Resolver** follows a specific hierarchy:
+When you click a link with a `b-target`, the LegoDOM **Target Resolver** follows a specific hierarchy:
 
 1.  **Local Scope**: It looks for the target inside the current component first. This prevents "ID collisions" if you have multiple instances of a layout.
     
@@ -123,7 +123,7 @@ When you click a link with a `b-target`, the LegoJS **Target Resolver** follows 
 
 ## Smart History
 
-Even though we are only swapping a small part of the DOM, LegoJS is smart enough to update the browser's address bar.
+Even though we are only swapping a small part of the DOM, LegoDOM is smart enough to update the browser's address bar.
 
 When a surgical swap happens, Lego saves the "target" information into the browser's history state (`history.state.legoTargets`). This means that when a user hits the **Back Button**, Lego knows exactly which fragment needs to be swapped back to its previous state.
 

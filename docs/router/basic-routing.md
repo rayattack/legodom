@@ -1,6 +1,6 @@
 # Basic Routing: The Global Outlet
 
-Before we dive into surgical swaps, we must understand how LegoJS handles the initial entry into your application. Every application needs a primary gateway—a place where the main content lives. In Lego, this is the `<lego-router>`.
+Before we dive into surgical swaps, we must understand how LegoDOM handles the initial entry into your application. Every application needs a primary gateway—a place where the main content lives. In LegoDOM, this is the `<lego-router>`.
 
 ## The Entry Point
 
@@ -15,7 +15,7 @@ In your `index.html`, you define a single custom element that acts as the "Maste
 ```
 
 
-When the page loads, the LegoJS router looks at the current browser URL and searches its internal "Route Map" for a match.
+When the page loads, the LegoDOM router looks at the current browser URL and searches its internal "Route Map" for a match.
 
 ## Defining Your First Routes
 
@@ -32,16 +32,16 @@ Lego.route('/user/:id', 'profile-page');
 
 ### How the Matching Works
 
-1.  **The Match**: Lego uses Regex to compare the window location with your defined paths.
+1.  **The Match**: LegoDOM uses Regex to compare the window location with your defined paths.
     
-2.  **The Injection**: If a match is found, Lego creates an instance of the associated component (e.g., `<home-page>`) and injects it into the `<lego-router>` tag.
+2.  **The Injection**: If a match is found, LegoDOM creates an instance of the associated component (e.g., `<home-page>`) and injects it into the `<lego-router>` tag.
     
 3.  **The Hydration**: The framework then "snaps" the component to life, initializing its state and running its `mounted()` lifecycle hook.
     
 
 ## The Global Fallback
 
-If no route matches the current URL, LegoJS looks for a special fallback route. This is essential for handling **404 Not Found** states gracefully.
+If no route matches the current URL, LegoDOM looks for a special fallback route. This is essential for handling **404 Not Found** states gracefully.
 
 ```js
 Lego.route('*', 'not-found-page');
@@ -50,7 +50,7 @@ Lego.route('*', 'not-found-page');
 
 ## Handling Parameters (`$params`)
 
-When you use a dynamic path like `/user/:id`, Lego automatically parses the URL and makes the data available to the component via the global `$route` object.
+When you use a dynamic path like `/user/:id`, LegoDOM automatically parses the URL and makes the data available to the component via the global `$route` object.
 
 In your component template:
 

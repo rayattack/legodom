@@ -1,7 +1,7 @@
 
 # 06. Target Resolver: Scoping and Logic
 
-In the previous chapters, we used `b-target` to send content to different parts of the page. But how does LegoJS actually find those "holes" in a complex, nested DOM? This is where the **Target Resolver** comes in.
+In the previous chapters, we used `b-target` to send content to different parts of the page. But how does LegoDOM actually find those "holes" in a complex, nested DOM? This is where the **Target Resolver** comes in.
 
 The Target Resolver is a prioritized logic engine that ensures your links always find the correct destination, even in massive applications with thousands of components.
 
@@ -16,11 +16,11 @@ In traditional JavaScript, if you use `document.querySelector('#detail-view')`, 
 
 ## The Resolver Hierarchy
 
-When you click a `b-link` with a `b-target`, LegoJS follows a strict search order to resolve the target:
+When you click a `b-link` with a `b-target`, LegoDOM follows a strict search order to resolve the target:
 
 ### 1. Local Component Scope (The Primary Search)
 
-LegoJS first looks for the target **inside the component that contains the link**.
+LegoDOM first looks for the target **inside the component that contains the link**.
 
 If you use `b-target="email-view"`, Lego looks for an `<email-view>` tag _within the current parent shell_. This allows you to have multiple instances of the same layout on one screen without them interfering with each other.
 
@@ -66,7 +66,7 @@ For highly dynamic UIs, `b-target` can even be a function or a dynamic expressio
 
 ## Why This Matters
 
-By prioritizing local tags over global IDs, LegoJS encourages **Encapsulation**. Your components become "Black Boxes" that manage their own internal routing targets. This means you can take a complex "Messaging Shell" and drop it into a "Dashboard Shell" without changing a single line of routing code—the targets will still resolve correctly because they are scoped to their parents.
+By prioritizing local tags over global IDs, LegoDOM encourages **Encapsulation**. Your components become "Black Boxes" that manage their own internal routing targets. This means you can take a complex "Messaging Shell" and drop it into a "Dashboard Shell" without changing a single line of routing code—the targets will still resolve correctly because they are scoped to their parents.
 
 ## Summary
 

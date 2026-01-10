@@ -3,7 +3,7 @@
 
 One of the biggest frustrations in modern web development is "breaking the back button." When you use JavaScript to update only part of a page, the browser often doesn't realize a navigation event occurred. If the user hits "Back," they might be booted out of your app entirely.
 
-LegoJS solves this using a system called **Smart History**. It ensures that even surgical, fragment-level updates are recorded and reversible.
+LegoDOM solves this using a system called **Smart History**. It ensures that even surgical, fragment-level updates are recorded and reversible.
 
 ## How Traditional Routers Fail
 
@@ -18,9 +18,9 @@ In a standard SPA, the router usually manages a single "current view." When you 
 
 Because the whole page (or the main outlet) is replaced, the browser's history stack is simple: Page A -> Page B. But in a complex layout like LinkedIn, you might have changed the chat window 5 times while the sidebar stayed exactly the same. Users expect the "Back" button to cycle through those chats, not take them back to the login screen.
 
-## The LegoJS Approach: Target Tracking
+## The LegoDOM Approach: Target Tracking
 
-When you use `b-link` with a `b-target`, LegoJS does two things simultaneously:
+When you use `b-link` with a `b-target`, LegoDOM does two things simultaneously:
 
 1.  It updates the browser URL using the History API.
     
@@ -29,7 +29,7 @@ When you use `b-link` with a `b-target`, LegoJS does two things simultaneously:
 
 ### Inside the History State
 
-Every time a surgical swap happens, LegoJS saves the target selector in the `history.state`. It looks something like this:
+Every time a surgical swap happens, LegoDOM saves the target selector in the `history.state`. It looks something like this:
 
 ```js
 // Internal representation
@@ -41,9 +41,9 @@ history.pushState({
 
 ## The "Popstate" Magic
 
-When a user hits the **Back** or **Forward** button, the browser triggers a `popstate` event. LegoJS intercepts this event and checks if the incoming state contains `legoTargets`.
+When a user hits the **Back** or **Forward** button, the browser triggers a `popstate` event. LegoDOM intercepts this event and checks if the incoming state contains `legoTargets`.
 
--   **If `legoTargets` exists:** LegoJS performs a surgical swap. It takes the URL the browser is moving to and renders it _only_ into the specified target (e.g., `#chat-window`).
+-   **If `legoTargets` exists:** LegoDOM performs a surgical swap. It takes the URL the browser is moving to and renders it _only_ into the specified target (e.g., `#chat-window`).
     
 -   **If no target exists:** It performs a global swap in the `<lego-router>`.
     
@@ -66,4 +66,4 @@ Because the history state uses the same URLs as your standard links, a "Back" na
 
 Smart History is the "glue" that makes a multi-fragment interface feel like a single, cohesive application. It respects the user's intent by making the browser's navigation tools work for specific parts of the page, not just the whole page.
 
-Next, we'll dive into the mechanics of how LegoJS finds these targets in complex, nested DOM trees in **Target Resolver: Scoping and Logic**.
+Next, we'll dive into the mechanics of how LegoDOM finds these targets in complex, nested DOM trees in **Target Resolver: Scoping and Logic**.

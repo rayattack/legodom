@@ -17,7 +17,7 @@ export default defineConfig({
       {
         text: 'v1.0.0',
         items: [
-          { text: 'Changelog', link: 'https://github.com/rayattack/LegoJS/releases' }
+          { text: 'Changelog', link: 'https://github.com/rayattack/LegoDOM/releases' }
 
         ]
       }
@@ -118,7 +118,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/rayattack/LegoJS' }
+      { icon: 'github', link: 'https://github.com/rayattack/LegoDOM' }
     ],
 
     footer: {
@@ -131,7 +131,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/rayattack/LegoJS/edit/main/docs/:path',
+      pattern: 'https://github.com/rayattack/LegoDOM/edit/main/docs/:path',
       text: 'Edit this page on GitHub'
     }
   },
