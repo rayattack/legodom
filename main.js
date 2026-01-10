@@ -473,7 +473,9 @@ const Lego = (() => {
       el._studs = reactive({
         ...scriptLogic,
         ...templateLogic,
-        ...instanceLogic
+        ...instanceLogic,
+        get $route() { return Lego.globals.$route },
+        get $go() { return Lego.globals.$go }
       }, el);
 
       shadow.appendChild(tpl);
