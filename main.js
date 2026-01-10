@@ -609,8 +609,6 @@ const Lego = (() => {
             const targets = targetAttr ? targetAttr.split(/\s+/).filter(Boolean) : [];
 
             const shouldPush = link.getAttribute('b-link') !== 'false';
-
-            // Execute via the chainable API
             Lego.globals.$go(href, ...targets).get(shouldPush);
           }
         });
