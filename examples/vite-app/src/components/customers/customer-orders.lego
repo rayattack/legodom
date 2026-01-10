@@ -1,0 +1,21 @@
+<template>
+  <customers-shell>
+    <div style="padding: 1rem; border: 1px dashed #ccc;">
+      <h3>📦 Order History</h3>
+      <p>Viewing orders for Customer ID: <strong>{{ global.$route.params.id }}</strong></p>
+
+      <!-- Composition: Using another component inside -->
+      <order-list></order-list>
+
+      <div style="margin-top: 1rem;">
+        <a href="/customers/{{ global.$route.params.id }}/details" b-target="#todo-container">View Profile Info</a>
+      </div>
+    </div>
+  </customers-shell>
+</template>
+
+<script>
+  export default {
+    name: 'CustomerOrders'
+  }
+</script>
