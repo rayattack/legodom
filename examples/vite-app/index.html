@@ -32,19 +32,7 @@
 
 <body>
   <app-navbar></app-navbar>
-  <h1>Lego + Vite Example</h1>
-
-  <div class="info">
-    <p><strong>✨ These components are auto-discovered from .lego files!</strong></p>
-    <p>The Vite plugin automatically finds all .lego files in <code>src/components/</code> and registers them.</p>
-  </div>
-
-  <!-- These components are automatically discovered and hydrated -->
-  <sample-component></sample-component>
-  <greeting-card></greeting-card>
-  <div id="todo-container">
-    <todo-list></todo-list>
-  </div>
+  <lego-router id="todo-container"></lego-router>
 
   <script type="module" src="/src/app.js"></script>
 </body>
