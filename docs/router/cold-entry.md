@@ -53,11 +53,11 @@ Lego.define('messaging-shell', `
 `, {
   mounted() {
     // Check if we arrived here via a deep-link (e.g., /messaging/123)
-    if (this.$params.id) {
+    if (this.$route.params.id) {
       // SURGICAL HEALING:
       // Tell Lego to render the current URL into the local target.
       // This pulls the 'messaging-details' fragment into the main window.
-      this.$go(window.location.pathname, '#chat-window');
+      this.$go(window.location.pathname, '#chat-window').get();
     }
   }
 });

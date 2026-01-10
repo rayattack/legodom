@@ -1,0 +1,21 @@
+<style>
+  self {
+    display: block;
+    padding: 1rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e0e0e0;
+  }
+</style>
+
+<template>
+  <div>
+    <h2>Customers Shell</h2>
+    <slot></slot>
+  </div>
+</template>
+
+<script>
+  export default {
+    name: 'CustomersShell'
+  }
+</script>

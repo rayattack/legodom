@@ -57,7 +57,28 @@ features:
     details: Battle-tested patterns from Vue and React, adapted for pure Web Components. No framework lock-in.
 ---
 
-## Quick Example
+## Components & Naming
+
+How you name your components depends on how you use Lego:
+
+### 1. Vite / Build Tools (Recommended)
+**Convention over Configuration.** The filename *is* the tag name.
+- `user-card.lego` → `<user-card></user-card>`
+- `app-nav.lego` → `<app-nav></app-nav>`
+
+You do not need `b-id` inside `.lego` files; the build system handles registration automatically.
+
+### 2. CDN / Script Tags
+Since there are no files, you must explicitly name your components using the `b-id` attribute on the `<template>` tag.
+
+```html
+<!-- Only needed for CDN usage -->
+<template b-id="user-profile">
+  <h1>User Profile</h1>
+</template>
+```
+
+## Quick Start (CDN)
 
 ```html
 <!-- Define a component -->
@@ -98,7 +119,7 @@ That's it. No build step, no npm, no configuration.
 > **Why call `Lego.init()`?**
 > While `Lego.define()` will "snap" your components into the page immediately, you must call `Lego.init()` to start the background engine. Without it:
 > - **Reactivity** to data changes won't work.
-> - **Mustaches** (`{{...}}`) outside of components won't hydrate.
+> - **Mustaches** (<code v-pre>{{...}}</code>) outside of components won't hydrate.
 > - **Single Page Routing** won't be activated.
 > - **New components** added to the DOM dynamically won't be auto-initialized.
 

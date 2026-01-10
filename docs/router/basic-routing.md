@@ -50,14 +50,14 @@ Lego.route('*', 'not-found-page');
 
 ## Handling Parameters (`$params`)
 
-When you use a dynamic path like `/user/:id`, Lego automatically parses the URL and makes the data available to the component via the `$params` object.
+When you use a dynamic path like `/user/:id`, Lego automatically parses the URL and makes the data available to the component via the global `$route` object.
 
 In your component template:
 
 ```html
 <template b-id="profile-page">
   <h1>User Profile</h1>
-  <p>Viewing ID: {{ $params.id }}</p>
+  <p>Viewing ID: {{ $route.params.id }}</p>
 </template>
 
 ```
@@ -66,7 +66,7 @@ In your component logic:
 
 ```js
 mounted() {
-  const userId = this.$params.id;
+  const userId = this.$route.params.id;
   this.fetchUserData(userId);
 }
 
@@ -89,7 +89,7 @@ mounted() {
 <script>
 export default {
   mounted() {
-    const userId = this.$params.id;
+    const userId = this.$route.params.id;
     this.fetchUserData(userId);
   }
 }

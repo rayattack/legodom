@@ -1,0 +1,55 @@
+<style>
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  li {
+    padding: 0.5rem;
+    border: 1px solid #eee;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .status {
+    font-weight: bold;
+    color: #059669;
+  }
+</style>
+
+<template>
+  <div>
+    <h4>Recent Orders</h4>
+    <p b-show="loading">Loading orders for customer...</p>
+    <ul b-show="!loading">
+      <li b-for="order in orders">
+        <span>Order #{{ order.id }}</span>
+        <span class="status">{{ order.status }}</span>
+      </li>
+    </ul>
+  </div>
+</template>
+
+<script>
+  export default {
+    name: 'OrderList',
+    state: {
+      orders: [],
+      loading: true
+    },
+    async mounted() {
+      // Simulate API fetch using the customer ID from parent or global params
+      const customerId = Lego.globals.$route.params.id;
+      setTimeout(() => {
+        this.orders = [
+          { id: '101', status: 'Delivered' },
+          { id: '105', status: 'Shipped' },
+          { id: '110', status: 'Processing' }
+        ];
+        this.loading = false;
+      }, 800);
+    }
+  }
+</script>

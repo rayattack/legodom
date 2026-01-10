@@ -2,7 +2,7 @@
 
 The true power of LegoJS lies in its ability to perform **Surgical Swaps**. In a traditional application, clicking a link often causes the entire page to re-render, destroying the state of your sidebar, header, or scroll position.
 
-With `b-link` and `b-target`, we can choose to update only a specific "fragment" of the page.
+With `b-target` (and optionally `b-link`), we can choose to update only a specific "fragment" of the page.
 
 ## The Problem with "Nuclear" Navigation
 
@@ -19,7 +19,7 @@ If the sidebar reloads:
 
 ## The Solution: `b-target`
 
-The `b-target` directive allows a link to specify exactly where the new component should be rendered.
+The `b-target` directive allows a link to specify exactly where the new component should be rendered. It implies `b-link` (history update) by default.
 
 
 ### Example: messaging-shell.html
@@ -33,8 +33,8 @@ In this SFC, we define a layout with a sidebar and a main content area. Clicking
     <aside class="sidebar">
       <h2>Contacts</h2>
       <nav>
-        <a href="/chat/alice" b-link b-target="#chat-window">Alice</a>
-        <a href="/chat/bob" b-link b-target="#chat-window">Bob</a>
+        <a href="/chat/alice" b-target="#chat-window">Alice</a>
+        <a href="/chat/bob" b-target="#chat-window">Bob</a>
       </nav>
     </aside>
 
@@ -79,7 +79,8 @@ You can tell Lego to find a specific element by its ID and replace its contents.
   <div class="layout">
     <aside class="sidebar">
       <div b-for="chat in threads">
-        <a href="/messaging/{{chat.id}}" b-link b-target="#chat-window">
+        <!-- Parent component (this shell) binds data to these links -->
+        <a href="/messaging/{{chat.id}}" b-target="#chat-window">
           {{chat.userName}}
         </a>
       </div>
@@ -99,7 +100,7 @@ You can tell Lego to find a specific element by its ID and replace its contents.
 Because Lego is built on Custom Elements, you can target a component tag directly. The framework will find that tag and swap its internal content.
 
 ```html
-<a href="/profile/settings" b-link b-target="settings-view">Edit Settings</a>
+<a href="/profile/settings" b-target="settings-view">Edit Settings</a>
 
 <settings-view>
   <!-- Content gets swapped here -->
@@ -109,7 +110,7 @@ Because Lego is built on Custom Elements, you can target a component tag directl
 
 ## How the Target Resolver Works
 
-When you click a `b-link` with a `b-target`, the LegoJS **Target Resolver** follows a specific hierarchy:
+When you click a link with a `b-target`, the LegoJS **Target Resolver** follows a specific hierarchy:
 
 1.  **Local Scope**: It looks for the target inside the current component first. This prevents "ID collisions" if you have multiple instances of a layout.
     

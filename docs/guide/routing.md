@@ -1,376 +1,273 @@
-# Routing
+# Surgical Routing
 
-Lego includes a built-in client-side router for building single-page applications.
+LegoDOM features a powerful "Surgical Router" that sets it apart from typical SPA routers. Instead of just replacing a single `<router-outlet>`, Lego allows you to swap **any** part of your page from **any** link, giving you the feel of a complex SPA with the simplicity of old-school HTML frames.
 
-## Basic Setup
+## The Concept
 
-### 1. Add Router Outlet
+In traditional SPAs, you have one `RouterView` that swaps out entire pages.
+In Lego, every link can be a router trigger, and every element can be a target.
 
-```html
-<lego-router></lego-router>
-```
+- **`b-target`**: "Where should this content go?"
+- **`b-link`**: "Should this update the URL history?"
 
-This is where your routed components will render.
+---
 
-Lego.route('/', 'home-page');
-Lego.route('/about', 'about-page');
-Lego.route('/contact', 'contact-page');
+## 1. Declarative Routing
 
-// 3. Initialize the Engine
-Lego.init();
-```
+The most common way to route is using standard `<a>` tags enriched with Lego attributes.
 
-### 3. Create Page Components
+### `b-target`
+Specifies the CSS selector of the element to replace.
 
 ```html
-<template b-id="home-page">
-  <h1>Home</h1>
-  <p>Welcome to the homepage!</p>
-</template>
+<!-- Swaps content into <div id="main-content"> -->
+<a href="/profile" b-target="#main-content">Go to Profile</a>
 
-<template b-id="about-page">
-  <h1>About</h1>
-  <p>Learn more about us.</p>
-</template>
+<!-- Example of using route params in a template -->
+<main>
+  <blog-posts b-show="$route.params.section === 'posts'"></blog-posts>
+  <blog-authors b-show="$route.params.section === 'authors'"></blog-authors>
+</main>
 ```
 
-### 4. Add Navigation
+### `b-link`
+Controls browser history behavior.
+- `b-link` (or just `b-target`): Defaults to `true` (updates URL, pushes history).
+- `b-link="false"`: Does **not** update the URL. Great for tabs, modals, or side-panels.
 
 ```html
-<nav>
-  <a href="/" b-link>Home</a>
-  <a href="/about" b-link>About</a>
-  <a href="/contact" b-link>Contact</a>
-</nav>
+<!-- Updates URL to /settings, swaps #main -->
+<a href="/settings" b-target="#main">Settings</a>
 
-<lego-router></lego-router>
+<!-- Keeps URL same, just swaps the sidebar context -->
+<a href="/sidebar/tools" b-target="#sidebar" b-link="false">Open Tools</a>
 ```
 
-The `b-link` attribute hijacks clicks to prevent page reloads.
+### Deep Linking & Defaults
+If a user refreshes the page, surgical targets (like `#sidebar`) usually won't have content because the `b-target` click never happened.
 
-## Complete Example
+**The Golden Rule:** Always have a `<lego-router>` as your default "Main" outlet.
+When the page loads, Lego looks for `<lego-router>` to render the URL's matching component.
 
 ```html
-<!DOCTYPE html>
-<html>
-<head>
-  <title>My SPA</title>
-  <style>
-    nav { padding: 1rem; background: #f0f0f0; }
-    nav a { margin-right: 1rem; text-decoration: none; }
-    nav a.active { font-weight: bold; }
-  </style>
-</head>
 <body>
-  <nav>
-    <a href="/" b-link>Home</a>
-    <a href="/blog" b-link>Blog</a>
-    <a href="/about" b-link>About</a>
-  </nav>
+  <nav>...</nav>
   
-  <lego-router></lego-router>
+  <!-- Default Outlet: Renders /home, /about, etc. -->
+  <lego-router id="main-app"></lego-router>
   
-  <template b-id="home-page">
-    <h1>Welcome Home</h1>
-    <p>This is the homepage.</p>
-  </template>
-  
-  <template b-id="blog-page">
-    <h1>Blog</h1>
-    <ul>
-      <li><a href="/blog/1" b-link>First Post</a></li>
-      <li><a href="/blog/2" b-link>Second Post</a></li>
-    </ul>
-  </template>
-  
-  <template b-id="about-page">
-    <h1>About Us</h1>
-    <p>We build awesome things.</p>
-  </template>
-  
-  <script src="https://unpkg.com/lego-dom/main.js"></script>
-  <script>
-    Lego.route('/', 'home-page');
-    Lego.route('/blog', 'blog-page');
-    Lego.route('/about', 'about-page');
-
-    // Start the routing engine
-    Lego.init();
-  </script>
+  <!-- Surgical Outlet: Only updated when specifically targeted -->
+  <aside id="sidebar"></aside>
 </body>
-</html>
 ```
 
-## Dynamic Routes
+## 2. The `$go` API
 
-Use `:param` syntax for URL parameters:
+For full programmatic control, use the globally available `$go` helper. It allows for surgical updates from your JavaScript logic.
 
-```js
-Lego.route('/user/:id', 'user-profile');
-Lego.route('/blog/:slug', 'blog-post');
-Lego.route('/category/:cat/item/:id', 'product-detail');
+### Syntax
+`Lego.globals.$go(path, ...targets)`
+
+- **path**: The URL to navigate to (e.g., `/user/1`).
+- **targets**: A list of selectors (e.g., `#main`, `#sidebar`). Passing nothing defaults to `lego-router`.
+
+### Methods
+The `$go` function returns an object with HTTP verb methods, primarily only `.get()` is relevant for routing, but others exist for consistency.
+
+```javascript
+// 1. Standard Navigation (pushes to history)
+Lego.globals.$go('/profile').get();
+
+// 2. Surgical Navigation (updates #sidebar, pushes to history)
+Lego.globals.$go('/widgets/clock', '#sidebar').get();
+
+// 3. Silent Update (updates #modal, NO history change)
+// Pass `false` as the first argument to .get()
+Lego.globals.$go('/modals/login', '#modal').get(false);
 ```
 
-### Accessing Parameters
-
-Route parameters are available in `global.params`:
+### Interactive Example: "The Shell"
+You can update **multiple** targets at once (future feature) or chain them.
+Commonly, you use `$go` inside your component logic:
 
 ```html
-<template b-id="user-profile">
-  <h1>User Profile</h1>
-  <p>User ID: {{ global.params.id }}</p>
-  <button @click="loadUser()">Load User</button>
-</template>
-
 <script>
-  Lego.define('user-profile', 
-    Lego.registry['user-profile'].innerHTML, {
-    async loadUser() {
-      const userId = Lego.globals.params.id;
-      const user = await fetch(`/api/users/${userId}`).then(r => r.json());
-      this.username = user.name;
+  export default {
+    methods: {
+      async loadUser() {
+        const userId = Lego.globals.$route.params.id; // Access in JS logic
+        const user = await fetch(`/api/users/${userId}`).then(r => r.json());
+        this.username = user.name;
+      },
+      openSettings() {
+        // Open settings in the sidebar without losing the main page context
+        this.global.$go('/settings-panel', '#sidebar').get(false);
+      }
     }
-  });
+  }
 </script>
 ```
 
-## Programmatic Navigation
+---
 
-Navigate programmatically using the History API:
+## 3. Advanced Patterns
 
-```js
-// Navigate to a new route
-history.pushState({}, '', '/about');
-window.dispatchEvent(new PopStateEvent('popstate'));
-
-// Or in a component method:
-{
-  goToAbout() {
-    history.pushState({}, '', '/about');
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }
-}
-```
-
-## Route Middleware
-
-Add middleware for authentication, logging, etc:
-
-```js
-// Define middleware function
-const authMiddleware = (params, globals) => {
-  if (!globals.isLoggedIn) {
-    history.pushState({}, '', '/login');
-    window.dispatchEvent(new PopStateEvent('popstate'));
-    return false; // Block navigation
-  }
-  return true; // Allow navigation
-};
-
-// Apply to routes
-Lego.route('/dashboard', 'dashboard-page', authMiddleware);
-Lego.route('/profile', 'profile-page', authMiddleware);
-```
-
-### Middleware Example
-
-```js
-// Logging middleware
-const logger = (params) => {
-  console.log('Navigating to:', params);
-  return true;
-};
-
-// Analytics middleware
-const analytics = (params) => {
-  if (window.gtag) {
-    gtag('event', 'page_view', { page_path: window.location.pathname });
-  }
-  return true;
-};
-
-// Apply
-Lego.route('/products/:id', 'product-page', (params, globals) => {
-  logger(params);
-  analytics(params);
-  return true;
-});
-```
-
-## Active Link Styling
-
-Style active navigation links:
-
-```js
-// Update active class on navigation
-window.addEventListener('popstate', () => {
-  document.querySelectorAll('[b-link]').forEach(link => {
-    const isActive = link.getAttribute('href') === window.location.pathname;
-    link.classList.toggle('active', isActive);
-  });
-});
-```
-
-## 404 / Not Found
-
-Handle unknown routes:
-
-```js
-// Define all your routes
-Lego.route('/', 'home-page');
-Lego.route('/about', 'about-page');
-
-// Catch-all for 404
-const matchRoute = () => {
-  const path = window.location.pathname;
-  const routes = ['/', '/about']; // Your known routes
-  
-  if (!routes.includes(path)) {
-    // Show 404
-    document.querySelector('lego-router').innerHTML = '<not-found></not-found>';
-  }
-};
-
-window.addEventListener('popstate', matchRoute);
-matchRoute(); // Initial check
-```
-
-## Nested Routes
-
-While Lego doesn't have built-in nested routing, you can implement it:
+### The "Sidebar" Pattern
+Keep a persistent Main Content while swapping sidebars.
 
 ```html
-<template b-id="blog-layout">
-  <aside>
-    <a href="/blog/posts" b-link>Posts</a>
-    <a href="/blog/authors" b-link>Authors</a>
+<nav>
+  <!-- Main Nav: Updates URL and main view -->
+  <a href="/dashboard" b-target="#main">Dashboard</a>
+  <a href="/files" b-target="#main">Files</a>
+</nav>
+
+<main id="main">
+  <!-- Dashboard or Files render here -->
+</main>
+
+<aside id="context-pane">
+  <!-- Context specific tools render here -->
+  <template b-id="user-profile">
+    <h1>User Profile</h1>
+    <p>User ID: {{ $route.params.id }}</p>
+    <button @click="loadUser()">Load User</button>
+  </template>
+</aside>
+
+<!-- Inside Dashboard Component -->
+<button onclick="Lego.globals.$go('/tools/chart-config', '#context-pane').get(false)">
+  Configure Chart
+</button>
+```
+
+### The "Modal" Pattern
+Render a route into a modal dialog container.
+
+```html
+<dialog id="modal-container"></dialog>
+
+<a href="/login" b-target="#modal-container"
+   onclick="document.getElementById('modal-container').showModal()">
+   Login
+</a>
+```
+
+### The "Persistent Layout" Pattern (The Holy Grail)
+This is where LegoDOM outshines traditional routers. You can have static sidebars that **never** reload, while the center content changes dynamically.
+
+```html
+<body>
+  <!-- LEFT: Never reloads. Keeps scroll position & expanded folders. -->
+  <aside id="static-left">
+    <file-tree></file-tree>
   </aside>
-  <main>
-    <blog-posts b-show="global.params.section === 'posts'"></blog-posts>
-    <blog-authors b-show="global.params.section === 'authors'"></blog-authors>
-  </main>
-</template>
+
+  <!-- CENTER: The main router outlet -->
+  <lego-router id="main-content"></lego-router>
+
+  <!-- RIGHT: Context panel for tools/details -->
+  <aside id="static-right"></aside>
+</body>
 ```
+*   **Main Links:** `<a href="/page" b-target="#main-content">`
+*   **Tool Links:** `<a href="/tool" b-target="#static-right">`
 
-```js
-Lego.route('/blog/:section', 'blog-layout');
-```
+---
 
-## Query Strings
+## 4. Deep Routing Strategies
 
-Access query parameters using URLSearchParams:
+When handling deep routes like `/customers/:id/orders/:orderId`, you have two architectural choices.
 
-```js
-{
-  mounted() {
-    const params = new URLSearchParams(window.location.search);
-    this.searchQuery = params.get('q') || '';
-    this.page = parseInt(params.get('page')) || 1;
+### Option A: The Shell Strategy (Self-Healing)
+Map everything to a single "Shell" component. The Shell determines what to show in its sub-outlets based on the URL params.
+
+*   **Pros:** Highly surgical. The Shell never re-renders, only its children do.
+*   **Cons:** Requires logic in `mounted()` to "heal" the state on page load.
+
+```javascript
+// Route Configuration
+Lego.route('/customers/:id', 'customers-shell');
+Lego.route('/customers/:id/orders/:orderId', 'customers-shell');
+
+// Component Logic (Self-Healing)
+mounted() {
+  if (this.$route.params.orderId) {
+    this.$go(window.location.pathname, '#details-pane').get();
   }
 }
 ```
 
-Example: `/search?q=legojs&page=2`
+### Option B: The Page Strategy (Component Nesting)
+Map deep routes to specific "Page" components. Each page imports and wraps itself in a shared Layout.
 
-## Hash vs History Mode
+*   **Pros:** Simpler logic. No "healing" code required.
+*   **Cons:** The Layout is technically re-created on every route change (though diffing makes it cheap).
 
-Lego uses History API (pushState) by default, giving you clean URLs:
-
-✅ `/about`  
-✅ `/user/123`  
-✅ `/blog/my-post`
-
-Not hash-based:  
-❌ `#/about`  
-❌ `#/user/123`
-
-### Server Configuration
-
-For clean URLs to work, configure your server to serve `index.html` for all routes:
-
-**nginx:**
-```nginx
-location / {
-  try_files $uri $uri/ /index.html;
-}
+```javascript
+// Route Configuration
+Lego.route('/customers/:id/orders/:orderId', 'order-details-page');
 ```
-
-**Apache (.htaccess):**
-```apache
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ index.html [L]
-```
-
-**Node.js/Express:**
-```js
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-```
-
-## Best Practices
-
-### 1. Centralize Route Definitions
-
-```js
-// routes.js
-const routes = {
-  '/': 'home-page',
-  '/blog': 'blog-page',
-  '/blog/:slug': 'blog-post',
-  '/user/:id': 'user-profile',
-  '/about': 'about-page'
-};
-
-Object.entries(routes).forEach(([path, component]) => {
-  Lego.route(path, component);
-});
-```
-
-### 2. Loading States
 
 ```html
-<template b-id="user-profile">
-  <div b-show="loading">Loading...</div>
-  <div b-show="!loading">
-    <h1>{{ user.name }}</h1>
-    <p>{{ user.bio }}</p>
-  </div>
+<!-- order-details-page.lego -->
+<template>
+  <customers-layout>
+    <order-info id="{{ $route.params.orderId }}"></order-info>
+  </customers-layout>
 </template>
 ```
 
-### 3. Error Handling
+---
 
-```js
-{
-  async loadData() {
-    this.loading = true;
-    this.error = null;
-    try {
-      const data = await fetch('/api/data').then(r => r.json());
-      this.data = data;
-    } catch (err) {
-      this.error = 'Failed to load data';
-    } finally {
-      this.loading = false;
-    }
+## 5. Middleware & Guards
+
+Middleware runs **before** the surgical swap happens. It### Accessing Parameters
+Route parameters are available directly via `$route.params` in templates.
+
+> **Note:** `$route` is a global helper available in all templates.
+
+```javascript
+/* 
+ * Middleware Signature:
+ * (params: Object, globals: Object) => boolean | Promise<boolean>
+ * Return `true` to allow navigation, `false` to block.
+ */
+
+// Example: Auth Guard
+const requireAuth = (params, globals) => {
+  if (!globals.user) {
+    // Redirect to login using surgical routing!
+    globals.$go('/login', '#main').get(); 
+    return false; // Stop original navigation
   }
-}
+  return true;
+};
+
+Lego.route('/admin', 'admin-panel', requireAuth);
 ```
 
-## Limitations
+## 5. Smart History
 
-- No nested router outlets (single level only)
-- No route guards (use middleware instead)
-- No automatic scroll restoration
-- Routes must be defined upfront (not lazy-loaded)
+Lego's router is "History Aware".
+When you use `b-target`, Lego stores the target selectors in the browser's History State.
 
-For complex routing needs, consider integrating a dedicated router library.
+**What this means:**
+1. You click "Open Sidebar" (Surgical update to `#sidebar`).
+2. You click "Home" (Main update to `#main`).
+3. You click **Back**.
+4. Lego automatically knows to reverse the "Home" navigation.
+5. You click **Back** again.
+6. Lego knows the previous state was a surgical update to `#sidebar` and restores it correctly!
 
-## Next Steps
+## Summary Table
 
-- See [routing examples](/examples/routing)
-- Learn about [lifecycle hooks](/guide/lifecycle)
-- Explore [state management patterns](/guide/reactivity)
+| Feature | Code | Description |
+| :--- | :--- | :--- |
+| **Standard Link** | `<a href="/x">` | Standard browser navigation (full reload). |
+| **SPA Link** | `<a href="/x" b-target>` | Default SPA nav. Swaps `<lego-router>`. |
+| **Surgical Link** | `<a href="/x" b-target="#id">` | Swaps content of `#id`. Updates URL. |
+| **Silent Link** | `... b-link="false">` | Swaps content. **No** URL update. |
+| **JS Nav** | `$go('/x').get()` | Programmatic navigation. |
+| **Silent JS** | `$go('/x').get(false)` | Programmatic silent swap. |
+

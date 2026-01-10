@@ -1,6 +1,7 @@
 const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
+  const activeComponents = new Set();
 
   const sfcLogic = new Map();
   const sharedStates = new Map();
@@ -140,7 +141,7 @@ const Lego = (() => {
 
   const getPrivateData = (el) => {
     if (!privateData.has(el)) {
-      privateData.set(el, { snapped: false, bindings: null, bound: false, rendering: false, anchor: null });
+      privateData.set(el, { snapped: false, bindings: null, bound: false, rendering: false, anchor: null, hasGlobalDependency: false });
     }
     return privateData.get(el);
   };
@@ -270,20 +271,29 @@ const Lego = (() => {
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
     let node;
     while (node = walker.nextNode()) {
-      const isInsideBFor = (n) => {
+      const isInsideBoundary = (n) => {
         let curr = n.parentNode;
         while (curr && curr !== container) {
           if (curr.hasAttribute && curr.hasAttribute('b-for')) return true;
-          if (curr.tagName && curr.tagName.includes('-') && registry[curr.tagName.toLowerCase()]) return true;
+          // Only stop at Shadow Roots or explicit boundaries, NOT component tags in Light DOM
+          // The parent MUST be able to bind data to the slots of its children.
           curr = curr.parentNode;
         }
         return false;
       };
-      if (isInsideBFor(node)) continue;
+      if (isInsideBoundary(node)) continue;
+
+      const checkGlobal = (str) => {
+        if (/\bglobal\b/.test(str)) {
+          const target = container.host || container;
+          getPrivateData(target).hasGlobalDependency = true;
+        }
+      };
 
       if (node.nodeType === Node.ELEMENT_NODE) {
         if (node.hasAttribute('b-if')) {
           const expr = node.getAttribute('b-if');
+          checkGlobal(expr);
           // Create an anchor point to keep track of where the element belongs in the DOM
           const anchor = document.createComment(`b-if: ${expr}`);
           const data = getPrivateData(node);
@@ -291,10 +301,15 @@ const Lego = (() => {
           bindings.push({ type: 'b-if', node, anchor, expr });
         }
 
-        if (node.hasAttribute('b-show')) bindings.push({ type: 'b-show', node, expr: node.getAttribute('b-show') });
+        if (node.hasAttribute('b-show')) {
+          const expr = node.getAttribute('b-show');
+          checkGlobal(expr);
+          bindings.push({ type: 'b-show', node, expr });
+        }
         if (node.hasAttribute('b-for')) {
           const match = node.getAttribute('b-for').match(/^\s*(\w+)\s+in\s+(.+)\s*$/);
           if (match) {
+            checkGlobal(match[2]);
             bindings.push({
               type: 'b-for',
               node,
@@ -308,9 +323,13 @@ const Lego = (() => {
         if (node.hasAttribute('b-text')) bindings.push({ type: 'b-text', node, path: node.getAttribute('b-text') });
         if (node.hasAttribute('b-sync')) bindings.push({ type: 'b-sync', node });
         [...node.attributes].forEach(attr => {
-          if (attr.value.includes('{{')) bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
+          if (attr.value.includes('{{')) {
+            checkGlobal(attr.value);
+            bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
+          }
         });
       } else if (node.nodeType === Node.TEXT_NODE && node.textContent.includes('{{')) {
+        checkGlobal(node.textContent);
         bindings.push({ type: 'text', node, template: node.textContent });
       }
     }
@@ -321,13 +340,13 @@ const Lego = (() => {
     const processNode = (node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         if (node._tpl === undefined) node._tpl = node.textContent;
-        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope, self: node }) ?? '');
+        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope, global: Lego.globals, self: node }) ?? '');
         if (node.textContent !== out) node.textContent = out;
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         [...node.attributes].forEach(attr => {
           if (attr._tpl === undefined) attr._tpl = attr.value;
           if (attr._tpl.includes('{{')) {
-            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope, self: node }) ?? '');
+            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope, global: Lego.globals, self: node }) ?? '');
             if (attr.value !== out) {
               attr.value = out;
               if (attr.name === 'class') node.className = out;
@@ -350,35 +369,30 @@ const Lego = (() => {
     data.rendering = true;
 
     try {
-      const shadow = el.shadowRoot;
-      if (!shadow) return;
-      if (!data.bindings) data.bindings = scanForBindings(shadow);
+      // Use shadowRoot if it's a component, otherwise render the element itself (light DOM)
+      const target = el.shadowRoot || el;
+      if (!data.bindings) data.bindings = scanForBindings(target);
 
       data.bindings.forEach(b => {
+        // ... (binding logic remains same, just uses b.node which is relative to target)
         if (b.type === 'b-if') {
-          // If condition is false, the node is swapped with its anchor comment
-          const condition = !!safeEval(b.expr, { state, self: b.node });
+          const condition = !!safeEval(b.expr, { state, global: Lego.globals, self: b.node });
           const isAttached = !!b.node.parentNode;
-
           if (condition && !isAttached) {
-            // Anchor must be in DOM to replace it
-            if (b.anchor.parentNode) {
-              b.anchor.parentNode.replaceChild(b.node, b.anchor);
-            }
+            if (b.anchor.parentNode) b.anchor.parentNode.replaceChild(b.node, b.anchor);
           } else if (!condition && isAttached) {
-            // Node must be in DOM to replace it
             b.node.parentNode.replaceChild(b.anchor, b.node);
           }
         }
-        if (b.type === 'b-show') b.node.style.display = safeEval(b.expr, { state, self: b.node }) ? '' : 'none';
+        if (b.type === 'b-show') b.node.style.display = safeEval(b.expr, { state, global: Lego.globals, self: b.node }) ? '' : 'none';
         if (b.type === 'b-text') b.node.textContent = resolve(b.path, state);
         if (b.type === 'b-sync') syncModelValue(b.node, resolve(b.node.getAttribute('b-sync'), state));
         if (b.type === 'text') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state, self: b.node }) ?? '');
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state, global: Lego.globals, self: b.node }) ?? '');
           if (b.node.textContent !== out) b.node.textContent = out;
         }
         if (b.type === 'attr') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state, self: b.node }) ?? '');
+          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state, global: Lego.globals, self: b.node }) ?? '');
           if (b.node.getAttribute(b.attrName) !== out) {
             b.node.setAttribute(b.attrName, out);
             if (b.attrName === 'class') b.node.className = out;
@@ -417,6 +431,13 @@ const Lego = (() => {
           }
         }
       });
+
+      // Global Broadcast: Only notify components that depend on globals
+      if (state === Lego.globals) {
+        activeComponents.forEach(comp => {
+          if (getPrivateData(comp).hasGlobalDependency) render(comp);
+        });
+      }
     } finally {
       data.rendering = false;
     }
@@ -452,7 +473,9 @@ const Lego = (() => {
       el._studs = reactive({
         ...scriptLogic,
         ...templateLogic,
-        ...instanceLogic
+        ...instanceLogic,
+        get $route() { return Lego.globals.$route },
+        get $go() { return Lego.globals.$go }
       }, el);
 
       shadow.appendChild(tpl);
@@ -463,6 +486,7 @@ const Lego = (() => {
       }
 
       bind(shadow, el);
+      activeComponents.add(el);
       render(el);
 
       if (typeof el._studs.mounted === 'function') {
@@ -481,6 +505,7 @@ const Lego = (() => {
     if (el._studs && typeof el._studs.unmounted === 'function') {
       try { el._studs.unmounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in unmounted:`, e); }
     }
+    activeComponents.delete(el);
     [...el.children].forEach(unsnap);
   };
 
@@ -560,8 +585,10 @@ const Lego = (() => {
       }));
       observer.observe(root, { childList: true, subtree: true });
 
+      root._studs = Lego.globals;
       snap(root);
-      bind(root, { _studs: Lego.globals, _data: { bound: false } });
+      bind(root, root);
+      render(root);
 
       if (routes.length > 0) {
         // Smart History: Restore surgical targets on Back button
@@ -584,8 +611,6 @@ const Lego = (() => {
             const targets = targetAttr ? targetAttr.split(/\s+/).filter(Boolean) : [];
 
             const shouldPush = link.getAttribute('b-link') !== 'false';
-
-            // Execute via the chainable API
             Lego.globals.$go(href, ...targets).get(shouldPush);
           }
         });
