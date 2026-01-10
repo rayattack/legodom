@@ -123,7 +123,7 @@ That's it. No build step, no npm, no configuration.
 > - **Single Page Routing** won't be activated.
 > - **New components** added to the DOM dynamically won't be auto-initialized.
 
-## Why Lego?
+## Why LegoDOM?
 
 **For small projects**, you get reactive components without the overhead of a full framework.
 
@@ -146,7 +146,7 @@ That's it. No build step, no npm, no configuration.
 
 ## Browser Support
 
-Lego works in all modern browsers that support:
+LegoDOM works in all modern browsers that support:
 - Web Components
 - Shadow DOM
 - ES6 Proxy
