@@ -147,13 +147,80 @@ Render a route into a modal dialog container.
 ```html
 <dialog id="modal-container"></dialog>
 
-<a href="/login" b-target="#modal-container" b-link="false" 
+<a href="/login" b-target="#modal-container"
    onclick="document.getElementById('modal-container').showModal()">
    Login
 </a>
 ```
 
-## 4. Middleware & Guards
+### The "Persistent Layout" Pattern (The Holy Grail)
+This is where LegoDOM outshines traditional routers. You can have static sidebars that **never** reload, while the center content changes dynamically.
+
+```html
+<body>
+  <!-- LEFT: Never reloads. Keeps scroll position & expanded folders. -->
+  <aside id="static-left">
+    <file-tree></file-tree>
+  </aside>
+
+  <!-- CENTER: The main router outlet -->
+  <lego-router id="main-content"></lego-router>
+
+  <!-- RIGHT: Context panel for tools/details -->
+  <aside id="static-right"></aside>
+</body>
+```
+*   **Main Links:** `<a href="/page" b-target="#main-content">`
+*   **Tool Links:** `<a href="/tool" b-target="#static-right">`
+
+---
+
+## 4. Deep Routing Strategies
+
+When handling deep routes like `/customers/:id/orders/:orderId`, you have two architectural choices.
+
+### Option A: The Shell Strategy (Self-Healing)
+Map everything to a single "Shell" component. The Shell determines what to show in its sub-outlets based on the URL params.
+
+*   **Pros:** Highly surgical. The Shell never re-renders, only its children do.
+*   **Cons:** Requires logic in `mounted()` to "heal" the state on page load.
+
+```javascript
+// Route Configuration
+Lego.route('/customers/:id', 'customers-shell');
+Lego.route('/customers/:id/orders/:orderId', 'customers-shell');
+
+// Component Logic (Self-Healing)
+mounted() {
+  if (this.$route.params.orderId) {
+    this.$go(window.location.pathname, '#details-pane').get();
+  }
+}
+```
+
+### Option B: The Page Strategy (Component Nesting)
+Map deep routes to specific "Page" components. Each page imports and wraps itself in a shared Layout.
+
+*   **Pros:** Simpler logic. No "healing" code required.
+*   **Cons:** The Layout is technically re-created on every route change (though diffing makes it cheap).
+
+```javascript
+// Route Configuration
+Lego.route('/customers/:id/orders/:orderId', 'order-details-page');
+```
+
+```html
+<!-- order-details-page.lego -->
+<template>
+  <customers-layout>
+    <order-info id="{{ $route.params.orderId }}"></order-info>
+  </customers-layout>
+</template>
+```
+
+---
+
+## 5. Middleware & Guards
 
 Middleware runs **before** the surgical swap happens. It### Accessing Parameters
 Route parameters are available directly via `$route.params` in templates.
