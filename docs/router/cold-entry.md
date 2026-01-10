@@ -3,7 +3,7 @@
 
 In the previous section, we learned how to use `b-target` to surgically swap fragments while the app is running. But what happens when a user types `myapp.com/messaging/123` directly into the address bar or hits **Refresh (F5)**?
 
-In a traditional nested router, the framework handles this automatically. In LegoJS, we use a more powerful, explicit pattern called **Self-Healing Layouts**.
+In a traditional nested router, the framework handles this automatically. In LegoDOM, we use a more powerful, explicit pattern called **Self-Healing Layouts**.
 
 ## The Cold Entry/Start Challenge
 
@@ -13,7 +13,7 @@ When a "Cold Start" occurs:
     
 2.  The server returns the base `index.html`.
     
-3.  LegoJS matches the route `/messaging/:id` to the `messaging-shell` component.
+3.  LegoDOM matches the route `/messaging/:id` to the `messaging-shell` component.
     
 4.  The `messaging-shell` mounts, but the `#chat-window` target is empty (or showing its default "Select a conversation" text).
     

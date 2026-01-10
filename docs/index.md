@@ -7,14 +7,14 @@ hero:
   tagline: A tiny, zero-dependency Web library for creating reactive Web Components directly in the browser
   image:
     src: /logo.svg
-    alt: Lego
+    alt: LegoDOM
   actions:
     - theme: brand
       text: Get Started
       link: /guide/getting-started
     - theme: alt
       text: View on GitHub
-      link: https://github.com/rayattack/Lego
+      link: https://github.com/rayattack/LegoDOM
     - theme: alt
       text: Try Examples
       link: /examples/
@@ -59,7 +59,7 @@ features:
 
 ## Components & Naming
 
-How you name your components depends on how you use Lego:
+How you name your components depends on how you use LegoDOM:
 
 ### 1. Vite / Build Tools (Recommended)
 **Convention over Configuration.** The filename *is* the tag name.
@@ -109,15 +109,15 @@ Since there are no files, you must explicitly name your components using the `b-
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 <script>
   // Complete the initialization
-  Lego.init();
+  LegoDOM.init();
 </script>
 ```
 
 That's it. No build step, no npm, no configuration.
 
 > [!IMPORTANT]
-> **Why call `Lego.init()`?**
-> While `Lego.define()` will "snap" your components into the page immediately, you must call `Lego.init()` to start the background engine. Without it:
+> **Why call `LegoDOM.init()`?**
+> While `LegoDOM.define()` will "snap" your components into the page immediately, you must call `LegoDOM.init()` to start the background engine. Without it:
 > - **Reactivity** to data changes won't work.
 > - **Mustaches** (<code v-pre>{{...}}</code>) outside of components won't hydrate.
 > - **Single Page Routing** won't be activated.
@@ -133,7 +133,7 @@ That's it. No build step, no npm, no configuration.
 
 ## Comparison
 
-| Feature | Lego | Vue | React |
+| Feature | LegoDOM | Vue | React |
 |---------|--------|-----|-------|
 | Size | < 17KB | ~33KB | ~40KB |
 | Dependencies | 0 | Many | Many |
