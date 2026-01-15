@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.0] - 2026-01-15
+## [1.2.0] - 2026-01-15
 
 **Breaking Change: New Template Syntax** 🚨
 To ensure compatibility with server-side frameworks (Jinja, Django, Flask) and JavaScript template literals, **LegoDOM now uses `[[ ]]` by default** instead of `{{ }}`.
