@@ -561,6 +561,10 @@ const Lego = (() => {
         ...templateLogic,
         ...instanceLogic,
         $vars: {},
+        $element: el,
+        $emit: (name, detail) => {
+          el.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
+        },
         get $route() { return Lego.globals.$route },
         get $go() { return Lego.globals.$go }
       }, el);

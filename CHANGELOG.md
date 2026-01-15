@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.0] - 2026-01-16
+## [1.3.1] - 2026-01-16
 
 ### New Features
 
@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
   ```html
   <input type="file" b-var="fileInput" style="display:none">
   <button @click="$vars.fileInput.click()">Upload</button>
+  ```
+- **`this.$emit()` in Script Methods:** `$emit` is now available on the component state, allowing event dispatching from script logic.
+  ```javascript
+  handleSave() {
+    this.$emit('save', { id: this.itemId });
+  }
   ```
 
 ### Documentation
