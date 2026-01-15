@@ -88,6 +88,7 @@ export default defineConfig({
             { text: 'Routing', link: '/guide/routing' },
             { text: 'CDN Usage', link: '/guide/cdn-usage' },
             { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
+            { text: 'Large Apps', link: '/guide/directory-structure' },
             { text: 'FAQ', link: '/guide/faq' }
           ]
         }
