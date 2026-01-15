@@ -16,7 +16,7 @@ Conditional rendering using `display: none`.
 ### With Expressions
 
 ```html
-<div b-show="count > 0">Count is {{ count }}</div>
+<div b-show="count > 0">Count is [[ count ]]</div>
 <div b-show="items.length === 0">No items</div>
 <div b-show="user && user.role === 'admin'">Admin panel</div>
 ```
@@ -57,7 +57,7 @@ List rendering.
 
 ```html
 <ul>
-  <li b-for="item in items">{{ item }}</li>
+  <li b-for="item in items">[[ item ]]</li>
 </ul>
 ```
 
@@ -66,7 +66,7 @@ List rendering.
 ```html
 <ul>
   <li b-for="todo in todos">
-    {{ todo.text }} - {{ todo.done ? 'Done' : 'Pending' }}
+    [[ todo.text ]] - [[ todo.done ? 'Done' : 'Pending' ]]
   </li>
 </ul>
 ```
@@ -78,7 +78,7 @@ Use `$index` (implicit variable):
 ```html
 <ul>
   <li b-for="item in items">
-    #{{ $index + 1 }}: {{ item.name }}
+    #[[ $index + 1 ]]: [[ item.name ]]
   </li>
 </ul>
 ```
@@ -87,10 +87,10 @@ Use `$index` (implicit variable):
 
 ```html
 <div b-for="category in categories">
-  <h3>{{ category.name }}</h3>
+  <h3>[[ category.name ]]</h3>
   <ul>
     <li b-for="product in category.products">
-      {{ product.name }}
+      [[ product.name ]]
     </li>
   </ul>
 </div>
@@ -100,8 +100,8 @@ Use `$index` (implicit variable):
 
 ```html
 <li b-for="user in users">
-  <span b-show="user.active">✅ {{ user.name }}</span>
-  <span b-show="!user.active">❌ {{ user.name }}</span>
+  <span b-show="user.active">✅ [[ user.name ]]</span>
+  <span b-show="!user.active">❌ [[ user.name ]]</span>
 </li>
 ```
 
@@ -113,7 +113,7 @@ Two-way data binding for form inputs.
 
 ```html
 <input b-sync="username" placeholder="Enter username">
-<p>Hello, {{ username }}!</p>
+<p>Hello, [[ username ]]!</p>
 ```
 
 ### Checkbox
@@ -129,7 +129,7 @@ Two-way data binding for form inputs.
 <input type="radio" name="size" value="small" b-sync="selectedSize">
 <input type="radio" name="size" value="medium" b-sync="selectedSize">
 <input type="radio" name="size" value="large" b-sync="selectedSize">
-<p>Selected: {{ selectedSize }}</p>
+<p>Selected: [[ selectedSize ]]</p>
 ```
 
 ### Select Dropdown
@@ -140,14 +140,14 @@ Two-way data binding for form inputs.
   <option value="uk">United Kingdom</option>
   <option value="ca">Canada</option>
 </select>
-<p>Country: {{ country }}</p>
+<p>Country: [[ country ]]</p>
 ```
 
 ### Textarea
 
 ```html
 <textarea b-sync="message" rows="4"></textarea>
-<p>{{ message.length }} characters</p>
+<p>[[ message.length ]] characters</p>
 ```
 
 ### In b-for Loops
@@ -155,7 +155,7 @@ Two-way data binding for form inputs.
 ```html
 <li b-for="todo in todos">
   <input type="checkbox" b-sync="todo.done">
-  <span class="{{ todo.done ? 'done' : '' }}">{{ todo.text }}</span>
+  <span class="[[ todo.done ? 'done' : '' ]]">[[ todo.text ]]</span>
 </li>
 ```
 
@@ -237,8 +237,8 @@ Client-side navigation (prevents page reload).
 ### With Dynamic Routes
 
 ```html
-<a href="/user/{{ userId }}" b-link>View Profile</a>
-<a href="/product/{{ productId }}" b-link>{{ productName }}</a>
+<a href="/user/[[ userId ]]" b-link>View Profile</a>
+<a href="/product/[[ productId ]]" b-link>[[ productName ]]</a>
 ```
 
 ::: tip Router Required
@@ -289,7 +289,7 @@ Lego.define('user-card', `...`, {
 
 ```html
 <li b-for="item in items" b-show="item.visible">
-  {{ item.name }}
+  [[ item.name ]]
 </li>
 ```
 
@@ -298,7 +298,7 @@ Lego.define('user-card', `...`, {
 ```html
 <li b-for="todo in todos">
   <input type="checkbox" b-sync="todo.done">
-  {{ todo.text }}
+  [[ todo.text ]]
 </li>
 ```
 
@@ -320,7 +320,7 @@ Lego.define('user-card', `...`, {
 <div b-show="showPanel">Panel content</div>
 
 <!-- ❌ Verbose -->
-<div style="display: {{ showPanel ? 'block' : 'none' }}">Panel content</div>
+<div style="display: [[ showPanel ? 'block' : 'none' ]]">Panel content</div>
 ```
 
 ### 2. Keep Event Handlers Simple
@@ -367,7 +367,7 @@ Move complex logic to methods.
 
 ```html
 <!-- For frequent toggling -->
-<div class="{{ visible ? '' : 'hidden' }}">Content</div>
+<div class="[[ visible ? '' : 'hidden' ]]">Content</div>
 ```
 
 ```css
@@ -394,7 +394,7 @@ Paginate large lists:
 ```
 
 ```html
-<li b-for="item in visibleItems()">{{ item.name }}</li>
+<li b-for="item in visibleItems()">[[ item.name ]]</li>
 ```
 
 ## Common Patterns
@@ -410,7 +410,7 @@ Paginate large lists:
 
 ```html
 <button @click="count--">-</button>
-<span>{{ count }}</span>
+<span>[[ count ]]</span>
 <button @click="count++">+</button>
 ```
 
@@ -421,7 +421,7 @@ Paginate large lists:
 <ul>
   <li b-for="todo in todos">
     <input type="checkbox" b-sync="todo.done">
-    <span class="{{ todo.done ? 'done' : '' }}">{{ todo.text }}</span>
+    <span class="[[ todo.done ? 'done' : '' ]]">[[ todo.text ]]</span>
   </li>
 </ul>
 ```

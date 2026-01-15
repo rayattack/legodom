@@ -152,10 +152,10 @@ A multi-page application demonstrating client-side routing.
     
     <div class="user-card" b-for="user in users">
       <div>
-        <strong>{{ user.name }}</strong>
-        <p style="margin:0;color:#666;">{{ user.email }}</p>
+        <strong>[[ user.name ]]</strong>
+        <p style="margin:0;color:#666;">[[ user.email ]]</p>
       </div>
-      <a href="/users/{{ user.id }}" b-link>View Profile →</a>
+      <a href="/users/[[ user.id ]]" b-link>View Profile →</a>
     </div>
   </template>
   
@@ -181,17 +181,17 @@ A multi-page application demonstrating client-side routing.
     </div>
     
     <div b-show="!loading && user" class="profile">
-      <h1>{{ user.name }}</h1>
-      <p><strong>Email:</strong> {{ user.email }}</p>
-      <p><strong>Phone:</strong> {{ user.phone }}</p>
-      <p><strong>Website:</strong> {{ user.website }}</p>
+      <h1>[[ user.name ]]</h1>
+      <p><strong>Email:</strong> [[ user.email ]]</p>
+      <p><strong>Phone:</strong> [[ user.phone ]]</p>
+      <p><strong>Website:</strong> [[ user.website ]]</p>
       
       <hr>
       
       <h3>Address</h3>
       <p>
-        {{ user.address.street }}<br>
-        {{ user.address.city }}, {{ user.address.zipcode }}
+        [[ user.address.street ]]<br>
+        [[ user.address.city ]], [[ user.address.zipcode ]]
       </p>
       
       <p><a href="/users" b-link>← Back to users</a></p>
@@ -264,7 +264,7 @@ A multi-page application demonstrating client-side routing.
     
     <div b-show="submitted" class="success">
       <h3>✅ Message Sent!</h3>
-      <p>Thank you for contacting us, {{ form.name }}. We'll respond to {{ form.email }} soon.</p>
+      <p>Thank you for contacting us, [[ form.name ]]. We'll respond to [[ form.email ]] soon.</p>
       <button @click="submitted = false">Send Another</button>
     </div>
   </template>

@@ -80,8 +80,8 @@ You can tell Lego to find a specific element by its ID and replace its contents.
     <aside class="sidebar">
       <div b-for="chat in threads">
         <!-- Parent component (this shell) binds data to these links -->
-        <a href="/messaging/{{chat.id}}" b-target="#chat-window">
-          {{chat.userName}}
+        <a href="/messaging/[[chat.id]]" b-target="#chat-window">
+          [[chat.userName]]
         </a>
       </div>
     </aside>

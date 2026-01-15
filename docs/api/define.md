@@ -21,8 +21,8 @@ import { Lego } from 'lego-dom';
 
 Lego.define('user-card', `
   <div class="card">
-    <h3>{{ name }}</h3>
-    <p>{{ role }}</p>
+    <h3>[[ name ]]</h3>
+    <p>[[ role ]]</p>
   </div>
 `, {
   name: 'John Doe',

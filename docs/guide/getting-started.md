@@ -2,6 +2,10 @@
 
 Get up and running with Lego in under 5 minutes.
 
+::: tip 🚀 Want a Complete Walkthrough?
+Check out our **[Step-by-Step Tutorial](/tutorial/)** – build a full multi-page app from scratch in 15 minutes!
+:::
+
 ## Installation
 
 ### Option 1: CDN (No Build Tools)
@@ -21,7 +25,7 @@ The fastest way to try Lego is via CDN:
   <template b-id="my-component" b-data="{ count: 0 }">
     <h1>Hello Lego!</h1>
     <button @click="count++">Click me</button>
-    <p>Count: {{ count }}</p>
+    <p>Count: [[ count ]]</p>
   </template>
 </body>
 </html>
@@ -45,7 +49,7 @@ import { Lego } from 'lego-dom';
 Lego.define('my-component', `
   <h1>Hello Lego!</h1>
   <button @click="count++">Click me</button>
-  <p>Count: {{ count }}</p>
+  <p>Count: [[ count ]]</p>
 `, {
   count: 0,
 });
@@ -144,8 +148,8 @@ Lego.define('click-counter', `
     }
   </style>
   
-  <h2>{{ message }}</h2>
-  <p>Count: {{ count }}</p>
+  <h2>[[ message ]]</h2>
+  <p>Count: [[ count ]]</p>
   <button @click="increment()">Click Me!</button>
 `, {
   message: 'Welcome!',
@@ -175,8 +179,8 @@ Create `src/components/click-counter.lego`:
     }
   </style>
   
-  <h2>{{ message }}</h2>
-  <p>Count: {{ count }}</p>
+  <h2>[[ message ]]</h2>
+  <p>Count: [[ count ]]</p>
   <button @click="increment()">Click Me!</button>
 </template>
 
@@ -197,11 +201,11 @@ The Vite plugin automatically discovers and registers it!
 
 ### 1. Templates
 
-Templates define what your component looks like. Use `{{ }}` for dynamic content:
+Templates define what your component looks like. Use `[[ ]]` for dynamic content:
 
 ```html
-<h1>Hello {{ name }}!</h1>
-<p>{{ calculateAge() }} years old</p>
+<h1>Hello [[ name ]]!</h1>
+<p>[[ calculateAge() ]] years old</p>
 ```
 
 ### 2. State (Studs)
@@ -238,7 +242,7 @@ Special attributes for common patterns:
 
 ```html
 <p b-show="isLoggedIn">Welcome back!</p>
-<li b-for="item in items">{{ item.name }}</li>
+<li b-for="item in items">[[ item.name ]]</li>
 <input b-sync="username" />
 ```
 

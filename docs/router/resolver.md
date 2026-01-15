@@ -58,7 +58,7 @@ For highly dynamic UIs, `b-target` can even be a function or a dynamic expressio
 
 ```
 <!-- Logic decides the target based on screen size -->
-<a href="/settings" b-link b-target="{{ isMobile ? '#main' : 'settings-pane' }}">
+<a href="/settings" b-link b-target="[[ isMobile ? '#main' : 'settings-pane' ]]">
   Settings
 </a>
 

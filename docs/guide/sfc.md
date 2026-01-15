@@ -2,11 +2,50 @@
 
 Single File Components (SFCs) let you define components in dedicated `.lego` files when using Vite as your build tool.
 
+::: tip 🚀 New to LegoDOM?
+Start with our **[Step-by-Step Tutorial](/tutorial/)** to build a complete multi-page app with SFCs!
+:::
+
+## Where Does My Config Go?
+
+The #1 question developers ask: **"I have a `.lego` file – now where do I put my routes?"**
+
+**Answer: Everything goes in your entry file (`app.js` or `main.js`):**
+
+```javascript
+// src/app.js – The control center of your app
+
+import { Lego } from 'lego-dom';
+import registerComponents from 'virtual:lego-components';
+
+// 1. Register all .lego files automatically
+registerComponents();
+
+// 2. Define your routes
+Lego.route('/', 'home-page');           // home-page.lego
+Lego.route('/login', 'login-page');     // login-page.lego
+Lego.route('/users/:id', 'user-profile'); // user-profile.lego
+
+// 3. Initialize global state (optional)
+Lego.globals.user = null;
+
+// 4. Start the engine
+await Lego.init();
+```
+
+Your `index.html` just needs:
+```html
+<lego-router></lego-router>
+<script type="module" src="/src/app.js"></script>
+```
+
+That's the complete pattern! 🎉
+
+---
+
 ## Why SFCs?
 
-When your project grows, keeping
-
- components in separate files makes your codebase more organized and maintainable.
+When your project grows, keeping components in separate files makes your codebase more organized and maintainable.
 
 ### Benefits
 
@@ -43,12 +82,12 @@ Here's a complete example (`user-card.lego`):
 
 ```html
 <template>
-  <img class="avatar" src="{{ avatarUrl }}" alt="{{ name }}">
-  <h2 class="name">{{ name }}</h2>
-  <p class="bio">{{ bio }}</p>
-  <p>Followers: {{ followers }}</p>
+  <img class="avatar" src="[[ avatarUrl ]]" alt="[[ name ]]">
+  <h2 class="name">[[ name ]]</h2>
+  <p class="bio">[[ bio ]]</p>
+  <p>Followers: [[ followers ]]</p>
   <button @click="follow()">
-    {{ isFollowing ? 'Unfollow' : 'Follow' }}
+    [[ isFollowing ? 'Unfollow' : 'Follow' ]]
   </button>
 </template>
 
@@ -214,10 +253,10 @@ Contains your component's HTML markup with Lego directives:
 
 ```html
 <template>
-  <h1>{{ title }}</h1>
-  <p b-show="showContent">{{ content }}</p>
+  <h1>[[ title ]]</h1>
+  <p b-show="showContent">[[ content ]]</p>
   <ul>
-    <li b-for="item in items">{{ item }}</li>
+    <li b-for="item in items">[[ item ]]</li>
   </ul>
 </template>
 ```
@@ -340,7 +379,7 @@ components/
 ```html
 <template b-id="my-component">
   <style>self { padding: 1rem; }</style>
-  <h1>{{ title }}</h1>
+  <h1>[[ title ]]</h1>
 </template>
 
 <my-component b-data="{ title: 'Hello' }"></my-component>
@@ -351,7 +390,7 @@ components/
 ```html
 <!-- my-component.lego -->
 <template>
-  <h1>{{ title }}</h1>
+  <h1>[[ title ]]</h1>
 </template>
 
 <style>

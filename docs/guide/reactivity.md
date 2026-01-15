@@ -189,7 +189,7 @@ Nested objects are automatically reactive:
 
 ```html
 <!-- All reactive -->
-<p>{{ user.profile.settings.theme }}</p>
+<p>[[ user.profile.settings.theme ]]</p>
 ```
 
 ```js
@@ -381,7 +381,7 @@ Use methods:
 ```
 
 ```html
-<p>{{ fullName() }}</p>
+<p>[[ fullName() ]]</p>
 ```
 
 ### Debouncing Updates

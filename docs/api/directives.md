@@ -26,7 +26,7 @@ Render a list of items.
 ```html
 <ul>
   <li b-for="user in users">
-    {{ user.name }}
+    [[ user.name ]]
   </li>
 </ul>
 ```
@@ -37,7 +37,7 @@ Two-way data binding for form inputs.
 
 ```html
 <input b-sync="username" placeholder="Enter username">
-<p>You typed: {{ username }}</p>
+<p>You typed: [[ username ]]</p>
 ```
 
 ## @event

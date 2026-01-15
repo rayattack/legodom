@@ -77,7 +77,7 @@ Compare that to:
 | Aspect | Lego | Traditional Frameworks |
 |--------|--------|----------------------|
 | **Reactivity** | Direct object mutation | setState / dispatch / ref() |
-| **Templates** | HTML with <code v-pre>{{ }}</code> | JSX / template syntax |
+| **Templates** | HTML with <code v-pre>[[ ]]</code> | JSX / template syntax |
 | **Styles** | Shadow DOM (native) | CSS-in-JS / scoped CSS |
 | **Build** | Optional | Required |
 | **Learning Curve** | Hours | Days/Weeks |

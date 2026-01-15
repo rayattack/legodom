@@ -4,6 +4,42 @@
 
 LegoDOM's router is different. It doesn't have a single "Root Outlet". Instead, **any element** can be a router target. This allows you to build **Persistent Layouts** (like Sidebars, Music Players, or Chat Windows) that never reload or lose state while the user navigates.
 
+::: tip 🚀 Just Want to Navigate Between Pages?
+Here's the quick answer:
+
+**1. Define routes in `app.js`:**
+```javascript
+Lego.route('/', 'home-page');
+Lego.route('/login', 'login-page');
+Lego.route('/dashboard', 'dashboard-page');
+```
+
+**2. Navigate with links:**
+```html
+<a href="/login" b-link>Go to Login</a>
+```
+
+**3. Or navigate with JavaScript:**
+```javascript
+this.$go('/login').get();
+```
+
+That's it! For the full tutorial, see [Adding Routes](/tutorial/03-adding-routes).
+:::
+
+## Quick Reference
+
+| I want to... | Code |
+|--------------|------|
+| Define a route | `Lego.route('/path', 'component-name')` |
+| Link to a page | `<a href="/path" b-link>Click</a>` |
+| Navigate via JS | `this.$go('/path').get()` |
+| Get URL params | `this.$route.params.id` |
+| Update only one div | `<a href="/x" b-target="#myDiv">` |
+| Navigate without URL change | `this.$go('/x').get(false)` |
+
+---
+
 ## The Architecture: "The Persistent Shell"
 
 The best way to use LegoDOM is to define a static "Shell" that holds your persistent tools, and standard outlets for your content.
@@ -155,7 +191,7 @@ Keep a persistent Main Content while swapping sidebars.
   <!-- Context specific tools render here -->
   <template b-id="user-profile">
     <h1>User Profile</h1>
-    <p>User ID: {{ $route.params.id }}</p>
+    <p>User ID: [[ $route.params.id ]]</p>
     <button @click="loadUser()">Load User</button>
   </template>
 </aside>
@@ -238,7 +274,7 @@ Lego.route('/customers/:id/orders/:orderId', 'order-details-page');
 <!-- order-details-page.lego -->
 <template>
   <customers-layout>
-    <order-info id="{{ $route.params.orderId }}"></order-info>
+    <order-info id="[[ $route.params.orderId ]]"></order-info>
   </customers-layout>
 </template>
 ```

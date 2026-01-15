@@ -734,32 +734,59 @@ const Lego = (() => {
       $go: (path, ...targets) => _go(path, ...targets)(document.body)
     }, document.body),
     defineSFC: (content, filename = 'component.lego') => {
-      const templateMatch = content.match(/<template([\s\S]*?)>([\s\S]*?)<\/template>/);
-      let template = '', stylesAttr = '';
-      if (templateMatch) {
-        const attrs = templateMatch[1];
-        template = templateMatch[2].trim();
-        const bStylesMatch = attrs.match(/b-styles=["']([^"']+)["']/);
-        if (bStylesMatch) stylesAttr = bStylesMatch[1];
-      }
-
-      const scriptMatch = content.match(/<script>([\s\S]*?)<\/script>/);
+      let template = '';
       let script = '{}';
-      if (scriptMatch) {
-        const logic = scriptMatch[1].trim();
-        const defaultExport = logic.match(/export\s+default\s+({[\s\S]*})/);
-        script = defaultExport ? defaultExport[1] : logic;
-      }
+      let stylesAttr = '';
+      let style = '';
 
-      const styleMatch = content.match(/<style>([\s\S]*?)<\/style>/);
-      if (styleMatch) {
-        template = `<style>${styleMatch[1].trim()}</style>` + template;
+      let remaining = content;
+      // Robust regex from parse-lego.js
+      const startTagRegex = /<(template|script|style)\b((?:\s+(?:[^>"']|"[^"]*"|'[^']*')*)*)>/i;
+
+      while (remaining) {
+        const match = remaining.match(startTagRegex);
+        if (!match) break;
+
+        const tagName = match[1].toLowerCase();
+        const attrs = match[2];
+        const fullMatch = match[0];
+        const startIndex = match.index;
+
+        const closeTag = `</${tagName}>`;
+        const contentStart = startIndex + fullMatch.length;
+        const contentEnd = remaining.indexOf(closeTag, contentStart);
+
+        if (contentEnd === -1) {
+          console.warn(`[Lego] Unclosed <${tagName}> tag in ${filename}`);
+          break;
+        }
+
+        const innerContent = remaining.slice(contentStart, contentEnd);
+
+        if (tagName === 'template') {
+          template = innerContent.trim();
+          const bStylesMatch = attrs.match(/b-styles=["']([^"']+)["']/);
+          if (bStylesMatch) stylesAttr = bStylesMatch[1];
+        } else if (tagName === 'script') {
+          // Extract logic from script
+          const logic = innerContent.trim();
+          const defaultExport = logic.match(/export\s+default\s+({[\s\S]*})/);
+          script = defaultExport ? defaultExport[1] : logic;
+        } else if (tagName === 'style') {
+          style = innerContent.trim();
+        }
+
+        remaining = remaining.slice(contentEnd + closeTag.length);
       }
 
       const name = deriveComponentName(filename);
       // We must eval the script to get the object. 
       // Safe-ish because it's coming from the "Server" (trusted source in this architecture)
       const logicObj = new Function(`return ${script}`)();
+
+      if (style) {
+        template = `<style>${style}</style>` + template;
+      }
 
       registry[name] = document.createElement('template');
       registry[name].innerHTML = template;

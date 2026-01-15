@@ -10,12 +10,13 @@ export default defineConfig({
 
     nav: [
       { text: 'Guide', link: '/guide/' },
+      { text: 'Tutorial', link: '/tutorial/' },
       { text: 'Contributing', link: '/contributing/' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
       { text: 'Router', link: '/router/' },
       {
-        text: 'v1.2.0',
+        text: 'v1.2.1',
         items: [
           { text: 'Changelog', link: 'https://github.com/rayattack/LegoDOM/releases' }
 
@@ -48,6 +49,19 @@ export default defineConfig({
           ]
         }
       ],
+      '/tutorial/': [
+        {
+          text: 'Tutorial: Your First App',
+          items: [
+            { text: 'Overview', link: '/tutorial/' },
+            { text: '1. Project Setup', link: '/tutorial/01-project-setup' },
+            { text: '2. Your First Component', link: '/tutorial/02-your-first-component' },
+            { text: '3. Adding Routes', link: '/tutorial/03-adding-routes' },
+            { text: '4. Multi-Page App', link: '/tutorial/04-multi-page-app' },
+            { text: '5. State & Globals', link: '/tutorial/05-state-and-globals' }
+          ]
+        }
+      ],
       '/guide/': [
         {
           text: 'Introduction',
@@ -73,7 +87,8 @@ export default defineConfig({
             { text: 'Single File Components', link: '/guide/sfc' },
             { text: 'Routing', link: '/guide/routing' },
             { text: 'CDN Usage', link: '/guide/cdn-usage' },
-            { text: 'Lifecycle Hooks', link: '/guide/lifecycle' }
+            { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
+            { text: 'FAQ', link: '/guide/faq' }
           ]
         }
       ],

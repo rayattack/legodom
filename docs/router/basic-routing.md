@@ -57,7 +57,7 @@ In your component template:
 ```html
 <template b-id="profile-page">
   <h1>User Profile</h1>
-  <p>Viewing ID: {{ $route.params.id }}</p>
+  <p>Viewing ID: [[ $route.params.id ]]</p>
 </template>
 
 ```
@@ -83,7 +83,7 @@ mounted() {
 
 <template>
   <h1>User Profile</h1>
-  <p>Viewing ID: {{ $params.id }}</p>
+  <p>Viewing ID: [[ $params.id ]]</p>
 </template>
 
 <script>

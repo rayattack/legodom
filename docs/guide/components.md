@@ -24,8 +24,8 @@ A component is a reusable, self-contained piece of UI with its own template, sty
     }
   </style>
   
-  <img class="avatar" src="{{ avatarUrl }}" alt="{{ name }}">
-  <span>{{ name }}</span>
+  <img class="avatar" src="[[ avatarUrl ]]" alt="[[ name ]]">
+  <span>[[ name ]]</span>
 </template>
 ```
 
@@ -37,7 +37,7 @@ Define components directly in your HTML with `<template b-id>`:
 
 ```html
 <template b-id="hello-world" b-data="{ name: 'Default User' }">
-  <h1>Hello {{ name }}!</h1>
+  <h1>Hello [[ name ]]!</h1>
 </template>
 
 <!-- Uses the default "Default User" -->
@@ -53,7 +53,7 @@ Use `Lego.define()` for programmatic component creation:
 
 ```js
 Lego.define('hello-world', `
-  <h1>Hello {{ name }}!</h1>
+  <h1>Hello [[ name ]]!</h1>
 `, {
   name: 'Alice'
 });
@@ -66,7 +66,7 @@ With Vite, use `.lego` files:
 ```html
 <!-- hello-world.lego -->
 <template>
-  <h1>Hello {{ name }}!</h1>
+  <h1>Hello [[ name ]]!</h1>
 </template>
 
 <script>
@@ -98,10 +98,10 @@ State is defined in the component's logic object:
 }
 ```
 
-Access state in templates using `{{ }}`:
+Access state in templates using `[[ ]]`:
 
 ```html
-<p>Count: {{ count }}</p>
+<p>Count: [[ count ]]</p>
 <button @click="increment()">+1</button>
 ```
 
@@ -182,7 +182,7 @@ Use `$ancestors()` to read parent component state:
 
 ```html
 <!-- In nested component -->
-<p>App title: {{ $ancestors('app-root').title }}</p>
+<p>App title: [[ $ancestors('app-root').title ]]</p>
 ```
 
 ::: warning Read-Only
@@ -346,11 +346,11 @@ Clear timers, remove listeners:
 ```html
 <div b-show="loading">Loading...</div>
 <div b-show="!loading && data">
-  <h2>{{ data.title }}</h2>
-  <p>{{ data.content }}</p>
+  <h2>[[ data.title ]]</h2>
+  <p>[[ data.content ]]</p>
 </div>
 <div b-show="!loading && error">
-  Error: {{ error }}
+  Error: [[ error ]]
 </div>
 ```
 
@@ -402,7 +402,7 @@ Use methods for computed values:
 ```
 
 ```html
-<p>Total: ${{ total().toFixed(2) }}</p>
+<p>Total: $[[ total().toFixed(2) ]]</p>
 ```
 
 ## Next Steps

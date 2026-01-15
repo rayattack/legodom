@@ -13,7 +13,7 @@ A simple reactive counter demonstrating basic state and events.
   <style>
     button { font-size: 1.2rem; padding: 0.5rem 1rem; }
   </style>
-  <p>Count: {{ count }}</p>
+  <p>Count: [[ count ]]</p>
   <button @click="count++">Increment</button>
 </template>
 
@@ -27,7 +27,7 @@ Two-way data binding with `b-sync`.
 ```html
 <template b-id="name-input">
   <input b-sync="name" placeholder="Enter your name">
-  <p b-show="name">Hello, {{ name }}!</p>
+  <p b-show="name">Hello, [[ name ]]!</p>
 </template>
 
 <name-input b-data="{ name: '' }"></name-input>
@@ -42,7 +42,7 @@ Lists with `b-for`.
   <ul>
     <li b-for="todo in todos">
       <input type="checkbox" b-sync="todo.done">
-      <span class="{{ todo.done ? 'done' : '' }}">{{ todo.text }}</span>
+      <span class="[[ todo.done ? 'done' : '' ]]">[[ todo.text ]]</span>
     </li>
   </ul>
 </template>

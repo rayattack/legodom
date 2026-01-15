@@ -17,7 +17,7 @@ Handling forms in Lego.
       <input type="password" b-sync="password">
     </div>
     
-    <p b-show="error" style="color: red">{{ error }}</p>
+    <p b-show="error" style="color: red">[[ error ]]</p>
     
     <button type="submit">Login</button>
   </form>

@@ -132,7 +132,7 @@ export default function legoPlugin(options = {}) {
         const defineCall = generateDefineCall(parsed);
 
         return `
-import { Lego } from 'lego-dom/main.js';
+import { Lego } from 'lego-dom';
 
 ${defineCall}
 

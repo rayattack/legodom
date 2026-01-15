@@ -7,7 +7,7 @@ Using `.lego` files with Vite.
 **Counter.lego**
 ```html
 <template>
-  <button @click="count++">Count: {{ count }}</button>
+  <button @click="count++">Count: [[ count ]]</button>
 </template>
 
 <style>

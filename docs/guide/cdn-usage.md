@@ -13,7 +13,7 @@ Lego works perfectly without any build tools. Just include it via CDN and start 
 <body>
   <!-- Define your component -->
   <template b-id="hello-world">
-    <h1>{{ message }}</h1>
+    <h1>[[ message ]]</h1>
   </template>
   
   <!-- Use it -->
@@ -133,13 +133,13 @@ Here's a full working application using only CDN:
     <ul>
       <li b-for="todo in todos">
         <input type="checkbox" b-sync="todo.done">
-        <span class="{{ todo.done ? 'done' : '' }}">
-          {{ todo.text }}
+        <span class="[[ todo.done ? 'done' : '' ]]">
+          [[ todo.text ]]
         </span>
       </li>
     </ul>
     
-    <p>{{ remaining() }} remaining</p>
+    <p>[[ remaining() ]] remaining</p>
   </template>
 
   <script src="https://unpkg.com/lego-dom/main.js"></script>
@@ -198,7 +198,7 @@ Lego is perfect for progressively enhancing existing sites:
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
   </style>
-  <p>Welcome, {{ username }}!</p>
+  <p>Welcome, [[ username ]]!</p>
   <button @click="logout()">Logout</button>
 </template>
 

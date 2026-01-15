@@ -56,8 +56,8 @@
       }
     </style>
 
-    <h3>{{title}}</h3>
-    <p>{{ items.filter(t => !t.done).length }} of {{ items.length }} items remaining</p>
+    <h3>[[title]]</h3>
+    <p>[[items.filter(t => !t.done).length]] of [[items.length]] items remaining</p>
     <div style="margin-bottom: 20px;">
       <input b-sync="newItem" placeholder="Add task..." class="input">
       <button @click="() => {
@@ -71,7 +71,7 @@
     <div b-for="todo in items">
       <div class="item-row {{todo.done ? 'done' : ''}}">
         <input type="checkbox" b-sync="todo.done">
-        <span>{{todo.text}}</span>
+        <span>[[todo.text]]</span>
       </div>
     </div>
   </template>
@@ -96,8 +96,8 @@
       }
     </style>
 
-    <h3>{{name}}</h3>
-    <p>{{bio}}</p>
+    <h3>[[name]]</h3>
+    <p>[[bio]]</p>
     <slot></slot>
   </template>
 
@@ -119,6 +119,11 @@
         }">
     </todo-list>
   </user-card>
+  <script>
+    // Initialize Lego
+    // We need to wait for DOM, but script at end of body is fine
+    Lego.init();
+  </script>
 </body>
 
 </html>

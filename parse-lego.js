@@ -14,33 +14,61 @@ export function parseLego(content, filename = 'component.lego') {
     template: '',
     script: '',
     style: '',
-    stylesAttr: '', // Stores the value of the b-styles attribute
+    stylesAttr: '',
     componentName: deriveComponentName(filename)
   };
 
-  // Updated to capture attributes on the template tag (like b-styles)
-  const templateMatch = content.match(/<template([\s\S]*?)>([\s\S]*?)<\/template>/);
-  if (templateMatch) {
-    const attrs = templateMatch[1];
-    result.template = templateMatch[2].trim();
+  let remaining = content;
 
-    // Extract b-styles value from the attributes string
-    const bStylesMatch = attrs.match(/b-styles=["']([^"']+)["']/);
-    if (bStylesMatch) {
-      result.stylesAttr = bStylesMatch[1];
+  // Regex to match the start tag of a section, handling attributes with quotes correctly
+  // <(template|script|style) matches the tag name
+  // \b ensures we don't match templates inside "template-foo"
+  // (?: ... )* loops over attributes
+  // \s+ requires space before attributes
+  // (?:[^>"']|"[^"]*"|'[^']*')* matches attribute content, respecting quotes to skip >
+  const startTagRegex = /<(template|script|style)\b((?:\s+(?:[^>"']|"[^"]*"|'[^']*')*)*)>/i;
+
+  while (remaining) {
+    const match = remaining.match(startTagRegex);
+    if (!match) break;
+
+    const tagName = match[1].toLowerCase();
+    const attrs = match[2]; // Captures all attributes
+    const fullMatch = match[0];
+    const startIndex = match.index;
+
+    // Find the corresponding closing tag
+    const closeTag = `</${tagName}>`;
+
+    // Content starts after the opening tag
+    const contentStart = startIndex + fullMatch.length;
+
+    // Find the closing tag starting from where content began
+    const contentEnd = remaining.indexOf(closeTag, contentStart);
+
+    if (contentEnd === -1) {
+      // If no closing tag found, we can't safely parse this block
+      console.warn(`[Lego] Unclosed <${tagName}> tag in ${filename}`);
+      break;
     }
-  }
 
-  // Extract script section
-  const scriptMatch = content.match(/<script>([\s\S]*?)<\/script>/);
-  if (scriptMatch) {
-    result.script = scriptMatch[1].trim();
-  }
+    const innerContent = remaining.slice(contentStart, contentEnd);
 
-  // Extract style section
-  const styleMatch = content.match(/<style>([\s\S]*?)<\/style>/);
-  if (styleMatch) {
-    result.style = styleMatch[1].trim();
+    if (tagName === 'template') {
+      result.template = innerContent.trim();
+      // Extract b-styles attribute if present
+      const bStylesMatch = attrs.match(/b-styles=["']([^"']+)["']/);
+      if (bStylesMatch) {
+        result.stylesAttr = bStylesMatch[1];
+      }
+    } else if (tagName === 'script') {
+      result.script = innerContent.trim();
+    } else if (tagName === 'style') {
+      result.style = innerContent.trim();
+    }
+
+    // Advance past this block (content + closing tag)
+    remaining = remaining.slice(contentEnd + closeTag.length);
   }
 
   return result;
@@ -59,7 +87,6 @@ export function deriveComponentName(filename) {
 
 /**
  * Generate Lego.define() code from parsed .lego file
- * Updated to include the 4th argument for styles
  * @param {object} parsed - Parsed .lego file object
  * @returns {string} - JavaScript code string
  */
@@ -88,7 +115,7 @@ export function generateDefineCall(parsed) {
     }
   }
 
-  // Generate the Lego.define call with the new 4th argument (stylesAttr)
+  // Generate the Lego.define call
   return `Lego.define('${componentName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, '${stylesAttr}');`;
 }
 
