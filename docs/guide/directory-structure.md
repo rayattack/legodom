@@ -30,9 +30,9 @@ But what do they *mean*?
 **The Technical Answer:** `main.js` allows all of this in one file. It will work.
 
 **The Architectural Answer:** You have conflated three distinct responsibilities into one:
-1.  **Identity** — Looking like an avatar.
-2.  **Intent** — Picking a file.
-3.  **Context** — Saving to *your specific server*.
+1.  **Identity** Looking like an avatar.
+2.  **Intent** Picking a file.
+3.  **Context** Saving to *your specific server*.
 
 **The Consequence:**
 If you later want to display that avatar in a read-only user list, you *cannot reuse this component* because clicking it triggers unwanted upload logic. You will be forced to create a new, duplicate `<block-avatar>` just for display.
@@ -62,7 +62,7 @@ export default {
 ```
 -   **Role:** Just the visuals. Circular crop, fallback, size classes.
 -   **Logic:** None. Zero business knowledge.
--   **Reusability:** Used *everywhere* — Navbar, User List, Profile Page, Comments.
+-   **Reusability:** Used *everywhere* e.g. Navbar, User List, Profile Page, Comments.
 
 #### 2. The Widget (Intent)
 
@@ -129,7 +129,7 @@ export default {
 
 ### Blocks (Atoms)
 
-> **TL;DR** — A Block is an irreducible thing. A UI with identity, but no narrative intent.
+> **TL;DR** A Block is an irreducible thing. A UI with identity, but no narrative intent.
 
 A Block cannot be broken down into smaller Blocks. It is self-contained.
 
@@ -143,7 +143,7 @@ A Block cannot be broken down into smaller Blocks. It is self-contained.
 
 ### Widgets (Molecules)
 
-> **TL;DR** — A Widget is an interaction, not a thing.
+> **TL;DR** A Widget is an interaction, not a thing.
 
 A Widget gives Blocks a reason to exist together. It defines *how* an interaction works without embedding *who* it's for or *what* business outcome it serves.
 
@@ -155,7 +155,7 @@ A Widget gives Blocks a reason to exist together. It defines *how* an interactio
 
 ### Components (Organisms)
 
-> **TL;DR** — Components are where your app features come to life.
+> **TL;DR** Components are where your app features come to life.
 
 A Component is a Widget (or set of Widgets) bound to specific data, rules, and responsibility. It's where interaction becomes meaningful to *this* application.
 
@@ -167,7 +167,7 @@ A Component is a Widget (or set of Widgets) bound to specific data, rules, and r
 
 ### Pages (Ecosystem)
 
-> **TL;DR** — A Page is the top-level host that routing targets.
+> **TL;DR** A Page is the top-level host that routing targets.
 
 Pages are the uppermost hosts. They orchestrate the layout of Components within the context of a LegoDOM application.
 
@@ -206,4 +206,4 @@ src/
 | :--- | :--- |
 | Name it `<comp-avatar-upload>` and accept it is not reusable. | Let the **Widget** handle the interaction. Let the **Component** handle the transaction. |
 
-**This is a recommendation.** If you find a pattern that works better for your team, use it. The goal is clarity, reusability, and reducing arguments — not rigid adherence to a doctrine.
+**This is a recommendation.** If you find a pattern that works better for your team, use it. The goal is clarity, reusability, and reducing arguments - not rigid adherence to a doctrine.
