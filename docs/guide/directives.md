@@ -2,6 +2,32 @@
 
 Directives are special attributes that add reactive behavior to elements.
 
+## b-if
+
+Conditional rendering (adds/removes from DOM).
+
+### Basic Usage
+
+```html
+<p b-if="isLoggedIn">Welcome back!</p>
+<p b-if="!isLoggedIn">Please log in</p>
+```
+
+### With Expressions
+
+```html
+<div b-if="count > 0">Count is [[ count ]]</div>
+<div b-if="items.length === 0">No items</div>
+```
+
+::: tip b-if vs b-show
+`b-if` adds or removes the element from the DOM.
+`b-show` toggles `display: none`.
+
+Use `b-if` if the condition rarely changes.
+Use `b-show` if you toggle often.
+:::
+
 ## b-show
 
 Conditional rendering using `display: none`.
@@ -48,6 +74,22 @@ Renders raw HTML content.
   rawContent: '<b>Bold</b> and <i>Italic</i>'
 }
 ```
+
+## b-text
+
+Sets the text content of an element.
+
+This is equivalent to using `[[ expression ]]` interpolation, but as a directive.
+
+```html
+<span b-text="user.name"></span>
+<!-- Equivalent to: -->
+<span>[[ user.name ]]</span>
+```
+
+::: tip Security
+Like `[[ ]]`, `b-text` escapes HTML special characters to prevent XSS. Use `b-html` if you need to render raw HTML.
+:::
 
 ## b-for
 
@@ -439,6 +481,22 @@ Paginate large lists:
 <div b-show="activeTab === 'profile'">Profile content</div>
 <div b-show="activeTab === 'settings'">Settings content</div>
 ```
+
+## See Also
+
+Some directives are specific to certain features and are documented in their respective guides:
+
+### Component Directives
+
+- **`b-id`**: Defines a component from a template.
+- **`b-styles`**: Applies shared styles to a component.
+- See [Components Guide](/guide/components)
+
+### Routing Directives
+
+- **`b-target`**: Specifies the target element for surgical routing updates.
+- **`b-link`**: Controls browser history behavior for links.
+- See [Routing Guide](/guide/routing)
 
 ## Next Steps
 
