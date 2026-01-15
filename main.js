@@ -5,6 +5,7 @@ const Lego = (() => {
 
   const sfcLogic = new Map();
   const sharedStates = new Map();
+  const expressionCache = new Map(); // Cache for compiled expressions
 
   const styleRegistry = new Map();
   let styleConfig = {};
@@ -169,19 +170,35 @@ const Lego = (() => {
   };
 
   const safeEval = (expr, context) => {
+    // 1. Security: Block dangerous patterns
+    if (/\b(function|eval|import|class|module|deploy|constructor|__proto__)\b/.test(expr)) {
+      console.warn(`[Lego] Security Warning: Blocked dangerous expression "${expr}"`);
+      return undefined;
+    }
+
     try {
       const scope = context.state || {};
+
+      // 2. Performance: Check cache
+      // We purposefully cache based on the expression string alone.
+      // The 'helpers' and 'state' are passed dynamically to the cached function.
+      let func = expressionCache.get(expr);
+      if (!func) {
+        func = new Function('global', 'self', 'event', 'helpers', `
+          with(helpers) {
+            with(this) { 
+              try { return ${expr} } catch(e) { return undefined; } 
+            }
+          }
+        `);
+        expressionCache.set(expr, func);
+      }
 
       const helpers = {
         $ancestors: (tag) => findAncestorState(context.self, tag),
         $registry: (tag) => sharedStates.get(tag.toLowerCase()),
         $element: context.self,
         $route: Lego.globals.$route,
-        /**
-         * The $go helper for surgical routing
-         * @param {string} path - URL to navigate to
-         * @param {...(string|function)} targets - Specific components or IDs to swap
-         */
         $go: (path, ...targets) => _go(path, ...targets)(context.self),
         $emit: (name, detail) => {
           context.self.dispatchEvent(new CustomEvent(name, {
@@ -191,14 +208,6 @@ const Lego = (() => {
           }));
         }
       };
-
-      const func = new Function('global', 'self', 'event', 'helpers', `
-        with(helpers) {
-          with(this) { 
-            try { return ${expr} } catch(e) { return undefined; } 
-          }
-        }
-      `);
 
       const result = func.call(scope, context.global, context.self, context.event, helpers);
       if (typeof result === 'function') return result.call(scope, context.event);
@@ -321,6 +330,11 @@ const Lego = (() => {
           }
         }
         if (node.hasAttribute('b-text')) bindings.push({ type: 'b-text', node, path: node.getAttribute('b-text') });
+        if (node.hasAttribute('b-html')) {
+          const expr = node.getAttribute('b-html');
+          checkGlobal(expr);
+          bindings.push({ type: 'b-html', node, expr });
+        }
         if (node.hasAttribute('b-sync')) bindings.push({ type: 'b-sync', node });
         [...node.attributes].forEach(attr => {
           if (attr.value.includes('{{')) {
@@ -386,6 +400,7 @@ const Lego = (() => {
         }
         if (b.type === 'b-show') b.node.style.display = safeEval(b.expr, { state, global: Lego.globals, self: b.node }) ? '' : 'none';
         if (b.type === 'b-text') b.node.textContent = resolve(b.path, state);
+        if (b.type === 'b-html') b.node.innerHTML = safeEval(b.expr, { state, global: Lego.globals, self: b.node }) || '';
         if (b.type === 'b-sync') syncModelValue(b.node, resolve(b.node.getAttribute('b-sync'), state));
         if (b.type === 'text') {
           const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state, global: Lego.globals, self: b.node }) ?? '');
