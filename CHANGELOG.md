@@ -2,12 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-01-15
+
+**The Enterprise Readiness Update** 
+This release focuses on Security, Performance, and Resilience, making LegoDOM suitable for high-traffic production environments.
+
+### Security Hardening
+
+- **Secure Expression Evaluation:** Implemented a new `safeEval` validator that blocks dangerous keywords (e.g., `function`, `eval`, `constructor`) to prevent arbitrary code execution.
+- **XSS Protection:** `safeEval` now automatically escapes output by default.
+- **New `b-html` Directive:** Added `b-html` for safely rendering raw HTML content (replacing `innerHTML`), requiring explicit opt-in for potential XSS risks.
+
+### Performance
+
+- **Expression Caching:** Compiled expressions are now cached in a `WeakMap`, transforming `O(n)` compilation costs into `O(1)` for repeated renders. This yields a massive performance boost for large lists (`b-for`).
+- **Optimized Binding:** Replaced `querySelectorAll('*')` with `TreeWalker`, significantly reducing memory allocation and DOM traversal time during component initialization.
+
+### Resilience & Scalability
+
+- **Global Error Handling:** Introduced `Lego.config.onError` hook for centralized error reporting (compatible with Sentry/Datadog).
+- **Graceful Rendering:** Rendering errors (e.g., accessing undefined properties in `{{ }}`) are now caught and reported, but do not crash the component or application.
+- **Memory Management:** Fixed nested component lifecycle issues where Shadow DOM children were not correctly tracked, preventing memory leaks in complex trees.
+- **Monitoring Plugin:** Added performance monitoring hooks (`onRenderStart`, `onRenderEnd`) and a new `monitoring-plugin.js` for realtime metrics.
+
 ## [1.0.0] - 2026-01-10
 
 **The Launch Release!** 🚀
 LegoDOM moves out of beta with a finalized API, robust routing, and a hybrid rendering engine.
 
-### 🌟 Major features
+### Major features
 
 - **Surgical Routing:** Introduced a groundbreaking `b-target` attribute that allows any link to update any part of the page without a full reload.
     - **Smart History:** The router now tracks surgical updates in `history.state`, correctly restoring "fragment" states when using the Back/Forward buttons.
@@ -21,7 +44,7 @@ LegoDOM moves out of beta with a finalized API, robust routing, and a hybrid ren
     - **Cleaner Templates:** Template expressions now support `$route` directly (`{{ $route.params.id }}`) without `global.` prefix.
     - **HMR 2.0:** The Vite plugin now correctly handles adding/deleting `.lego` files and performs smarter hot updates.
 
-### ⚡ Improvements
+### Improvements
 
 - **Router:**
     - Exposed `$go(path, ...targets).get()` for programmatic surgical navigation.
@@ -37,7 +60,7 @@ LegoDOM moves out of beta with a finalized API, robust routing, and a hybrid ren
     - Complete overhaul of Routing guide with "Surgical Swaps", "Deep Linking", and "Self-Healing" patterns.
     - Clarified component naming conventions (Filename for Vite vs. `b-id` for CDN).
 
-### 🐛 Bug Fixes
+### Bug Fixes
 
 - Fixed "Literal Mustaches" appearing in `href` and text content on initial load.
 - Fixed Deep Linking where hitting Refresh on a sub-route would render an empty shell (addressed via Self-Healing pattern).

@@ -10,6 +10,12 @@ const Lego = (() => {
   const styleRegistry = new Map();
   let styleConfig = {};
 
+  const config = {
+    onError: (err, type, el) => {
+      console.error(`[Lego Error] [${type}]`, err, el);
+    }
+  };
+
   const routes = [];
 
   const escapeHTML = (str) => {
@@ -169,7 +175,7 @@ const Lego = (() => {
     return undefined;
   };
 
-  const safeEval = (expr, context) => {
+  const safeEval = (expr, context, throwError = false) => {
     // 1. Security: Block dangerous patterns
     if (/\b(function|eval|import|class|module|deploy|constructor|__proto__)\b/.test(expr)) {
       console.warn(`[Lego] Security Warning: Blocked dangerous expression "${expr}"`);
@@ -184,10 +190,11 @@ const Lego = (() => {
       // The 'helpers' and 'state' are passed dynamically to the cached function.
       let func = expressionCache.get(expr);
       if (!func) {
+        // Removed inner try-catch to allow error propagation to the caller
         func = new Function('global', 'self', 'event', 'helpers', `
           with(helpers) {
             with(this) { 
-              try { return ${expr} } catch(e) { return undefined; } 
+              return ${expr}
             }
           }
         `);
@@ -213,6 +220,8 @@ const Lego = (() => {
       if (typeof result === 'function') return result.call(scope, context.event);
       return result;
     } catch (e) {
+      if (throwError) throw e;
+      config.onError(e, 'render-error', context.self);
       return undefined;
     }
   };
@@ -228,51 +237,68 @@ const Lego = (() => {
 
   const bind = (container, componentRoot, loopCtx = null) => {
     const state = componentRoot._studs;
-    const elements = container instanceof Element ? [container, ...container.querySelectorAll('*')] : container.querySelectorAll('*');
 
-    elements.forEach(child => {
+    const bindNode = (child) => {
       const childData = getPrivateData(child);
       if (childData.bound) return;
 
-      [...child.attributes].forEach(attr => {
-        if (attr.name.startsWith('@')) {
-          const eventName = attr.name.slice(1);
-          child.addEventListener(eventName, (event) => {
-            let evalScope = state;
-            if (loopCtx) {
-              const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: componentRoot });
-              const item = list[loopCtx.index];
-              evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
-            }
-            safeEval(attr.value, { state: evalScope, global: Lego.globals, self: child, event });
-          });
-        }
-      });
-
-      if (child.hasAttribute('b-sync')) {
-        const prop = child.getAttribute('b-sync');
-        const updateState = () => {
-          let target, last;
-          if (loopCtx && prop.startsWith(loopCtx.name + '.')) {
-            const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: componentRoot });
-            const item = list[loopCtx.index];
-            if (!item) return;
-            const subPath = prop.split('.').slice(1);
-            last = subPath.pop();
-            target = subPath.reduce((o, k) => o[k], item);
-          } else {
-            const keys = prop.split('.');
-            last = keys.pop();
-            target = keys.reduce((o, k) => o[k], state);
+      if (child.hasAttributes()) {
+        const attrs = child.attributes;
+        for (let i = 0; i < attrs.length; i++) {
+          const attr = attrs[i];
+          if (attr.name.startsWith('@')) {
+            const eventName = attr.name.slice(1);
+            child.addEventListener(eventName, (event) => {
+              try {
+                let evalScope = state;
+                if (loopCtx) {
+                  const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: componentRoot });
+                  const item = list[loopCtx.index];
+                  evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
+                }
+                safeEval(attr.value, { state: evalScope, global: Lego.globals, self: child, event }, true);
+              } catch (err) {
+                config.onError(err, 'event-handler', child);
+              }
+            });
           }
-          const newVal = child.type === 'checkbox' ? child.checked : child.value;
-          if (target && target[last] !== newVal) target[last] = newVal;
-        };
-        child.addEventListener('input', updateState);
-        child.addEventListener('change', updateState);
+        }
+
+        if (child.hasAttribute('b-sync')) {
+          const prop = child.getAttribute('b-sync');
+          const updateState = () => {
+            try {
+              let target, last;
+              if (loopCtx && prop.startsWith(loopCtx.name + '.')) {
+                const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: componentRoot });
+                const item = list[loopCtx.index];
+                if (!item) return;
+                const subPath = prop.split('.').slice(1);
+                last = subPath.pop();
+                target = subPath.reduce((o, k) => o[k], item);
+              } else {
+                const keys = prop.split('.');
+                last = keys.pop();
+                target = keys.reduce((o, k) => o[k], state);
+              }
+              const newVal = child.type === 'checkbox' ? child.checked : child.value;
+              if (target && target[last] !== newVal) target[last] = newVal;
+            } catch (err) {
+              config.onError(err, 'sync-update', child);
+            }
+          };
+          child.addEventListener('input', updateState);
+          child.addEventListener('change', updateState);
+        }
       }
       childData.bound = true;
-    });
+    };
+
+    if (container instanceof Element) bindNode(container);
+
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
+    let child;
+    while (child = walker.nextNode()) bindNode(child);
   };
 
   const scanForBindings = (container) => {
@@ -381,6 +407,7 @@ const Lego = (() => {
     const data = getPrivateData(el);
     if (data.rendering) return;
     data.rendering = true;
+    if (config.metrics && config.metrics.onRenderStart) config.metrics.onRenderStart(el);
 
     try {
       // Use shadowRoot if it's a component, otherwise render the element itself (light DOM)
@@ -453,7 +480,10 @@ const Lego = (() => {
           if (getPrivateData(comp).hasGlobalDependency) render(comp);
         });
       }
+    } catch (err) {
+      config.onError(err, 'render', el);
     } finally {
+      if (config.metrics && config.metrics.onRenderEnd) config.metrics.onRenderEnd(el);
       data.rendering = false;
     }
   };
@@ -507,6 +537,14 @@ const Lego = (() => {
       if (typeof el._studs.mounted === 'function') {
         try { el._studs.mounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in mounted <${name}>:`, e); }
       }
+      activeComponents.add(el);
+      render(el);
+
+      [...shadow.children].forEach(snap);
+
+      if (typeof el._studs.mounted === 'function') {
+        try { el._studs.mounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in mounted <${name}>:`, e); }
+      }
     }
 
     let provider = el.parentElement;
@@ -520,6 +558,11 @@ const Lego = (() => {
     if (el._studs && typeof el._studs.unmounted === 'function') {
       try { el._studs.unmounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in unmounted:`, e); }
     }
+
+    if (el.shadowRoot) {
+      [...el.shadowRoot.children].forEach(unsnap);
+    }
+
     activeComponents.delete(el);
     [...el.children].forEach(unsnap);
   };
@@ -651,10 +694,18 @@ const Lego = (() => {
       registry[tagName] = t;
       sfcLogic.set(tagName, logic);
 
-      sharedStates.set(tagName.toLowerCase(), reactive({ ...logic }, document.body));
+      // Initialize shared state with try-catch safety
+      try {
+        sharedStates.set(tagName.toLowerCase(), reactive({ ...logic }, document.body));
+      } catch (e) {
+        config.onError(e, 'define', tagName);
+      }
 
       document.querySelectorAll(tagName).forEach(snap);
     },
+    // For specific test validation
+    getActiveComponentsCount: () => activeComponents.size,
+    config, // Expose config for customization
     route: (path, tagName, middleware = null) => {
       const paramNames = [];
       const regexPath = path.replace(/:([^\/]+)/g, (_, name) => {

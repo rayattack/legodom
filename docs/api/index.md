@@ -7,6 +7,7 @@ Welcome to the Lego API documentation.
 - [Lego.define()](/api/define) - Defining components
 - [Lego.route()](/api/route) - Client-side routing
 - [Lego.globals](/api/globals) - Global state
+- [Lego.config](/api/config) - Configuration & Error Handling
 - [Lifecycle Hooks](/api/lifecycle) - Component lifecycle methods
 
 ## Templates & Binding

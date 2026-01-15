@@ -11,6 +11,14 @@ Conditionally render an element.
 <div b-show="!loading">Content loaded!</div>
 ```
 
+## b-html
+
+Renders raw HTML. **Security Risk**: Use with caution.
+
+```html
+<div b-html="htmlContent"></div>
+```
+
 ## b-for
 
 Render a list of items.

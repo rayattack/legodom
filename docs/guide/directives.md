@@ -32,6 +32,23 @@ Conditional rendering using `display: none`.
 `b-show` sets `display: none` when the condition is false. The element stays in the DOM but is hidden.
 :::
 
+## b-html
+
+Renders raw HTML content.
+
+> [!WARNING]
+> Only use on trusted content. This exposes you to XSS vulnerabilities if used with user input.
+
+```html
+<div b-html="rawContent"></div>
+```
+
+```js
+{
+  rawContent: '<b>Bold</b> and <i>Italic</i>'
+}
+```
+
 ## b-for
 
 List rendering.
