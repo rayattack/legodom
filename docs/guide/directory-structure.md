@@ -19,7 +19,6 @@ But what do they *mean*?
 | **Component** | Computation | Business data & API calls | `<comp-profile-settings>`, `<comp-checkout-form>` |
 | **Page** | Ecosystem | Layout & Routing | `<page-dashboard>`, `<page-login>` |
 
----
 
 ## The Litmus Test: The Avatar Upload
 
