@@ -69,14 +69,14 @@ export default {
 <template>
   <div @click="openPicker()">
     <slot></slot>
-    <input type="file" style="display:none" @change="onFileChange">
+    <input type="file" style="display:none" b-var="avatarFileElement" @change="onFileChange">
   </div>
 </template>
 
 <script>
 export default {
   openPicker() {
-    this.$element.querySelector('input').click();
+    this.$vars.avatarFileElement.click();
   },
   onFileChange(event) {
     // It doesn't know about /v1/avatars. It just hands you the file.

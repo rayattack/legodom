@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-01-16
+
+### New Features
+
+- **`b-var` Directive:** Access DOM elements directly via `this.$vars.name`. Useful for triggering `.click()`, `.focus()`, or `.play()` on hidden inputs, video elements, etc.
+  ```html
+  <input type="file" b-var="fileInput" style="display:none">
+  <button @click="$vars.fileInput.click()">Upload</button>
+  ```
+
+### Documentation
+
+- **New Guide: Large Apps ("Chaos Tends To A Minimum"):** Added a comprehensive architectural guide for structuring enterprise-scale projects with 200+ components. Introduces the **Blocks → Widgets → Components → Pages** hierarchy to cleanly separate Identity, Intent, Computation, and Coordination.
+- **`b-if` Directive:** Documented the `b-if` directive for conditional rendering (DOM insertion/removal).
+- **`b-text` Directive:** Documented the limited `b-text` directive (property paths only, no expressions).
+- **Directives "See Also":** Added cross-references to `b-target`, `b-id`, `b-styles` in the Directives guide.
+
 ## [1.2.0] - 2026-01-15
 
 **Breaking Change: New Template Syntax** 🚨

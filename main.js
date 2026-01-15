@@ -319,6 +319,14 @@ const Lego = (() => {
           child.addEventListener('input', updateState);
           child.addEventListener('change', updateState);
         }
+
+        // b-var: Register element reference
+        if (child.hasAttribute('b-var')) {
+          const varName = child.getAttribute('b-var');
+          if (state.$vars) {
+            state.$vars[varName] = child;
+          }
+        }
       }
       childData.bound = true;
     };
@@ -548,11 +556,11 @@ const Lego = (() => {
       const templateLogic = parseJSObject(templateNode.getAttribute('b-data') || '{}');
       const instanceLogic = parseJSObject(el.getAttribute('b-data') || '{}');
 
-      // Priority: Script < Template < Instance
       el._studs = reactive({
         ...scriptLogic,
         ...templateLogic,
         ...instanceLogic,
+        $vars: {},
         get $route() { return Lego.globals.$route },
         get $go() { return Lego.globals.$go }
       }, el);

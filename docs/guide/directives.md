@@ -102,6 +102,29 @@ Use `[[ ]]` for anything complex. `b-text` is strictly for direct property bindi
 <span b-text="count + 1"></span>
 ```
 
+## b-var
+
+Creates a reference to a DOM element accessible via `this.$vars`.
+
+Use `b-var` when you need direct DOM access (e.g., `.focus()`, `.click()`, `.play()`).
+
+### Usage
+
+```html
+<input type="file" b-var="fileInput" style="display:none">
+<button @click="$vars.fileInput.click()">Upload</button>
+```
+
+Or in script:
+
+```javascript
+export default {
+  openPicker() {
+    this.$vars.fileInput.click();
+  }
+}
+```
+
 ## b-for
 
 List rendering.
