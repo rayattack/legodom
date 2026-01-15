@@ -21,7 +21,7 @@ When you define `Lego.globals`, the library doesn't just store your object. It w
 
 The library uses a specific optimization to avoid re-rendering the whole world.
 
--   **Depenedency Tracking**: During `scanForBindings`, if the parser sees a variable that looks global (e.g. `{{ global.user }}`), it marks that specific component with a `hasGlobalDependency` flag.
+-   **Depenedency Tracking**: During `scanForBindings`, if the parser sees a variable that looks global (e.g. `[[ global.user ]]`), it marks that specific component with a `hasGlobalDependency` flag.
 
 -   **The Broadcast Loop**: When you change a global (e.g., `Lego.globals.theme = 'dark'`), the Proxy's `set` trap fires on `document.body`. The `render` function sees this is a global update and iterates through **activeComponents**, checking which ones have the flag. Only those components re-render.
     
