@@ -121,7 +121,6 @@ export default {
 -   **Logic:** Knows about `user`, knows about `/v1/avatars`, handles the business outcome.
 -   **Boundary:** This is the *only* place that knows about your specific backend.
 
----
 
 ## The Definitions
 
@@ -173,7 +172,6 @@ Pages are the uppermost hosts. They orchestrate the layout of Components within 
 -   **Naming:** `page-dashboard`, `page-login`, `page-user-profile`.
 -   **Rule:** Pages are the *only* UI units directly known to `<lego-router>`. While a Component owns the *logic* of a feature, a Page owns the *real estate*.
 
----
 
 ## Recommended Directory Structure
 
@@ -196,7 +194,6 @@ src/
 └── main.js           # App entry, routes, globals
 ```
 
----
 
 ## Summary
 
