@@ -9,7 +9,6 @@ In LegoDOM land everything is a `.lego`. A `block` is a lego, a `widget` is a le
 
 But what do they *mean*?
 
----
 
 ## The Four Levels
 
