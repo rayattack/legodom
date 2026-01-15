@@ -16,7 +16,7 @@ But what do they *mean*?
 | :--- | :--- | :--- | :--- |
 | **Block** | Identity | Its own visuals | `<block-avatar>`, `<block-button>` |
 | **Widget** | Intent | How an interaction works | `<widget-file-trigger>`, `<widget-dropdown>` |
-| **Component** | Context | Business data & API calls | `<comp-profile-settings>`, `<comp-checkout-form>` |
+| **Component** | Computation | Business data & API calls | `<comp-profile-settings>`, `<comp-checkout-form>` |
 | **Page** | Ecosystem | Layout & Routing | `<page-dashboard>`, `<page-login>` |
 
 ---
@@ -31,7 +31,7 @@ But what do they *mean*?
 **The Architectural Answer:** You have conflated three distinct responsibilities into one:
 1.  **Identity** Looking like an avatar.
 2.  **Intent** Picking a file.
-3.  **Context** Saving to *your specific server*.
+3.  **Computation** Saving to *your specific server*.
 
 **The Consequence:**
 If you later want to display that avatar in a read-only user list, you *cannot reuse this component* because clicking it triggers unwanted upload logic. You will be forced to create a new, duplicate `<block-avatar>` just for display.
@@ -90,7 +90,7 @@ export default {
 -   **Logic:** Handles the hidden `<input type="file">`, listens for `change`, and **emits an event**.
 -   **Boundary:** It uses `$emit` (from `main.js`) to broadcast what happened. It never makes API calls.
 
-#### 3. The Component (Context)
+#### 3. The Component (Computation a.k.a. Context)
 
 ```html
 <!-- comp-profile-settings.lego -->
