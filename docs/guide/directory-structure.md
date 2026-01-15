@@ -17,7 +17,7 @@ But what do they *mean*?
 | **Block** | Identity | Its own visuals | `<block-avatar>`, `<block-button>` |
 | **Widget** | Intent | How an interaction works | `<widget-file-trigger>`, `<widget-dropdown>` |
 | **Component** | Computation | Business data & API calls | `<comp-profile-settings>`, `<comp-checkout-form>` |
-| **Page** | Ecosystem | Layout & Routing | `<page-dashboard>`, `<page-login>` |
+| **Page** | Coordination | Layout & Routing | `<page-dashboard>`, `<page-login>` |
 
 
 ## The Litmus Test: The Avatar Upload
@@ -163,7 +163,7 @@ A Component is a Widget (or set of Widgets) bound to specific data, rules, and r
 -   **Communication:** Listens to Widget events (like `@file-selected`) and performs business transactions.
 
 
-### Pages (Ecosystem)
+### Pages (Coordination)
 
 > **TL;DR** A Page is the top-level host that routing targets.
 
