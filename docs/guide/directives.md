@@ -79,17 +79,28 @@ Renders raw HTML content.
 
 Sets the text content of an element.
 
-This is equivalent to using `[[ expression ]]` interpolation, but as a directive.
+> [!WARNING] Limitation
+> **`b-text` is extremely weak.** Unlike `[[ ]]`, it **does not** support JavaScript expressions (math, logic, functions). It ONLY supports simple property paths.
+
+### Functionality
+
+| Syntax | Supported? | Example |
+| :--- | :--- | :--- |
+| **Property Path** | Yes | `b-text="user.name"` |
+| **Math** | No | `b-text="count + 1"` |
+| **Logic** | No | `b-text="isActive ? 'Yes' : 'No'"` |
+| **Methods** | No | `b-text="formatDate(date)"` |
+
+Use `[[ ]]` for anything complex. `b-text` is strictly for direct property binding.
 
 ```html
+<!-- Works -->
 <span b-text="user.name"></span>
-<!-- Equivalent to: -->
-<span>[[ user.name ]]</span>
-```
 
-::: tip Security
-Like `[[ ]]`, `b-text` escapes HTML special characters to prevent XSS. Use `b-html` if you need to render raw HTML.
-:::
+<!-- Does NOT Work (Use [[ ]] instead) -->
+<span b-text="user.firstName + ' ' + user.lastName"></span>
+<span b-text="count + 1"></span>
+```
 
 ## b-for
 
