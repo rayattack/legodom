@@ -5,14 +5,7 @@ Everything we’ve discussed i.e. the Scanner, the Registry, the Router, and the
 
 The code for `init()` is deceptively small because its primary job is to flip the switches on the systems we've already built.
 
-### 1. The Singleton Guard
-
-The very first thing `init()` does is check a internal flag: `if (initialized) return;`.
-
--   **The Why**: In a complex app, you might accidentally call `init()` multiple times. Without this guard, you would attach multiple `MutationObservers` to the body, causing every component to "snap" and "render" twice for every single change.
-    
-
-### 2. Bootstrapping the Watchdog
+### 1. Bootstrapping the Watchdog
 
 The core of the initialization is setting up the `MutationObserver` we discussed in Topic 7.
 

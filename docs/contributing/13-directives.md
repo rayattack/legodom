@@ -79,6 +79,24 @@ By using `getPrivateData` (which is a `WeakMap`), we ensure that if the componen
 **In short:** The anchor is the "Reserved Seat" sign at a theater. `getPrivateData` is the list that remembers which seat belongs to which person while they are out in the lobby.
 
 
+## Raw HTML Injection (`b-html`)
+
+LegoDOM is secure by default: all text interpolation is escaped. If your data contains `<b>Bold</b>`, it detects it as text, not HTML.
+
+`b-html` is the **only** hatch to render raw HTML.
+
+```javascript
+if (b.type === 'b-html') {
+    // SECURITY CRITICAL: This is the only place we set innerHTML directly.
+    b.node.innerHTML = safeEval(b.expr, { state, self: b.node });
+}
+```
+
+**Why separate directive?**
+By forcing you to use `b-html="..."`, we make it obvious during code reviews that "This part is dangerous." It prevents accidental XSS where a developer thought `{{ content }}` would render HTML.
+
+
+
 ## Simple Text Interpolation (`b-text`)
 
 While you can use <code v-pre>{{mustaches}}</code>, `b-text` is the "cleaner" way to bind the entire content of an element to a single variable.

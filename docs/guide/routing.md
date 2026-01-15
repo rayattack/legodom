@@ -1,14 +1,39 @@
 # Surgical Routing
 
-LegoDOM features a powerful "Surgical Router" that sets it apart from typical SPA routers. Instead of just replacing a single `<router-outlet>`, Lego allows you to swap **any** part of your page from **any** link, giving you the feel of a complex SPA with the simplicity of old-school HTML frames.
+**Stop rebuilding your entire page just to change one div.**
 
-## The Concept
+LegoDOM's router is different. It doesn't have a single "Root Outlet". Instead, **any element** can be a router target. This allows you to build **Persistent Layouts** (like Sidebars, Music Players, or Chat Windows) that never reload or lose state while the user navigates.
 
-In traditional SPAs, you have one `RouterView` that swaps out entire pages.
-In Lego, every link can be a router trigger, and every element can be a target.
+## The Architecture: "The Persistent Shell"
 
-- **`b-target`**: "Where should this content go?"
-- **`b-link`**: "Should this update the URL history?"
+The best way to use LegoDOM is to define a static "Shell" that holds your persistent tools, and standard outlets for your content.
+
+```html
+<body>
+  <!-- 1. The Shell (Sidebar): Never reloads. Keeps scroll pos & draft state. -->
+  <aside id="sidebar">
+    <file-tree></file-tree>
+  </aside>
+
+  <!-- 2. The Stage (Main Content): This changes when URL changes. -->
+  <lego-router id="stage"></lego-router>
+  
+  <!-- 3. The Context (Right Panel): Tools based on selection. -->
+  <aside id="tools"></aside>
+</body>
+```
+
+Then, you simply tell links *where* to render their content:
+
+```html
+<!-- Updates component in #stage (Default URL navigation) -->
+<a href="/dashboard" b-target="#stage">Dashboard</a>
+
+<!-- Updates component in #tools (Keeps URL sync, but only touches right panel) -->
+<a href="/tools/settings" b-target="#tools">Settings</a>
+```
+
+This feels like a native app. The Sidebar doesn't flicker. The scroll position isn't lost.
 
 ---
 

@@ -29,3 +29,30 @@ Lego.define('user-card', `
   role: 'Admin'
 });
 ```
+
+## Lego.defineSFC()
+
+Runtime parser for Single File Components (SFC). Useful for **Server-Side Rendering** or dynamic loading architectures.
+
+```ts
+Lego.defineSFC(content: string, filename?: string)
+```
+
+### Example
+
+```javascript
+const sfc = `
+<template>
+  <h1>[[ title ]]</h1>
+</template>
+<script>
+  export default { title: 'Hello World' }
+</script>
+<style>
+  h1 { color: red; }
+</style>
+`;
+
+// Registers <my-component> instantly
+Lego.defineSFC(sfc, 'my-component.lego');
+```

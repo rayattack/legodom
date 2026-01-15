@@ -19,6 +19,11 @@ const snap = (el) => {
     const tpl = templateNode.content.cloneNode(true);
     const shadow = el.attachShadow({ mode: 'open' });
 
+    const splitStyles = (templateNode.getAttribute('b-styles') || "").split(/\s+/).filter(Boolean);
+    if (splitStyles.length) {
+       shadow.adoptedStyleSheets = splitStyles.flatMap(k => styleRegistry.get(k) || []);
+    }
+
     // TIER 1: Logic from Lego.define (SFC)
     const scriptLogic = sfcLogic.get(name) || {};
 
@@ -32,7 +37,10 @@ const snap = (el) => {
     el._studs = reactive({
       ...scriptLogic,
       ...templateLogic,
-      ...instanceLogic
+      ...instanceLogic,
+      // Inject Global Helpers
+      get $route() { return Lego.globals.$route },
+      get $go() { return Lego.globals.$go }
     }, el);
 
     shadow.appendChild(tpl);
@@ -83,6 +91,12 @@ const shadow = el.attachShadow({ mode: 'open' });
 -   **Encapsulation**: By using `attachShadow`, the component’s internal styles and HTML are shielded from the rest of the page.
     
 -   **Template Injection**: It clones the content of the template and appends it to this new Shadow Root.
+
+#### What about `<slot>`?
+Because we use native Shadow DOM, `<slot>` just works.
+When `snap` attaches the shadow root, any children *already* inside the custom element (the "Light DOM") are automatically projected into the `<slot>` tags defined in your template.
+We don't need to write any code for this—the browser does it for us.
+
     
 
 ### 3. CSS "self" Transformation

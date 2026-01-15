@@ -77,13 +77,24 @@ This is the most critical part of the initialization. The library creates a `Mut
 
 ```js
 const observer = new MutationObserver(m => m.forEach(r => {
-  r.addedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && snap(n));
+  r.addedNodes.forEach(n => {
+    if (n.nodeType === Node.ELEMENT_NODE) {
+      snap(n);
+      
+      // Auto-Discovery (v2.0): Check for remote components
+      const tagName = n.tagName.toLowerCase();
+      if (tagName.includes('-') && !registry[tagName] && config.loader && !activeComponents.has(n)) {
+        // ... Call loader ...
+      }
+    }
+  });
   r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
 }));
 observer.observe(document.body, { childList: true, subtree: true });
 ```
 
--   **What it does**: It watches the `document.body` for any changes to the HTML structure.
+- **What it does**: It watches the `document.body` for any changes to the HTML structure.
+- **Auto-Discovery (New in v2.0)**: If `snap(n)` fails because the component isn't in the registry, the observer now checks `config.loader`. If a loader is defined, it triggers a fetch to pull the component definition from the server. This enables the "HTMX+Components" pattern.
     
 -   **The Config**: It observes `{ childList: true, subtree: true }`. This means it sees if an element is added to the body, or if an element is added deep inside another element.
     

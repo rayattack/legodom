@@ -15,7 +15,7 @@ describe('parse-lego tests', () => {
   it('should extract attributes from template', () => {
     const sfcContent = `
 <template b-styles="tailwind chartist" b-id="ignored">
-  <div class="p-4">Hello {{name}}</div>
+  <div class="p-4">Hello [[name]]</div>
 </template>
 <script>
 export default { mounted() { console.log('hi') } }
@@ -27,7 +27,7 @@ export default { mounted() { console.log('hi') } }
     const parsed = parseLego(sfcContent, 'user-profile.lego');
     expect(parsed.componentName).toBe('user-profile');
     expect(parsed.stylesAttr).toBe('tailwind chartist');
-    expect(parsed.template).toContain('{{name}}');
+    expect(parsed.template).toContain('[[name]]');
     expect(parsed.script).toContain('mounted');
     expect(parsed.style).toContain('color: red');
   });

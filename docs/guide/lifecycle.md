@@ -233,6 +233,38 @@ Called when the component is removed from the DOM.
     }
   }
 }
+  }
+}
+```
+
+## Performance Hooks (Metrics)
+
+For advanced monitoring, LegoDOM provides global hooks in `Lego.config.metrics`. These run for **every** component.
+
+### `onRenderStart` & `onRenderEnd`
+
+Useful for tracking how long renders take, which helps identify slow components.
+
+```javascript
+Lego.config.metrics = {
+  onRenderStart(el) {
+    console.time(`render-${el.tagName}`);
+  },
+  onRenderEnd(el) {
+    console.timeEnd(`render-${el.tagName}`);
+  }
+};
+```
+
+### `onAllSettled` (New in v2.0)
+
+Called when the entire component tree (including Shadow DOM children) has finished its initial render pass. This is perfect for removing loading spinners or measuring "Time to Interactive".
+
+```javascript
+/* main.js */
+Lego.init(document.body).then(() => {
+  document.getElementById('global-loader').remove();
+});
 ```
 
 ## Lifecycle Flow

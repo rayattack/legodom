@@ -52,6 +52,19 @@ const scanForBindings = (container) => {
 };
 ```
 
+## Why Regex? (The "Forbidden" Choice)
+
+You will notice we use Regular Expressions to find bindings.
+
+**"Regex is bad for HTML!"** they say.
+Usually, yes. But we are not parsing *arbitrary* HTML to build a DOM. We are scanning *specific known tokens* inside trusted templates.
+
+**The Trade-off:**
+- **AST Parser**: Reliable, but heavy (10kb+).
+- **Regex Scanner**: Good enough for 99% of bindings, extremely light (<1kb).
+
+Since LegoDOM targets **speed** and **size** (<4kb), Regex is the correct architectural choice. We mitigate edge cases by ignoring bindings inside `<script>` and `<style>` blocks.
+
 ### 1. The `TreeWalker` Efficiency
 
 LegoDOM uses a native browser tool called a `TreeWalker`.

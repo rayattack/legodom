@@ -12,16 +12,16 @@ The fastest way to get started with Lego is using the CDN. No build tools requir
     <title>Lego Quick Start</title>
 </head>
 <body>
-    <!-- 2. Use your component -->
-    <hello-world></hello-world>
+    <!-- Interpolation works here too -->
+    <hello-world name="Lego"></hello-world>
 
     <!-- 3. Define the template -->
     <template b-id="hello-world">
         <style>
             h1 { color: #646cff; }
         </style>
-        <h1>Hello, {{ name }}!</h1>
-        <button @click="toggle()">Toggle Name</button>
+        <h1>Hello [[ name ]]!</h1>
+        <button @click="count++">Count is [[ count ]]</button>
     </template>
 
     <!-- 4. Load Lego -->

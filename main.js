@@ -13,7 +13,21 @@ const Lego = (() => {
   const config = {
     onError: (err, type, el) => {
       console.error(`[Lego Error] [${type}]`, err, el);
-    }
+    },
+    metrics: {},   // Performance hooks
+    syntax: 'brackets' // 'brackets' ([[ ]]) or 'mustache' ({{ }})
+  };
+
+  const getDelimiters = () => {
+    return config.syntax === 'brackets' ? ['[[', ']]'] : ['{{', '}}'];
+  };
+
+  const createRegex = () => {
+    const [start, end] = getDelimiters();
+    // Escape special regex characters
+    const s = start.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const e = end.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`${s}(.*?)${e}`, 'g');
   };
 
   const routes = [];
@@ -23,6 +37,21 @@ const Lego = (() => {
     return str.replace(/[&<>"']/g, m => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[m]));
+  };
+
+  const deriveComponentName = (filename) => {
+    const basename = filename.split('/').pop().replace(/\.lego$/, '');
+    // 1. Convert snake_case to kebab-case
+    // 2. Convert PascalCase/camelCase to kebab-case
+    const name = basename
+      .replace(/_/g, '-')
+      .replace(/([a-z])([A-Z])/g, '$1-$2')
+      .toLowerCase();
+
+    if (!name.includes('-')) {
+      throw new Error(`[Lego] Invalid component definition: "${filename}". Component names must contain a hyphen (e.g. user-card.lego or UserCard.lego).`);
+    }
+    return name;
   };
 
   /**
@@ -362,15 +391,19 @@ const Lego = (() => {
           bindings.push({ type: 'b-html', node, expr });
         }
         if (node.hasAttribute('b-sync')) bindings.push({ type: 'b-sync', node });
+        const [start] = getDelimiters();
         [...node.attributes].forEach(attr => {
-          if (attr.value.includes('{{')) {
+          if (attr.value.includes(start)) {
             checkGlobal(attr.value);
             bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
           }
         });
-      } else if (node.nodeType === Node.TEXT_NODE && node.textContent.includes('{{')) {
-        checkGlobal(node.textContent);
-        bindings.push({ type: 'text', node, template: node.textContent });
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        const [start] = getDelimiters();
+        if (node.textContent.includes(start)) {
+          checkGlobal(node.textContent);
+          bindings.push({ type: 'text', node, template: node.textContent });
+        }
       }
     }
     return bindings;
@@ -380,13 +413,14 @@ const Lego = (() => {
     const processNode = (node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         if (node._tpl === undefined) node._tpl = node.textContent;
-        const out = node._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope, global: Lego.globals, self: node }) ?? '');
+        const out = node._tpl.replace(createRegex(), (_, k) => safeEval(k.trim(), { state: scope, global: Lego.globals, self: node }) ?? '');
         if (node.textContent !== out) node.textContent = out;
       } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const [start] = getDelimiters();
         [...node.attributes].forEach(attr => {
           if (attr._tpl === undefined) attr._tpl = attr.value;
-          if (attr._tpl.includes('{{')) {
-            const out = attr._tpl.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state: scope, global: Lego.globals, self: node }) ?? '');
+          if (attr._tpl.includes(start)) {
+            const out = attr._tpl.replace(createRegex(), (_, k) => safeEval(k.trim(), { state: scope, global: Lego.globals, self: node }) ?? '');
             if (attr.value !== out) {
               attr.value = out;
               if (attr.name === 'class') node.className = out;
@@ -430,11 +464,11 @@ const Lego = (() => {
         if (b.type === 'b-html') b.node.innerHTML = safeEval(b.expr, { state, global: Lego.globals, self: b.node }) || '';
         if (b.type === 'b-sync') syncModelValue(b.node, resolve(b.node.getAttribute('b-sync'), state));
         if (b.type === 'text') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state, global: Lego.globals, self: b.node }) ?? '');
+          const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: Lego.globals, self: b.node }) ?? '');
           if (b.node.textContent !== out) b.node.textContent = out;
         }
         if (b.type === 'attr') {
-          const out = b.template.replace(/{{(.*?)}}/g, (_, k) => safeEval(k.trim(), { state, global: Lego.globals, self: b.node }) ?? '');
+          const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: Lego.globals, self: b.node }) ?? '');
           if (b.node.getAttribute(b.attrName) !== out) {
             b.node.setAttribute(b.attrName, out);
             if (b.attrName === 'class') b.node.className = out;
@@ -534,16 +568,10 @@ const Lego = (() => {
       activeComponents.add(el);
       render(el);
 
-      if (typeof el._studs.mounted === 'function') {
-        try { el._studs.mounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in mounted <${name}>:`, e); }
-      }
-      activeComponents.add(el);
-      render(el);
-
       [...shadow.children].forEach(snap);
 
       if (typeof el._studs.mounted === 'function') {
-        try { el._studs.mounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in mounted <${name}>:`, e); }
+        try { el._studs.mounted.call(el._studs); } catch (e) { config.onError(e, 'mounted', el); }
       }
     }
 
@@ -609,14 +637,14 @@ const Lego = (() => {
     });
   };
 
-  return {
-    init: async (root = document.body, styles = {}) => {
-      // If called as an event listener or with invalid root, fail over to document.body
+  const publicAPI = {
+    init: async (root = document.body, options = {}) => {
       if (!root || typeof root.nodeType !== 'number') root = document.body;
-      styleConfig = styles;
+      styleConfig = options.styles || {};
+      config.loader = options.loader; // Register loader hook
 
       // Pre-load all defined style sets into Constructable Stylesheets
-      const loadPromises = Object.entries(styles).map(async ([key, urls]) => {
+      const loadPromises = Object.entries(styleConfig).map(async ([key, urls]) => {
         const sheets = await Promise.all(urls.map(async (url) => {
           try {
             const response = await fetch(url);
@@ -638,7 +666,26 @@ const Lego = (() => {
       });
 
       const observer = new MutationObserver(m => m.forEach(r => {
-        r.addedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && snap(n));
+        r.addedNodes.forEach(n => {
+          if (n.nodeType === Node.ELEMENT_NODE) {
+            snap(n);
+            // Auto-Discovery: Check if tag is unknown and loader is configured
+            const tagName = n.tagName.toLowerCase();
+            if (tagName.includes('-') && !registry[tagName] && config.loader && !activeComponents.has(n)) {
+              const result = config.loader(tagName);
+              if (result) {
+                // Handle Promise (user does custom fetch) vs String (we fetch)
+                const promise = (typeof result === 'string')
+                  ? fetch(result).then(r => r.text())
+                  : result;
+
+                Promise.resolve(promise)
+                  .then(sfc => publicAPI.defineSFC(sfc, tagName + '.lego'))
+                  .catch(e => console.error(`[Lego] Failed to load ${tagName}:`, e));
+              }
+            }
+          }
+        });
         r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
       }));
       observer.observe(root, { childList: true, subtree: true });
@@ -686,6 +733,42 @@ const Lego = (() => {
       },
       $go: (path, ...targets) => _go(path, ...targets)(document.body)
     }, document.body),
+    defineSFC: (content, filename = 'component.lego') => {
+      const templateMatch = content.match(/<template([\s\S]*?)>([\s\S]*?)<\/template>/);
+      let template = '', stylesAttr = '';
+      if (templateMatch) {
+        const attrs = templateMatch[1];
+        template = templateMatch[2].trim();
+        const bStylesMatch = attrs.match(/b-styles=["']([^"']+)["']/);
+        if (bStylesMatch) stylesAttr = bStylesMatch[1];
+      }
+
+      const scriptMatch = content.match(/<script>([\s\S]*?)<\/script>/);
+      let script = '{}';
+      if (scriptMatch) {
+        const logic = scriptMatch[1].trim();
+        const defaultExport = logic.match(/export\s+default\s+({[\s\S]*})/);
+        script = defaultExport ? defaultExport[1] : logic;
+      }
+
+      const styleMatch = content.match(/<style>([\s\S]*?)<\/style>/);
+      if (styleMatch) {
+        template = `<style>${styleMatch[1].trim()}</style>` + template;
+      }
+
+      const name = deriveComponentName(filename);
+      // We must eval the script to get the object. 
+      // Safe-ish because it's coming from the "Server" (trusted source in this architecture)
+      const logicObj = new Function(`return ${script}`)();
+
+      registry[name] = document.createElement('template');
+      registry[name].innerHTML = template;
+      registry[name].setAttribute('b-styles', stylesAttr);
+      sfcLogic.set(name, logicObj);
+
+      // Upgrade existing elements
+      document.querySelectorAll(name).forEach(el => !getPrivateData(el).snapped && snap(el));
+    },
     define: (tagName, templateHTML, logic = {}, styles = "") => {
       const t = document.createElement('template');
       t.setAttribute('b-id', tagName);
@@ -715,6 +798,8 @@ const Lego = (() => {
       routes.push({ path, regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
     }
   };
+
+  return publicAPI;
 })();
 
 if (typeof window !== 'undefined') {

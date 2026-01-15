@@ -27,6 +27,9 @@ Whenever a new piece of HTML is injected (via `innerHTML`, `appendChild`, etc.),
 -   **Filter**: The library checks `n.nodeType === Node.ELEMENT_NODE` to ensure it is an **Element** (like a `<div>` or `<my-comp>`) and not just a fragment of text.
 
 -   **The Action**: It calls `snap(n)`. This triggers the entire initialization process: attaching the Shadow DOM, creating reactive state, and rendering the template.
+    
+-   **Auto-Discovery (v2.0)**: If `snap(n)` doesn't find a template in the registry, the observer now checks `Lego.config.loader`. If configured, it pauses to fetch the component definition from the server.
+
 
 
 ### 3. Processing `removedNodes`

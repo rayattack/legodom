@@ -2,7 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.0] - 2026-01-15
+## [2.0.0] - 2026-01-15
+
+**Breaking Change: New Template Syntax** 🚨
+To ensure compatibility with server-side frameworks (Jinja, Django, Flask) and JavaScript template literals, **LegoDOM now uses `[[ ]]` by default** instead of `{{ }}`.
+
+- **Breaking:** Default interpolation syntax changed from `{{ variable }}` to `[[ variable ]]`.
+- **Feature:** Added `Lego.config.syntax` to configure delimiters.
+    - Set to `'mustache'` to revert to `{{ }}`.
+    - Set to `'brackets'` (default) for `[[ ]]`.
+- **Feature:** Added support for snake_case, PascalCase, camelCase, and kebab-case component names for `.lego` files.
+- **Feature:** Added `Lego.config.loader` to fetch SFCs from a server endpoint.
+- **Fix:** Fixed a critical bug where `snap()` triggered double renders and mounted hooks.
+
+## [1.1.0] - 2026-01-12
 
 **The Enterprise Readiness Update** 
 This release focuses on Security, Performance, and Resilience, making LegoDOM suitable for high-traffic production environments.

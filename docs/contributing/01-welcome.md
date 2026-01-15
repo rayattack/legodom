@@ -7,7 +7,9 @@ const Lego = (() => {
   // ... all the logic ...
   return {
     init: () => { ... },
+    init: () => { ... },
     define: (tagName, templateHTML, logic = {}) => { ... },
+    defineSFC: (content, filename) => { ... }, // Runtime SFC Parser
     // ...
   };
 })();

@@ -85,13 +85,9 @@ Lego automatically escapes HTML to prevent XSS:
 <!-- Renders as: &lt;script&gt;alert("XSS")&lt;/script&gt; -->
 ```
 
-**By default, there is no way to render raw HTML.** This is by design—for security.
+**By default,## Raw HTML
 
-If you absolutely must render raw HTML (e.g., from a CMS), use the [`b-html`](/guide/directives#b-html) directive:
-
-```html
-<div b-html="userInput"></div>
-```
+To render raw HTML content, use the `b-html` directive.
 
 > [!WARNING]
 > Never use `b-html` on untrusted user input (e.g., comments, messages). It can lead to XSS attacks.

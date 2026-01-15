@@ -54,7 +54,7 @@ describe('Lego JS Node Environment Tests', () => {
   });
 
   it('should reactively update text content', async () => {
-    window.Lego.define('test-comp', '<span>{{msg}}</span>');
+    window.Lego.define('test-comp', '<span>[[msg]]</span>');
     const el = document.createElement('test-comp');
     el.setAttribute('b-data', "{ msg: 'hello' }");
     document.body.appendChild(el);
@@ -74,7 +74,7 @@ describe('Lego JS Node Environment Tests', () => {
   });
 
   it('should prevent XSS via auto-escaping', async () => {
-    window.Lego.define('xss-comp', '<div>{{code}}</div>');
+    window.Lego.define('xss-comp', '<div>[[code]]</div>');
     const el = document.createElement('xss-comp');
     el.setAttribute('b-data', "{ code: '<script>alert(1)</script>' }");
     document.body.appendChild(el);

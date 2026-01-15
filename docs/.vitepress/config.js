@@ -85,6 +85,7 @@ export default defineConfig({
             { text: 'Lego.define()', link: '/api/define' },
             { text: 'Lego.route()', link: '/api/route' },
             { text: 'Lego.globals', link: '/api/globals' },
+            { text: 'Lego.config', link: '/api/config' },
             { text: 'Directives', link: '/api/directives' },
             { text: 'Lifecycle Hooks', link: '/api/lifecycle' },
             { text: 'Vite Plugin', link: '/api/vite-plugin' }

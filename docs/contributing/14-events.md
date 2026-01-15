@@ -38,7 +38,7 @@ The library is flexible with how you call these methods:
     
 -   **Parameterized Call**: `@click="deleteItem(5)"`. The library uses a regex to check if there are parentheses. If it finds them, it parses the arguments (like `5`) and passes them to your function.
     
--   **The "Magic" `$event`**: If you write `@click="move($event, 10)"`, the library intelligently injects the native browser event object into that specific slot.
+-   **The "Native" `event`**: If you write `@click="move(event, 10)"`, the library injects the native browser event object into that specific slot. (Note: use `event`, not `$event`).
     
 
 ### 4. Event Modifiers

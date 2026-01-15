@@ -25,7 +25,9 @@ Once `snap()` has merged the data from the SFC (Tier 1), the Template (Tier 2), 
   el._studs = reactive({
     ...scriptLogic,
     ...templateLogic,
-    ...instanceLogic
+    ...instanceLogic,
+    get $route() { return Lego.globals.$route },
+    get $go() { return Lego.globals.$go }
   }, el);
   //... rest of code
 ```

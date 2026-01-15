@@ -9,22 +9,21 @@ In Lego, the code is designed to allow a component in the footer to talk to a co
 
 In most frameworks, data flows down like a waterfall. If a deeply nested component needs a piece of data, every parent above it must "pass it down." The code in `main.js` avoids this by creating a centralized, reactive hub.
 
-### 2. The Implementation: The "Universal Proxy"
+### 2. The Implementation: "The Body is the Root"
 
-When you define `Lego.globals`, the library doesn't just store your object. It wraps the entire thing in the same `reactive()` proxy used for individual components.
+When you define `Lego.globals`, the library doesn't just store your object. It wraps it in the same `reactive()` proxy, but binds it to `document.body`.
 
--   **The Code**: `Lego.globals = reactive(userDefinedGlobals, null)`.
+-   **The Code**: `Globals = reactive(userState, document.body)`.
     
--   **The Magic of `null`**: Notice that when a component's state is made reactive, we pass the `el` (the element) so it knows what to render. When we create `Lego.globals`, we pass `null`. This tells the proxy: "You don't belong to one element; you belong to everyone".
-    
+-   **The Effect**: This means the entire `<body>` is technically the "component" for global state.
 
-### 3. The `$global` Prefix and Subscriptions
+### 3. The `$global` Dependency Check (Smart Broadcast)
 
-The library uses a specific naming convention to trigger its "Global Watcher" logic. Whenever the `render()` engine or a `b-sync` sees a variable starting with `$`, it knows to ignore the local component state (`_studs`) and look into `Lego.globals` instead.
+The library uses a specific optimization to avoid re-rendering the whole world.
 
--   **The Subscription Logic**: In the `render()` function, if a global is accessed, the code automatically adds that component to a "Global Subscribers" list.
-    
--   **The Update Loop**: When you change a global (e.g., `Lego.globals.theme = 'dark'`), the Proxy's `set` trap fires. Because this proxy is global, it iterates through **every single component** currently on the page and tells them to check if they need a re-render.
+-   **Depenedency Tracking**: During `scanForBindings`, if the parser sees a variable that looks global (e.g. `{{ global.user }}`), it marks that specific component with a `hasGlobalDependency` flag.
+
+-   **The Broadcast Loop**: When you change a global (e.g., `Lego.globals.theme = 'dark'`), the Proxy's `set` trap fires on `document.body`. The `render` function sees this is a global update and iterates through **activeComponents**, checking which ones have the flag. Only those components re-render.
     
 
 ### 4. Why `Object.defineProperty` is avoided for Globals

@@ -94,6 +94,40 @@ async load(id) {
         
     -   It **injects** a `Lego.define()` call into your JavaScript bundle automatically.
         
-    -   **Result:** You just create a file named `UserCard.lego`, and suddenly `<user-card>` is a valid HTML tag in your app.
-        
-**Key Insight:** Notice in `main.js` how `define` uses `sfcLogic.set(tagName, logic)`. This is where the plugin "parks" your component's JavaScript code so that when the component "snaps" (Topic 23), it can find its specific logic.
+    -   **Result:** You just create a file named `user-card.lego`, and suddenly `<user-card>` is a valid HTML tag in your app.
+
+**Paradigm 3: Runtime Component Definition (New in v2.0)**
+
+```js
+defineSFC: (content, filename) => {
+  // Regex parsing of <template>, <script>, <style>
+  const templateMatch = content.match(/<template([\s\S]*?)>([\s\S]*?)<\/template>/);
+  // ...
+  const logicObj = new Function(`return ${script}`)();
+  // ...
+  sfcLogic.set(name, logicObj);
+}
+```
+
+This is the power behind the **Server Loader**. We can fetch a string from the server and "compile" it in the browser using `new Function()`. It populates `registry` and `sfcLogic` just like the build-time tools, but on the fly.
+
+### 4. Component Naming Conventions ("Explicit or Go Home")
+
+When you define a component via a file (e.g. `.lego`), the library automatically derives the tag name. To keep the web platform happy, we enforce **Custom Element Best Practices**:
+
+1.  **Automatic Conversion**: All filenames are converted to `kebab-case`.
+    -   `UserProfile.lego` -> `<user-profile>`
+    -   `navBar.lego` -> `<nav-bar>`
+    -   `data_table.lego` -> `<data-table>`
+    
+2.  **The Hyphen Rule**: A custom element **MUST** contain a hyphen.
+    -   `Button.lego` -> Error
+    -   `Adidas.lego` -> Error
+
+> [!TIP]
+> **Single Word Component? Namespace It!** 
+> Custom Element specs require a hyphen to distinguish from native tags. To ensure forward compatibility, **LegoDOM will throw an error** if you try to define a single-word component.
+> Simply add your app or product prefix to the filename:
+> -   `fb-button.lego` -> `<fb-button>`
+> -   `shop-card.lego` -> `<shop-card>`
+> -   `mobile-button.lego` -> `<mobile-button>`

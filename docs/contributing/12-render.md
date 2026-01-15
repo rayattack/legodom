@@ -20,16 +20,34 @@ const render = (el) => {
     if (!shadow) return;
     if (!data.bindings) data.bindings = scanForBindings(shadow);
 
+    if (config.metrics?.onRenderStart) config.metrics.onRenderStart(el);
+
     data.bindings.forEach(b => {
+      // 1. Conditionals (b-if)
+      if (b.type === 'b-if') {
+          const condition = !!safeEval(b.expr, { state, global: Lego.globals, self: b.node });
+          const isAttached = !!b.node.parentNode;
+          if (condition && !isAttached) b.anchor.parentNode.replaceChild(b.node, b.anchor);
+          else if (!condition && isAttached) b.node.parentNode.replaceChild(b.anchor, b.node);
+      }
+      
+      // 2. Visibility (b-show)
       if (b.type === 'b-show') b.node.style.display = safeEval(b.expr, { state, self: b.node }) ? '' : 'none';
+      
+      // 3. Text (b-text, b-html)
       if (b.type === 'b-text') b.node.textContent = escapeHTML(resolve(b.path, state));
+      if (b.type === 'b-html') b.node.innerHTML = safeEval(b.expr, { state, self: b.node }); // Trusted HTML
+      
+      // 4. Sync (b-sync)
       if (b.type === 'b-sync') syncModelValue(b.node, resolve(b.node.getAttribute('b-sync'), state));
+      
+      // 5. Mustaches 
       if (b.type === 'text') {
-        const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state, self: b.node }) ?? ''));
+        const out = b.template.replace(/\[\[(.*?)\]\]/g, (_, k) => escapeHTML(safeEval(k.trim(), { state, self: b.node }) ?? ''));
         if (b.node.textContent !== out) b.node.textContent = out;
       }
       if (b.type === 'attr') {
-        const out = b.template.replace(/{{(.*?)}}/g, (_, k) => escapeHTML(safeEval(k.trim(), { state, self: b.node }) ?? ''));
+        const out = b.template.replace(/\[\[(.*?)\]\]/g, (_, k) => escapeHTML(safeEval(k.trim(), { state, self: b.node }) ?? ''));
         if (b.node.getAttribute(b.attrName) !== out) {
           b.node.setAttribute(b.attrName, out);
           if (b.attrName === 'class') b.node.className = out;
@@ -69,7 +87,10 @@ const render = (el) => {
       }
     });
   } finally {
+  } finally {
+    if (config.metrics?.onRenderEnd) config.metrics.onRenderEnd(el);
     data.rendering = false;
+  }
   }
 };
 ```
@@ -96,16 +117,17 @@ The function loops through `data.bindings` and performs specific actions based o
 -   **`attr`**: It updates attributes like `src`, `href`, or `class`. It even has a special check: if the attribute is `class`, it also updates `node.className` to ensure the browser applies the styles correctly.
     
 
-### 3. The `safeEval` Bridge
+### 3. The `safeEval` Bridge & Security
 
-You’ll notice that for things like `b-show` or <code v-pre>{{mustaches}}</code>, the library calls `safeEval(expr, { state, self: b.node })`.
+You’ll notice that for things like `b-show` or mustaches, the library calls `safeEval(expr, { state, self: b.node })`.
 
--   This allows your HTML to handle more than just simple variables.
-    
--   You can write logic directly in your template, like <code v-pre>{{ count > 10 ? 'Big' : 'Small' }}</code>.
-    
--   `render` passes the current state as the "context," so those expressions know exactly what `count` refers to.
-    
+**Why not just `eval()`?**
+`eval()` executes code in the global scope, which is a massive security hole and performance killer.
+
+`safeEval` uses `new Function` with a **Proxy Sandbox**:
+1.  **Block List**: It immediately throws if it sees dangerous keywords like `eval`, `Function`, `import`, or global objects like `window`, `document`, `fetch` (unless explicitly provided).
+2.  **Scope Proxy**: The execution context is a `Proxy` (`with(proxy) { ... }`). If the code tries to access `document.cookie` effectively, the proxy intercepts it.
+3.  **Configurable Syntax**: As of v2.0, this also handles the dynamic regex for `[[ ]]` vs `{{ }}` support via `Lego.config.syntax`.
 
 ### 4. Directives vs. Mustache Priority
 
