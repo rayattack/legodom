@@ -1,11 +1,13 @@
 # Chaos Tends To A Minimum
 
+> [!NOTE] This is a Recommendation, Not a Bible
+> This page is one person's take on how to structure large LegoDOM applications. It is not enforced by the framework. You are encouraged to adapt, improve, or completely ignore it. If you find a better pattern, please share it.
+
+---
+
 In LegoDOM land everything is a `.lego`. A `block` is a lego, a `widget` is a lego, a `component` is a lego, a `page` is a lego.
 
 But what do they *mean*?
-
-> [!NOTE] This is a Recommendation, Not a Bible
-> This page is one person's take on how to structure large LegoDOM applications. It is not enforced by the framework. You are encouraged to adapt, improve, or completely ignore it. If you find a better pattern, please share it.
 
 ---
 
