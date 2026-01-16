@@ -9,7 +9,8 @@ export default defineConfig({
   plugins: [
     legoPlugin({
       componentsDir: './src/components',
-      include: ['**/*.lego']
+      include: ['**/*.lego'],
+      importPath: 'lego-dom/main.js' // Use the alias defined below
     }),
     tailwindcss()
   ],

@@ -20,7 +20,8 @@ const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID;
 export default function legoPlugin(options = {}) {
   const {
     componentsDir = './src/components',
-    include = ['**/*.lego']
+    include = ['**/*.lego'],
+    importPath = 'lego-dom'
   } = options;
 
   let config;
@@ -132,7 +133,7 @@ export default function legoPlugin(options = {}) {
         const defineCall = generateDefineCall(parsed);
 
         return `
-import { Lego } from 'lego-dom';
+import { Lego } from '${importPath}';
 
 ${defineCall}
 

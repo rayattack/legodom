@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.3.2] - 2026-01-16
+## [1.3.3] - 2026-01-16
 
 ### Fixes
 
@@ -11,6 +11,10 @@ All notable changes to this project will be documented in this file.
 ### Documentation
 
 - **Large Apps Guide:** Added "Scaling to Multi-Domain Apps" section for enterprise projects with multiple business domains (HRIS, Finance, Planning, etc.).
+
+### Improvements
+
+- **Vite Plugin:** Added `importPath` option to `legoPlugin()`, allowing developers to override where the `Lego` core is imported from (e.g., for local testing or custom builds).
 
 ## [1.3.1] - 2026-01-16
 
