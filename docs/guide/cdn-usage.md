@@ -288,9 +288,42 @@ Lego works in all modern browsers:
 
 No polyfills needed for these browsers!
 
+## Using .lego Files without Build Tools
+
+You can use full Single File Components (`.lego` files) directly in the browser without any build step! 
+Lego provides a `loader` configuration that lets you fetch component files on demand.
+
+### How it Works
+
+1. **Serve your files**: Make sure your `.lego` files are accessible via HTTP (e.g., in a `/components` folder).
+2. **Configure the loader**: Tell Lego how to fetch a component when it encounters an unknown tag.
+
+### Example
+
+```html
+<script>
+  Lego.init(document.body, {
+    // The loader function receives the tag name (e.g., 'user-card')
+    // and must return a Promise that resolves to the component's source code.
+    loader: (tagName) => {
+      // Fetch the raw text content of the .lego file
+      return fetch(`/components/${tagName}.lego`).then(res => res.text());
+    }
+  });
+</script>
+
+<!-- Now just use the tag! Lego will fetch, compile, and render it automatically. -->
+<user-card></user-card>
+```
+
+This is perfect for:
+- **Micro-frontends**: Load components from different services.
+- **CMS Integration**: Store component code in a database.
+- **Dynamic Apps**: Load features only when they are needed.
+
 ## Pros and Cons
 
-### ✅ Advantages
+### Advantages
 
 - **No build step** - Instant development
 - **No npm** - No dependency management
@@ -298,11 +331,8 @@ No polyfills needed for these browsers!
 - **Progressive enhancement** - Add to existing sites easily
 - **Low barrier** - Great for beginners
 
-### ⚠️ Limitations
+### Limitations
 
-- No tree-shaking (you get the whole library)
-- No TypeScript compilation
-- No `.lego` SFC support
 - No hot module replacement
 - Slower for large apps compared to bundled versions
 
