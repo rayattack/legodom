@@ -78,7 +78,25 @@ Here's a full working application using only CDN:
   <h1>My Todo App</h1>
   <todo-app></todo-app>
 
-  <template b-id="todo-app">
+  <template b-id="todo-app" b-data="{
+    newTodo: '',
+    todos: [
+      { text: 'Learn Lego', done: true },
+      { text: 'Build something awesome', done: false }
+    ],
+    addTodo() {
+      if (this.newTodo.trim()) {
+        this.todos.push({
+          text: this.newTodo,
+          done: false
+        });
+        this.newTodo = '';
+      }
+    },
+    remaining() {
+      return this.todos.filter(t => !t.done).length;
+    }
+  }">
     <style>
       self {
         display: block;
@@ -141,26 +159,7 @@ Here's a full working application using only CDN:
   <script src="https://unpkg.com/lego-dom/main.js"></script>
   
   <script>
-    // Initialize with data
-    Lego.define('todo-app', Lego.registry['todo-app'].innerHTML, {
-      newTodo: '',
-      todos: [
-        { text: 'Learn Lego', done: true },
-        { text: 'Build something awesome', done: false }
-      ],
-      addTodo() {
-        if (this.newTodo.trim()) {
-          this.todos.push({
-            text: this.newTodo,
-            done: false
-          });
-          this.newTodo = '';
-        }
-      },
-      remaining() {
-        return this.todos.filter(t => !t.done).length;
-      }
-    });
+
 
     // Don't forget to init!
     Lego.init();
@@ -183,7 +182,16 @@ Lego is perfect for progressively enhancing existing sites:
 <!-- Add interactive components -->
 <user-widget></user-widget>
 
-<template b-id="user-widget">
+<template b-id="user-widget" b-data="{
+  username: 'Guest',
+  async mounted() {
+    const user = await fetch('/api/user').then(r => r.json());
+    this.username = user.name;
+  },
+  logout() {
+    window.location.href = '/logout';
+  }
+}">
   <style>
     self {
       position: fixed;
@@ -200,16 +208,7 @@ Lego is perfect for progressively enhancing existing sites:
 
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 <script>
-  Lego.define('user-widget', Lego.registry['user-widget'].innerHTML, {
-    username: 'Guest',
-    async mounted() {
-      const user = await fetch('/api/user').then(r => r.json());
-      this.username = user.name;
-    },
-    logout() {
-      window.location.href = '/logout';
-    }
-  });
+
 
   Lego.init();
 </script>
