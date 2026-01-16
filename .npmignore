@@ -1,0 +1,9 @@
+lego-studio/
+node_modules/
+.git/
+.ds_store
+docs/
+examples/
+tests/
+.github/
+.legodom
