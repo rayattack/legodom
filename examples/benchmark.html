@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LegoDOM Performance Benchmark</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: #f5f5f5;
+    }
+    .controls {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .controls h1 {
+      margin-top: 0;
+    }
+    .controls button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .controls button:hover {
+      background: #1d4ed8;
+    }
+    .controls button.danger {
+      background: #dc2626;
+    }
+    .controls button.danger:hover {
+      background: #b91c1c;
+    }
+    .metrics {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .metric {
+      display: inline-block;
+      margin-right: 2rem;
+      margin-bottom: 1rem;
+    }
+    .metric-label {
+      font-size: 0.875rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #111827;
+    }
+    .metric-value.good {
+      color: #059669;
+    }
+    .metric-value.warning {
+      color: #d97706;
+    }
+    .metric-value.bad {
+      color: #dc2626;
+    }
+    #container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .fps-graph {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #fps-canvas {
+      width: 100%;
+      height: 100px;
+      background: #f9fafb;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <h1>🚀 LegoDOM Performance Benchmark</h1>
+    <p>Test rendering performance with large numbers of components</p>
+    <button onclick="createComponents(100)">100 Components</button>
+    <button onclick="createComponents(500)">500 Components</button>
+    <button onclick="createComponents(1000)">1,000 Components</button>
+    <button onclick="createComponents(5000)">5,000 Components</button>
+    <button onclick="stressTest()">Stress Test (Rapid Updates)</button>
+    <button onclick="clearComponents()" class="danger">Clear All</button>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Components</div>
+      <div class="metric-value" id="component-count">0</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">FPS</div>
+      <div class="metric-value" id="fps">60</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Frame Time</div>
+      <div class="metric-value" id="frame-time">0ms</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Render Time</div>
+      <div class="metric-value" id="render-time">0ms</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Memory</div>
+      <div class="metric-value" id="memory">0 MB</div>
+    </div>
+  </div>
+
+  <div class="fps-graph">
+    <h3>FPS Over Time</h3>
+    <canvas id="fps-canvas" width="1000" height="100"></canvas>
+  </div>
+
+  <div id="container"></div>
+
+  <!-- Component Template -->
+  <template b-id="perf-card">
+    <style>
+      self {
+        display: block;
+        background: white;
+        padding: 1rem;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+      }
+      self:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      .title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #111827;
+      }
+      .count {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2563eb;
+      }
+      .status {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+      }
+    </style>
+    <div class="title">Card #[[ id ]]</div>
+    <div class="count">[[ count ]]</div>
+    <div class="status">[[ status ]]</div>
+  </template>
+
+  <script src="../main.js"></script>
+  <script>
+    // Initialize Lego
+    Lego.init(document.body);
+
+    // Performance tracking
+    let frameCount = 0;
+    let lastTime = performance.now();
+    let fps = 60;
+    let renderTimes = [];
+    const fpsHistory = [];
+    const maxHistory = 100;
+
+    // FPS Graph
+    const canvas = document.getElementById('fps-canvas');
+    const ctx = canvas.getContext('2d');
+
+    function drawFPSGraph() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw grid
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = (canvas.height / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // Draw FPS line
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      fpsHistory.forEach((fps, i) => {
+        const x = (canvas.width / maxHistory) * i;
+        const y = canvas.height - (fps / 60 * canvas.height);
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      
+      ctx.stroke();
+
+      // Draw 60fps reference line
+      ctx.strokeStyle = '#059669';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(canvas.width, 0);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function updateMetrics() {
+      const now = performance.now();
+      frameCount++;
+      
+      if (now >= lastTime + 1000) {
+        fps = Math.round((frameCount * 1000) / (now - lastTime));
+        frameCount = 0;
+        lastTime = now;
+        
+        // Update FPS display
+        const fpsEl = document.getElementById('fps');
+        fpsEl.textContent = fps;
+        fpsEl.className = 'metric-value ' + (fps >= 55 ? 'good' : fps >= 30 ? 'warning' : 'bad');
+        
+        // Update FPS history
+        fpsHistory.push(fps);
+        if (fpsHistory.length > maxHistory) {
+          fpsHistory.shift();
+        }
+        
+        drawFPSGraph();
+        
+        // Update memory
+        if (performance.memory) {
+          const memMB = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+          document.getElementById('memory').textContent = memMB + ' MB';
+        }
+      }
+      
+      requestAnimationFrame(updateMetrics);
+    }
+    updateMetrics();
+
+    // Render time tracking
+    Lego.config.metrics = {
+      onRenderStart(el) {
+        el._renderStart = performance.now();
+      },
+      onRenderEnd(el) {
+        if (el._renderStart) {
+          const renderTime = performance.now() - el._renderStart;
+          renderTimes.push(renderTime);
+          if (renderTimes.length > 100) renderTimes.shift();
+          
+          const avgRenderTime = renderTimes.reduce((a, b) => a + b, 0) / renderTimes.length;
+          const frameTime = Math.max(...renderTimes.slice(-10));
+          
+          document.getElementById('render-time').textContent = avgRenderTime.toFixed(2) + 'ms';
+          
+          const frameTimeEl = document.getElementById('frame-time');
+          frameTimeEl.textContent = frameTime.toFixed(2) + 'ms';
+          frameTimeEl.className = 'metric-value ' + (frameTime <= 16 ? 'good' : frameTime <= 33 ? 'warning' : 'bad');
+        }
+      }
+    };
+
+    // Component creation
+    window.createComponents = function(count) {
+      const container = document.getElementById('container');
+      const startTime = performance.now();
+      
+      console.log(`Creating ${count} components...`);
+      
+      for (let i = 0; i < count; i++) {
+        const card = document.createElement('perf-card');
+        card.setAttribute('b-data', JSON.stringify({
+          id: i + 1,
+          count: 0,
+          status: 'Ready'
+        }));
+        container.appendChild(card);
+      }
+      
+      const createTime = performance.now() - startTime;
+      console.log(`Created ${count} components in ${createTime.toFixed(2)}ms`);
+      
+      document.getElementById('component-count').textContent = container.children.length;
+    };
+
+    // Stress test - rapid updates
+    window.stressTest = function() {
+      const container = document.getElementById('container');
+      const components = Array.from(container.children);
+      
+      if (components.length === 0) {
+        alert('Create some components first!');
+        return;
+      }
+      
+      console.log('Starting stress test...');
+      let updates = 0;
+      
+      const interval = setInterval(() => {
+        // Update all components
+        components.forEach(comp => {
+          if (comp.state) {
+            comp.state.count++;
+            comp.state.status = updates % 2 === 0 ? 'Active' : 'Updating';
+          }
+        });
+        
+        updates++;
+        
+        if (updates >= 100) {
+          clearInterval(interval);
+          console.log('Stress test complete!');
+        }
+      }, 16); // ~60fps update rate
+    };
+
+    // Clear all components
+    window.clearComponents = function() {
+      const container = document.getElementById('container');
+      container.innerHTML = '';
+      document.getElementById('component-count').textContent = '0';
+      renderTimes = [];
+      console.log('Cleared all components');
+    };
+
+    console.log('Benchmark ready! Click buttons to test performance.');
+  </script>
+</body>
+</html>
