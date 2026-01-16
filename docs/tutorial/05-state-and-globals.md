@@ -219,14 +219,14 @@ export default {
 </script>
 ```
 
-### Using `$ancestors` (Access Parent State)
+### Using `$ancestors` (Access Parent Element + State)
 
 ```javascript
 // In a deeply nested component
 mounted() {
   // Get state from a specific ancestor by tag name
   const parentState = this.$ancestors('user-profile');
-  console.log(parentState.userId);
+  console.log(parentState.state.userId);
 }
 ```
 

@@ -2,6 +2,61 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-01-16
+
+### Breaking Changes
+
+- **`$ancestors()` now returns element instead of state:** For consistency with `$element`, `$ancestors()` now returns the ancestor element. Access state via `.state` property.
+  ```javascript
+  // Before (v1.3.x)
+  const userId = this.$ancestors('user-profile').userId;
+  
+  // After (v1.4.0)
+  const userId = this.$ancestors('user-profile').state.userId;
+  ```
+  **Migration:** Add `.state` after all `$ancestors()` calls that access component state.
+
+## [1.3.5] - 2026-01-16
+
+### Features
+
+- **Lego Studio:** Added zero-config component development environment. Enable with `Lego.init(document.body, { studio: true })` and navigate to `/_/studio` to browse, preview, and inspect components in real-time.
+  - Component browser with search/filter
+  - Live component preview in isolation
+  - Real-time state inspector with JSON editor
+  - URL deep linking for sharing components
+  - Published as separate package: `@legodom/studio@0.0.2`
+
+- **Advanced API:** Exposed `Lego.snap()` and `Lego.unsnap()` for manual component initialization and cleanup. Useful for building dev tools, testing, and dynamic component creation in Shadow DOMs.
+  ```javascript
+  const el = document.createElement('my-component');
+  mount.appendChild(el);
+  Lego.snap(el);  // Manually initialize
+  
+  // Later...
+  Lego.unsnap(el);  // Clean up
+  ```
+
+- **Component State Property:** Added `element.state` getter/setter to all component instances for cleaner state access.
+  ```javascript
+  // Before (internal API)
+  const state = element._studs;
+  
+  // After (public API)
+  const state = element.state;
+  element.state = { count: 5 };  // Merges into existing state
+  ```
+
+### Documentation
+
+- **Advanced API Guide:** Added comprehensive documentation for `Lego.snap()` and `Lego.unsnap()` at `/docs/api/advanced.md`
+- **Lego Studio Guide:** Added full Studio documentation at `/docs/guide/studio.md` with quick start, examples, and troubleshooting
+
+### Improvements
+
+- **Studio CDN Loading:** Studio is loaded on-demand from unpkg CDN when `studio: true` is set, keeping core LegoDOM lightweight
+- **State Reactivity:** The `element.state` setter uses `Object.assign()` to merge new values while preserving the reactive Proxy
+
 ## [1.3.4] - 2026-01-16
 
 ### Improvements

@@ -16,7 +16,7 @@ export default defineConfig({
       { text: 'Examples', link: '/examples/' },
       { text: 'Router', link: '/router/' },
       {
-        text: 'v1.3.4',
+        text: 'v1.4.0',
         items: [
           { text: 'Changelog', link: 'https://github.com/rayattack/LegoDOM/releases' }
 
@@ -85,6 +85,7 @@ export default defineConfig({
           items: [
             { text: 'Single File Components', link: '/guide/sfc' },
             { text: 'Routing', link: '/guide/routing' },
+            { text: 'Lego Studio', link: '/guide/studio' },
             { text: 'CDN Usage', link: '/guide/cdn-usage' },
             { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
             { text: 'Large Apps', link: '/guide/directory-structure' },

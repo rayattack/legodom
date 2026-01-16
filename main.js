@@ -193,11 +193,11 @@ const Lego = (() => {
     return current ?? '';
   };
 
-  const findAncestorState = (el, tagName) => {
+  const findAncestor = (el, tagName) => {
     let parent = el.parentElement || el.getRootNode().host;
     while (parent) {
       if (parent.tagName && parent.tagName.toLowerCase() === tagName.toLowerCase()) {
-        return parent._studs;
+        return parent;
       }
       parent = parent.parentElement || (parent.getRootNode && parent.getRootNode().host);
     }
@@ -231,7 +231,7 @@ const Lego = (() => {
       }
 
       const helpers = {
-        $ancestors: (tag) => findAncestorState(context.self, tag),
+        $ancestors: (tag) => findAncestor(context.self, tag),
         $registry: (tag) => sharedStates.get(tag.toLowerCase()),
         $element: context.self,
         $route: Lego.globals.$route,
@@ -718,7 +718,7 @@ const Lego = (() => {
       if (options.studio) {
         if (!registry['lego-studio']) {
           const script = document.createElement('script');
-          script.src = 'https://unpkg.com/@legodom/studio@latest/dist/lego-studio.js';
+          script.src = 'https://unpkg.com/@legodom/studio@0.0.2/dist/lego-studio.js';
           script.onerror = () => console.warn('[Lego] Failed to load Studio from CDN');
           document.head.appendChild(script);
         }

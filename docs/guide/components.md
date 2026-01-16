@@ -184,15 +184,15 @@ document.querySelector('child-component')
 
 ### Accessing Ancestors
 
-Use `$ancestors()` to read parent component state:
+Use `$ancestors()` to get a parent component:
 
 ```html
 <!-- In nested component -->
-<p>App title: [[ $ancestors('app-root').title ]]</p>
+<p>App title: [[ $ancestors('app-root').state.title ]]</p>
 ```
 
 ::: warning Read-Only
-`$ancestors()` is for reading parent state, not mutating it.
+`$ancestors()` should be used for reading parent state, not mutating it.
 :::
 
 ## Component Composition
