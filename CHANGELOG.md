@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.4] - 2026-01-16
+
+### Improvements
+
+- **Minified Build:** Added a build script (`npm run build`) that uses `esbuild` to generate a `main.min.js` file, reducing file size by ~55% for optimal CDN performance.
+
 ## [1.3.3] - 2026-01-16
 
 ### Fixes

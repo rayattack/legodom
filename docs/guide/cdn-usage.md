@@ -39,7 +39,7 @@ That's it! Open this file in any browser and it works.
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 
 <!-- Specific version -->
-<script src="https://unpkg.com/lego-dom@1.3.3/main.js"></script>
+<script src="https://unpkg.com/lego-dom@1.3.4/main.js"></script>
 ```
 
 ### jsdelivr
@@ -49,7 +49,7 @@ That's it! Open this file in any browser and it works.
 <script src="https://cdn.jsdelivr.net/npm/lego-dom/main.js"></script>
 
 <!-- Specific version -->
-<script src="https://cdn.jsdelivr.net/npm/lego-dom@1.3.3/main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lego-dom@1.3.4/main.js"></script>
 ```
 
 
@@ -242,7 +242,7 @@ Lego components work alongside other frameworks:
 Always pin to a specific version:
 
 ```html
-<script src="https://unpkg.com/lego-dom@1.3.3/main.js"></script>
+<script src="https://unpkg.com/lego-dom@1.3.4/main.js"></script>
 ```
 
 ### For Development/Prototyping
@@ -267,7 +267,7 @@ For maximum security:
 
 ```html
 <script 
-  src="https://unpkg.com/lego-dom@1.3.3/main.js"
+  src="https://unpkg.com/lego-dom@1.3.4/main.js"
   integrity="sha384-..."
   crossorigin="anonymous">
 </script>

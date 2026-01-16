@@ -1,6 +1,6 @@
 {
   "name": "lego-dom",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "license": "MIT",
   "description": "A feature-rich web components + SFC frontend framework",
   "main": "main.js",
@@ -22,11 +22,13 @@
   "author": "Tersoo Ortserga",
   "scripts": {
     "test": "vitest run",
+    "build": "esbuild main.js --minify --outfile=main.min.js",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
+    "esbuild": "^0.27.2",
     "jsdom": "^22.0.0",
     "vitepress": "^1.6.4",
     "vitest": "^1.0.0"
