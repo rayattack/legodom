@@ -25,8 +25,8 @@
     <p b-show="loading">Loading orders for customer...</p>
     <ul b-show="!loading">
       <li b-for="order in orders">
-        <span>Order #{{ order.id }}</span>
-        <span class="status">{{ order.status }}</span>
+        <span>Order #[[ order.id ]]</span>
+        <span class="status">[[ order.status ]]</span>
       </li>
     </ul>
   </div>

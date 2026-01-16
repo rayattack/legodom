@@ -29,7 +29,7 @@
   <div>
     <input b-sync="name" type="text" placeholder="Enter your name">
     <div class="greeting" b-show="name">
-      Hello, {{ name }}! 👋
+      Hello, [[ name ]]! 👋
     </div>
   </div>
 </template>

@@ -10,6 +10,10 @@ Welcome to the Lego API documentation.
 - [Lego.config](/api/config) - Configuration & Error Handling
 - [Lifecycle Hooks](/api/lifecycle) - Component lifecycle methods
 
+## Advanced
+
+- [Lego.snap() & Lego.unsnap()](/api/advanced) - Manual component initialization and cleanup
+
 ## Templates & Binding
 
 - [Directives](/api/directives) - `b-show`, `b-for`, `b-sync`

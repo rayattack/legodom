@@ -43,8 +43,8 @@ Create a new `.lego` file in `src/components/`:
 
 ```html
 <template>
-  <h1>{{ message }}</h1>
-  <button @click="count++">{{ count }}</button>
+  <h1>[[ message ]]</h1>
+  <button @click="count++">[[ count ]]</button>
 </template>
 
 <script>

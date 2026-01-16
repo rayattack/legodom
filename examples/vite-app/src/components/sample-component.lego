@@ -47,14 +47,14 @@
 </style>
 
 <template>
-  <div class="header">{{ title }}</div>
+  <div class="header">[[ title ]]</div>
   <div class="content">
     <p class="gobe">This is a sample Lego component loaded from a .lego file!</p>
-    <p>Message: {{ message }}</p>
+    <p>Message: [[ message ]]</p>
   </div>
   <button @click="incrementCount()">
     Click me!
-    <span class="count">{{ count }}</span>
+    <span class="count">[[ count ]]</span>
   </button>
 </template>
 

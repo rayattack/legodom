@@ -103,6 +103,7 @@ export default defineConfig({
             { text: 'Lego.config', link: '/api/config' },
             { text: 'Directives', link: '/api/directives' },
             { text: 'Lifecycle Hooks', link: '/api/lifecycle' },
+            { text: 'Advanced API', link: '/api/advanced' },
             { text: 'Vite Plugin', link: '/api/vite-plugin' }
           ]
         }

@@ -568,6 +568,13 @@ const Lego = (() => {
         get $go() { return Lego.globals.$go }
       }, el);
 
+      Object.defineProperty(el, 'state', {
+        get() { return this._studs },
+        set(v) { Object.assign(this._studs, v) },
+        configurable: true,
+        enumerable: false
+      });
+
       shadow.appendChild(tpl);
 
       const style = shadow.querySelector('style');
@@ -649,6 +656,8 @@ const Lego = (() => {
   };
 
   const publicAPI = {
+    snap,
+    unsnap,
     init: async (root = document.body, options = {}) => {
       if (!root || typeof root.nodeType !== 'number') root = document.body;
       styleConfig = options.styles || {};
@@ -706,6 +715,17 @@ const Lego = (() => {
       bind(root, root);
       render(root);
 
+      if (options.studio) {
+        if (!registry['lego-studio']) {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/@legodom/studio@latest/dist/lego-studio.js';
+          script.onerror = () => console.warn('[Lego] Failed to load Studio from CDN');
+          document.head.appendChild(script);
+        }
+        Lego.route('/_/studio', 'lego-studio');
+        Lego.route('/_/studio/:component', 'lego-studio');
+      }
+
       if (routes.length > 0) {
         // Smart History: Restore surgical targets on Back button
         window.addEventListener('popstate', (event) => {
@@ -731,17 +751,6 @@ const Lego = (() => {
           }
         });
         _matchRoute();
-      }
-
-      if (options.studio) {
-        if (!registry['lego-studio']) {
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/@legodom/studio@latest/dist/lego-studio.js';
-          script.onerror = () => console.warn('[Lego] Failed to load Studio from CDN');
-          document.head.appendChild(script);
-        }
-        Lego.route('/_/studio', 'lego-studio');
-        Lego.route('/_/studio/:component', 'lego-studio');
       }
     },
     globals: reactive({

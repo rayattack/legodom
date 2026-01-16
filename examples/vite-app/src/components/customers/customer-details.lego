@@ -2,7 +2,7 @@
   <customers-shell>
     <div style="padding: 1rem; border: 1px dashed #4f46e5;">
       <h3>👤 Customer Profile</h3>
-      <p>Details for Customer ID: <strong>{{ global.$route.params.id }}</strong></p>
+      <p>Details for Customer ID: <strong>[[ global.$route.params.id ]]</strong></p>
 
       <div style="display: grid; gap: 0.5rem; margin-top: 1rem;">
         <div><strong>Status:</strong> Premium Member</div>
@@ -11,7 +11,7 @@
       </div>
 
       <div style="margin-top: 1rem;">
-        <a href="/customers/{{ global.$route.params.id }}/orders" b-target="#todo-container">View Orders</a>
+        <a href="/customers/[[ global.$route.params.id ]]/orders" b-target="#todo-container">View Orders</a>
       </div>
     </div>
   </customers-shell>

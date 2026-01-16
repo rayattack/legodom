@@ -3,6 +3,7 @@ import './app.css';
 
 // Import Lego core (local for testing)
 import { Lego } from '../../../lego.js';
+import '../../../lego-studio/src/lego-studio.lego';
 
 // Import virtual module that auto-discovers and registers all .lego components
 import registerComponents from 'virtual:lego-components';
@@ -25,5 +26,6 @@ Lego.route('/admin', 'admin-panel', async (params, globals) => {
 
 // Initialize Lego
 await Lego.init(document.body, {
-  tailwind: ['/src/app.css']
+  tailwind: ['/src/app.css'],
+  studio: true
 })

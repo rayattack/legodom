@@ -26,9 +26,6 @@
 
 <script>
   export default {
-    name: 'AppNavbar',
-    mounted() {
-      console.log('This is mounted');
-    }
+    name: 'AppNavbar'
   }
 </script>

@@ -146,17 +146,17 @@
 
   <div class="filters">
     <button 
-            class="filter-btn {{ filter === 'all' ? 'active' : '' }}"
+            class="filter-btn [[ filter === 'all' ? 'active' : '' ]]"
             @click="filter = 'all'">
       All
     </button>
     <button 
-            class="filter-btn {{ filter === 'active' ? 'active' : '' }}"
+            class="filter-btn [[ filter === 'active' ? 'active' : '' ]]"
             @click="filter = 'active'">
       Active
     </button>
     <button 
-            class="filter-btn {{ filter === 'completed' ? 'active' : '' }}"
+            class="filter-btn [[ filter === 'completed' ? 'active' : '' ]]"
             @click="filter = 'completed'">
       Completed
     </button>
@@ -165,20 +165,20 @@
   <ul b-for="todo in filteredTodos()">
     <li>
       <input type="checkbox" b-sync="todo.done">
-      <span class="todo-text {{ todo.done ? 'done' : '' }}">
-        {{ todo.text }}
+      <span class="todo-text [[ todo.done ? 'done' : '' ]]">
+        [[ todo.text ]]
       </span>
       <button class="delete-btn" @click="deleteTodo(todo)">Delete</button>
     </li>
   </ul>
 
   <div class="stats">
-    <span>{{ remaining() }} item{{ remaining() === 1 ? '' : 's' }} left</span>
+    <span>[[ remaining() ]] item[[ remaining() === 1 ? '' : 's' ]] left</span>
     <button 
             class="clear-completed" 
             b-show="completedCount() > 0"
             @click="clearCompleted()">
-      Clear completed ({{ completedCount() }})
+      Clear completed ([[ completedCount() ]])
     </button>
   </div>
 </template>
