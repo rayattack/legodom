@@ -91,113 +91,6 @@ registerComponents();
 await Lego.init();
 ```
 
-## Your First Component
-
-Let's create a simple counter component.
-
-### Using HTML Templates
-
-```html
-<template b-id="click-counter" b-data="{ message: 'Welcome!', count: 0 }">
-  <style>
-    self {
-      display: block;
-      padding: 2rem;
-      text-align: center;
-      background: #f0f0f0;
-      border-radius: 8px;
-    }
-    button {
-      font-size: 1.2rem;
-      padding: 0.5rem 1.5rem;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #45a049;
-    }
-  </style>
-  
-  <div>
-    ... markup ...
-  </div>
-</template>
-  
-<!-- Uses defaults: message="Welcome!", count=0 -->
-<click-counter></click-counter>
-
-<!-- Overrides message, keeps count=0 -->
-<click-counter b-data="{ message: 'Bienvenido!' }"></click-counter>
-
-<script src="https://unpkg.com/lego-dom/main.js"></script>
-```
-
-### Using JavaScript
-
-```js
-import { Lego } from 'lego-dom';
-
-Lego.define('click-counter', `
-  <style>
-    self {
-      display: block;
-      padding: 2rem;
-      text-align: center;
-    }
-  </style>
-  
-  <h2>[[ message ]]</h2>
-  <p>Count: [[ count ]]</p>
-  <button @click="increment()">Click Me!</button>
-`, {
-  message: 'Welcome!',
-  count: 0,
-  increment() {
-    this.count++;
-  }
-});
-```
-
-Then use it in your HTML:
-
-```html
-<click-counter></click-counter>
-```
-
-### Using .lego Files (with Vite)
-
-Create `src/components/click-counter.lego`:
-
-```html
-<template>
-  <style>
-    self {
-      display: block;
-      padding: 2rem;
-    }
-  </style>
-  
-  <h2>[[ message ]]</h2>
-  <p>Count: [[ count ]]</p>
-  <button @click="increment()">Click Me!</button>
-</template>
-
-<script>
-export default {
-  message: 'Welcome!',
-  count: 0,
-  increment() {
-    this.count++;
-  }
-}
-</script>
-```
-
-The Vite plugin automatically discovers and registers it!
-
 ## Understanding the Basics
 
 ### 1. Templates
@@ -241,6 +134,9 @@ Special attributes for common patterns:
 - `b-for` - List rendering
 - `b-sync` - Two-way binding
 
+For extensive information, see [Directives](/guide/directives).
+
+
 ```html
 <p b-show="isLoggedIn">Welcome back!</p>
 <li b-for="item in items">[[ item.name ]]</li>
@@ -249,11 +145,11 @@ Special attributes for common patterns:
 
 ## What You've Learned
 
-- ✅ Three different ways to install Lego
-- ✅ How to create your first component
+- ✅ How to install LegoDOM
+- ✅ The 3 (three) different ways that exist to create componentS
 - ✅ The basics of templates, state, and events
-- ✅ Available directives
-- ✅ The importance of the `Lego.init()` engine
+- ✅ A sneak peek into the world of directives
+- ✅ The use of the `Lego.init()` to kickstart LegoDOM.
 
 ## Next Steps
 

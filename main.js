@@ -100,6 +100,8 @@ const Lego = (() => {
     let queued = false;
     const componentsToUpdate = new Set();
     let isProcessing = false;
+    const MAX_RENDER_TIME = 8; // Half of 16ms frame budget
+    const updatedCallbacks = new Map();
 
     return {
       add: (el) => {
@@ -114,21 +116,43 @@ const Lego = (() => {
           componentsToUpdate.clear();
           queued = false;
 
-          batch.forEach(el => render(el));
+          let index = 0;
+          const renderChunk = () => {
+            const chunkStart = performance.now();
 
-          setTimeout(() => {
-            batch.forEach(el => {
-              const state = el._studs;
-              if (state && typeof state.updated === 'function') {
-                try {
-                  state.updated.call(state);
-                } catch (e) {
-                  console.error(`[Lego] Error in updated hook:`, e);
+            while (index < batch.length && (performance.now() - chunkStart) < MAX_RENDER_TIME) {
+              render(batch[index]);
+              index++;
+            }
+
+            if (index < batch.length) {
+              requestAnimationFrame(renderChunk);
+            } else {
+              batch.forEach(el => {
+                const state = el._studs;
+                if (state && typeof state.updated === 'function') {
+                  if (updatedCallbacks.has(el)) {
+                    clearTimeout(updatedCallbacks.get(el));
+                  }
+
+                  const timeout = setTimeout(() => {
+                    try {
+                      state.updated.call(state);
+                    } catch (e) {
+                      console.error(`[Lego] Error in updated hook:`, e);
+                    }
+                    updatedCallbacks.delete(el);
+                  }, 50);
+
+                  updatedCallbacks.set(el, timeout);
                 }
-              }
-            });
-            isProcessing = false;
-          }, 0);
+              });
+
+              isProcessing = false;
+            }
+          };
+
+          renderChunk();
         });
       }
     };
