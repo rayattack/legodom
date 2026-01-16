@@ -100,8 +100,24 @@ const Lego = (() => {
     let queued = false;
     const componentsToUpdate = new Set();
     let isProcessing = false;
-    const MAX_RENDER_TIME = 8; // Half of 16ms frame budget
-    const updatedCallbacks = new Map();
+
+    // Optimization: Single timer for all updated hooks instead of one per component
+    let updatedTimer = null;
+    const pendingUpdated = new Set();
+
+    const scheduleUpdatedHooks = () => {
+      if (updatedTimer) clearTimeout(updatedTimer);
+      updatedTimer = setTimeout(() => {
+        pendingUpdated.forEach(el => {
+          const state = el._studs;
+          if (state && typeof state.updated === 'function') {
+            try { state.updated.call(state); } catch (e) { console.error(`[Lego] Error in updated hook:`, e); }
+          }
+        });
+        pendingUpdated.clear();
+        updatedTimer = null;
+      }, 50); // Global debounce
+    };
 
     return {
       add: (el) => {
@@ -116,43 +132,13 @@ const Lego = (() => {
           componentsToUpdate.clear();
           queued = false;
 
-          let index = 0;
-          const renderChunk = () => {
-            const chunkStart = performance.now();
+          // Simple synchronous render loop (faster for small batches, no overhead)
+          batch.forEach(el => render(el));
 
-            while (index < batch.length && (performance.now() - chunkStart) < MAX_RENDER_TIME) {
-              render(batch[index]);
-              index++;
-            }
-
-            if (index < batch.length) {
-              requestAnimationFrame(renderChunk);
-            } else {
-              batch.forEach(el => {
-                const state = el._studs;
-                if (state && typeof state.updated === 'function') {
-                  if (updatedCallbacks.has(el)) {
-                    clearTimeout(updatedCallbacks.get(el));
-                  }
-
-                  const timeout = setTimeout(() => {
-                    try {
-                      state.updated.call(state);
-                    } catch (e) {
-                      console.error(`[Lego] Error in updated hook:`, e);
-                    }
-                    updatedCallbacks.delete(el);
-                  }, 50);
-
-                  updatedCallbacks.set(el, timeout);
-                }
-              });
-
-              isProcessing = false;
-            }
-          };
-
-          renderChunk();
+          // Batch complete: Queue updated hooks efficiently
+          batch.forEach(el => pendingUpdated.add(el));
+          scheduleUpdatedHooks();
+          isProcessing = false;
         });
       }
     };
