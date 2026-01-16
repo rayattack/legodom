@@ -1,0 +1,46 @@
+<style>
+  /* @import 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:wght@400;700&display=swap'; */
+  self {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .tooltipped:hover .tooltip {
+    visibility: visible;
+  }
+  .tooltip {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    border-radius: 5px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -60px;
+  }
+</style>
+
+<template>
+  <div>
+    <span b-for="menu in [
+      { icon: 'home', name: 'Home' },
+      { icon: 'mail', name: 'Mail' },
+      { icon: 'calendar', name: 'Calendar' },
+      { icon: 'person', name: 'Profile' },
+    ]">
+      <p>[[ menu.name ]]</p>
+    </span>
+  </div>
+  <p>[[ name ]]</p>
+</template>
+
+<script>
+export default {
+  name: 'side-menu'
+}
+</script>
