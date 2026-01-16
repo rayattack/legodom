@@ -732,6 +732,17 @@ const Lego = (() => {
         });
         _matchRoute();
       }
+
+      if (options.studio) {
+        if (!registry['lego-studio']) {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/@legodom/studio@latest/dist/lego-studio.js';
+          script.onerror = () => console.warn('[Lego] Failed to load Studio from CDN');
+          document.head.appendChild(script);
+        }
+        Lego.route('/_/studio', 'lego-studio');
+        Lego.route('/_/studio/:component', 'lego-studio');
+      }
     },
     globals: reactive({
       $route: {
@@ -826,6 +837,7 @@ const Lego = (() => {
     },
     // For specific test validation
     getActiveComponentsCount: () => activeComponents.size,
+    getLegos: () => Object.keys(registry),
     config, // Expose config for customization
     route: (path, tagName, middleware = null) => {
       const paramNames = [];

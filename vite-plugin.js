@@ -153,20 +153,6 @@ export default '${parsed.componentName}';
       }
     },
 
-    transform(code, id) {
-      if (id.endsWith('.lego') && !id.includes('?')) {
-        const parsed = parseLego(code, path.basename(id));
-        const validation = validateLego(parsed);
 
-        if (!validation.valid) {
-          throw new Error(`Invalid .lego file:\n${validation.errors.join('\n')}`);
-        }
-
-        return {
-          code: generateDefineCall(parsed),
-          map: null
-        };
-      }
-    }
   };
 }
