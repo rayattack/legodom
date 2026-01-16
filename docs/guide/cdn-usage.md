@@ -49,7 +49,7 @@ That's it! Open this file in any browser and it works.
 <script src="https://cdn.jsdelivr.net/npm/lego-dom/main.js"></script>
 
 <!-- Specific version -->
-<script src="https://cdn.jsdelivr.net/npm/lego-dom@1.3.4/main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lego-dom@1.3.4/main.min.js"></script>
 ```
 
 
@@ -242,7 +242,7 @@ Lego components work alongside other frameworks:
 Always pin to a specific version:
 
 ```html
-<script src="https://unpkg.com/lego-dom@1.3.4/main.js"></script>
+<script src="https://unpkg.com/lego-dom@1.3.4/main.min.js"></script>
 ```
 
 ### For Development/Prototyping
@@ -250,7 +250,7 @@ Always pin to a specific version:
 Use latest:
 
 ```html
-<script src="https://unpkg.com/lego-dom/main.js"></script>
+<script src="https://unpkg.com/lego-dom/main.min.js"></script>
 ```
 
 ### With defer
@@ -258,7 +258,7 @@ Use latest:
 Load asynchronously without blocking page render:
 
 ```html
-<script defer src="https://unpkg.com/lego-dom/main.js"></script>
+<script defer src="https://unpkg.com/lego-dom/main.min.js"></script>
 ```
 
 ### With integrity (SRI)
@@ -267,7 +267,7 @@ For maximum security:
 
 ```html
 <script 
-  src="https://unpkg.com/lego-dom@1.3.4/main.js"
+  src="https://unpkg.com/lego-dom@1.3.4/main.min.js"
   integrity="sha384-..."
   crossorigin="anonymous">
 </script>
