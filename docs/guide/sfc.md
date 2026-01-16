@@ -310,6 +310,50 @@ Scoped styles using Shadow DOM. Use `self` to target the component root:
 
 Styles are automatically scoped to your component—they won't affect other components or global styles.
 
+## Dynamic Styles
+
+A powerful feature of LegoDOM SFCs is that **interpolation works inside `<style>` tags too!**
+
+You can use `[[ ]]` to bind CSS values directly to your component's state, props, or logic. Because styles are scoped (Shadow DOM), this is safe and won't leak.
+
+```html
+<template>
+  <button @click="toggleTheme()">Toggle Theme</button>
+</template>
+
+<style>
+  /* Use state variables directly in CSS */
+  self {
+    background-color: [[ theme === 'dark' ? '#333' : '#fff' ]];
+    color: [[ theme === 'dark' ? '#fff' : '#000' ]];
+    
+    /* You can also bind strict values for calculation */
+    --padding: [[ basePadding + 'px' ]];
+    padding: var(--padding);
+  }
+</style>
+
+<script>
+export default {
+  theme: 'light',
+  basePadding: 20,
+  
+  toggleTheme() {
+    this.theme = this.theme === 'light' ? 'dark' : 'light';
+  }
+}
+</script>
+```
+
+::: tip Why this rocks 🤘
+This eliminates the need for CSS-in-JS libraries. You get full reactivity in your CSS with standard syntax.
+:::
+
+::: warning Performance Note
+Binding to CSS properties works great for themes, settings, and layout changes.  
+For high-frequency updates (like drag-and-drop coordinates or 60fps animations), prefer binding to **CSS Variables** on the host element (`style="--x: [[ x ]]"`) to avoid re-parsing the stylesheet on every frame.
+:::
+
 ## Hot Module Replacement
 
 During development, changes to `.lego` files trigger a full page reload. Your changes appear instantly!
