@@ -16,7 +16,7 @@ export default defineConfig({
       { text: 'Examples', link: '/examples/' },
       { text: 'Router', link: '/router/' },
       {
-        text: 'v1.2.2',
+        text: 'v1.3.2',
         items: [
           { text: 'Changelog', link: 'https://github.com/rayattack/LegoDOM/releases' }
 

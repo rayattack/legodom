@@ -127,7 +127,7 @@ Because both of these were "mapped" during the `scanForBindings` phase (Topic 11
 
 The library looks for the pattern `item in list` (e.g., `user in users`).
 
--   **Capture**: During the scanning phase, it saves the inner HTML of the element as a "template string" and then empties the element so it can be filled dynamically.
+-   **Capture**: During the scanning phase, it saves a deep clone of the `b-for` element itself as the "template node" (using `node.cloneNode(true)`) and then empties the element so it can be filled dynamically. This approach handles both element children and text-only content correctly.
     
 
 ### The Concept of "The Pool" (`forPools`)

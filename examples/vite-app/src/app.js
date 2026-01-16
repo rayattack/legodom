@@ -1,8 +1,8 @@
 // Import Tailwind CSS
 import './app.css';
 
-// Import Lego core
-import { Lego } from 'lego-dom/main.js';
+// Import Lego core (local for testing)
+import { Lego } from '../../main.js';
 
 // Import virtual module that auto-discovers and registers all .lego components
 import registerComponents from 'virtual:lego-components';

@@ -379,7 +379,7 @@ const Lego = (() => {
           bindings.push({ type: 'b-show', node, expr });
         }
         if (node.hasAttribute('b-for')) {
-          const match = node.getAttribute('b-for').match(/^\s*(\w+)\s+in\s+(.+)\s*$/);
+          const match = node.getAttribute('b-for').match(/^\s*(\w+)\s+in\s+([\s\S]+?)\s*$/);
           if (match) {
             checkGlobal(match[2]);
             bindings.push({
@@ -387,7 +387,7 @@ const Lego = (() => {
               node,
               itemName: match[1],
               listName: match[2].trim(),
-              template: node.innerHTML
+              template: node.cloneNode(true)  // Store the whole node as template
             });
             node.innerHTML = '';
           }
@@ -492,9 +492,8 @@ const Lego = (() => {
             currentKeys.add(key);
             let child = pool.get(key);
             if (!child) {
-              const temp = document.createElement('div');
-              temp.innerHTML = b.template;
-              child = temp.firstElementChild;
+              child = b.template.cloneNode(true);
+              child.removeAttribute('b-for');
               pool.set(key, child);
               bind(child, el, { name: b.itemName, listName: b.listName, index: i });
             }

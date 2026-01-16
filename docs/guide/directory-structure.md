@@ -192,7 +192,51 @@ src/
 │   ├── page-dashboard.lego
 │   └── page-login.lego
 └── main.js           # App entry, routes, globals
+
+
+## Scaling to Multi-Domain Apps
+
+For large enterprise apps with multiple business domains (HRIS, Finance, Planning, Messages), the flat structure breaks down. Use a **Domain-First** approach.
+
+### Domain-First Structure
+
+```text
+src/
+├── shared/                    # Truly universal (used by 3+ domains)
+│   ├── blocks/
+│   │   ├── block-button.lego
+│   │   └── block-avatar.lego
+│   └── widgets/
+│       ├── widget-datepicker.lego
+│       └── widget-modal.lego
+│
+├── hris/                      # Human Resources domain
+│   ├── blocks/
+│   ├── widgets/
+│   │   └── widget-leave-calendar.lego
+│   ├── components/
+│   │   └── comp-employee-list.lego
+│   └── pages/
+│       └── page-employees.lego
+│
+├── finance/                   # Finance domain
+│   ├── widgets/
+│   ├── components/
+│   └── pages/
+│
+├── planning/                  # Planning domain
+│   ├── widgets/
+│   ├── components/
+│   └── pages/
+│
+└── main.js
 ```
+
+### Rules for Multi-Domain
+
+1. **Shared** = Only what is used by 3+ domains. Be ruthless.
+2. **Domain folders** = Each domain owns its own `blocks/`, `widgets/`, `components/`, `pages/`.
+3. **No cross-domain Component imports.** If HRIS needs Finance data, go through a shared service or global state, not by importing `finance/components/...`.
 
 
 ## Summary

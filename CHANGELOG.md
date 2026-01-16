@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.2] - 2026-01-16
+
+### Fixes
+
+- **Inline Arrays in `b-for`:** Fixed a bug where inline arrays like `b-for="item in [{ name: 'A' }, { name: 'B' }]"` would fail to render. The fix changes `b-for` to clone the entire node as a template instead of storing innerHTML.
+
+### Documentation
+
+- **Large Apps Guide:** Added "Scaling to Multi-Domain Apps" section for enterprise projects with multiple business domains (HRIS, Finance, Planning, etc.).
+
 ## [1.3.1] - 2026-01-16
 
 ### Fixes
