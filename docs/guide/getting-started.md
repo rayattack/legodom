@@ -8,7 +8,7 @@ Check out our **[Step-by-Step Tutorial](/tutorial/)** – build a full multi-pag
 
 ## Installation
 
-### Option 1: CDN (No Build Tools)
+### Option 1 (HTML): CDN (No Build Tools)
 
 The fastest way to try Lego is via CDN:
 
@@ -33,7 +33,7 @@ The fastest way to try Lego is via CDN:
 
 That's it! Open this HTML file in any browser and it works.
 
-### Option 2: npm
+### Option 2 (JS): npm
 
 For projects using npm:
 
@@ -55,7 +55,7 @@ Lego.define('my-component', `
 });
 ```
 
-### Option 3: With Vite (Recommended for Larger Projects)
+### Option 3 (SFC): With Vite (Recommended for Larger Projects)
 
 For the best development experience with `.lego` Single File Components:
 
@@ -121,15 +121,16 @@ Let's create a simple counter component.
     }
   </style>
   
-  <template b-id="click-counter" b-data="{ message: 'Welcome!', count: 0 }">
+  <div>
     ... markup ...
-  </template>
+  </div>
+</template>
   
-  <!-- Uses defaults: message="Welcome!", count=0 -->
-  <click-counter></click-counter>
+<!-- Uses defaults: message="Welcome!", count=0 -->
+<click-counter></click-counter>
 
-  <!-- Overrides message, keeps count=0 -->
-  <click-counter b-data="{ message: 'Bienvenido!' }"></click-counter>
+<!-- Overrides message, keeps count=0 -->
+<click-counter b-data="{ message: 'Bienvenido!' }"></click-counter>
 
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 ```

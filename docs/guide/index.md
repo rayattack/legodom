@@ -6,7 +6,7 @@ LegoDOM is a tiny, zero-dependency JavaScript library for building reactive Web 
 
 LegoDOM is built on a simple belief: **the DOM is not your enemy**.
 
-Modern frameworks introduced virtual DOMs and compilation steps to solve problems that arose from trying to make the DOM do things it wasn't designed for. Lego takes a different approach—it embraces the DOM and Web Components as they were intended to be used.
+Modern frameworks introduced virtual DOMs and compilation steps to solve problems that arose from trying to make the DOM do things it wasn't designed for. Lego takes a different approach it embraces the DOM and Web Components as they were intended to be used.
 
 ## Key Principles
 
@@ -29,7 +29,7 @@ Change an object → the DOM updates. That's it. No `setState`, no `dispatch`, n
 
 ```js
 // This just works
-component._studs.count++;
+component.state.count++;
 ```
 
 ### 4. Web Standards First
@@ -46,18 +46,23 @@ No proprietary APIs. Everything is built on web standards.
 
 ### ✅ Lego is Great For:
 
-- **Small to medium applications** where framework overhead isn't worth it
-- **Embedded widgets** that need to work anywhere
+- **Applications of any scale** - From prototypes to enterprise systems with hundreds of components
+- **Multi-domain applications** - HRIS, CRM, Finance, Planning systems with complex business logic
+- **Embedded widgets** that need to work anywhere without conflicts
 - **Progressive enhancement** of existing sites
+- **Teams that value simplicity** over framework complexity
+- **Projects requiring full control** with zero dependencies
 - **Learning** how reactive systems work under the hood
-- **Projects** where you want full control and no dependencies
 
 ### ⚠️ Consider Alternatives If:
 
-- You need a massive ecosystem of pre-built components
-- Your team is already invested in React/Vue/Angular
-- You need SSR (Server-Side Rendering) out of the box
-- You're building something extremely complex with hundreds of components
+- You need a massive ecosystem of pre-built UI components (though LegoDOM components are easy to build)
+- Your team is already deeply invested in React/Vue/Angular and migration isn't justified
+- You require TypeScript with full type inference (LegoDOM works with TS but doesn't provide built-in types)
+
+::: tip SSC vs SSR
+LegoDOM supports **SSC (Server-Side Components)** - you can render components on the server and hydrate them on the client. This is simpler and more efficient than traditional SSR frameworks that require complex hydration strategies.
+:::
 
 ## How Small Is It?
 
