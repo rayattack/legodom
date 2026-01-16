@@ -7,7 +7,7 @@ Learn how to create and use components in Lego.
 A component is a reusable, self-contained piece of UI with its own template, styles, and logic.
 
 
-::: warning Notice That
+::: warning Note That
 `style` tags inside NON SFC components are inside the `<template>` tag. And outside the tag in SFCs.
 :::
 
