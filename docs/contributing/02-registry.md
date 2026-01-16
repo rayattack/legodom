@@ -20,7 +20,7 @@ const sharedStates = new Map();
 
 `const registry = {}` is a plain object that stores references to `<template>` elements.
 
--   When the library initializes, it scans the DOM for any `<template b-id="my-component">` and saves it here.
+-   When LegoDOM initializes, it scans the DOM for any `<template b-id="my-component">` and saves it here.
     
 -   The `b-id` becomes the key, and the DOM node itself is the value.
     
@@ -82,7 +82,7 @@ async load(id) {
 ```
 
 **The Three Ways to Register:**
-1.  **The HTML Manual Method:** You put `<template b-id="my-comp">` directly in your `*.html` files. During `Lego.init()`, the library scrapes these and populates the registry. This is great for "no-build" prototypes.
+1.  **The HTML Manual Method:** You put `<template b-id="my-comp">` directly in your `*.html` files. During `Lego.init()`, LegoDOM scrapes these and populates the registry. This is great for "no-build" prototypes.
     
 2.  **The `Lego.define()` JS Method:** You call `Lego.define('my-comp', '<h1>Hi</h1>', { ... logic })` in a standard JavaScript file.
     
@@ -113,7 +113,7 @@ This is the power behind the **Server Loader**. We can fetch a string from the s
 
 ### 4. Component Naming Conventions ("Explicit or Go Home")
 
-When you define a component via a file (e.g. `.lego`), the library automatically derives the tag name. To keep the web platform happy, we enforce **Custom Element Best Practices**:
+When you define a component via a file (e.g. `.lego`), LegoDOM automatically derives the tag name. To keep the web platform happy, we enforce **Custom Element Best Practices**:
 
 1.  **Automatic Conversion**: All filenames are converted to `kebab-case`.
     -   `UserProfile.lego` -> `<user-profile>`

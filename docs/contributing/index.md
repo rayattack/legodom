@@ -15,7 +15,7 @@ We avoid compilers, transpilers, and VDOMs. We use:
 ## The Journey
 Follow the path of a component from HTML string to Pixel:
 
-1.  [**Init**](./06-init) - How the library wakes up.
+1.  [**Init**](./06-init) - How LegoDOM wakes up.
 2.  [**Scanner**](./11-scanner) - How we find holes in your HTML (Regex vs AST).
 3.  [**Studs**](./10-studs) - The Reactivity Engine (Proxies).
 4.  [**Render**](./12-render) - The "Loop of Truth" & Security.

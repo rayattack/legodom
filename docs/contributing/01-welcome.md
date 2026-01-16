@@ -30,9 +30,9 @@ You’ll notice the use of `WeakMap` for `proxyCache`, `privateData`, and `forPo
 
 -   **Why not a regular Map?** A `WeakMap` allows the keys (which are DOM elements in this code) to be **garbage collected** if the element is removed from the DOM.
     
--   **Memory Leak Prevention:** If we used a regular `Map`, the library would hold a reference to every component ever created, even if you deleted them, eventually crashing the browser tab.
+-   **Memory Leak Prevention:** If we used a regular `Map`, LegoDOM would hold a reference to every component ever created, even if you deleted them, eventually crashing the browser tab.
     
 
 ### Internal Registry
 
-`const registry = {}` acts as the library's "brain." It stores the `<template>` elements that define what a component looks like. When you write `<my-button>`, Lego looks into this object to find the blueprint.
+`const registry = {}` acts as LegoDOM's "brain." It stores the `<template>` elements that define what a component looks like. When you write `<my-button>`, Lego looks into this object to find the blueprint.

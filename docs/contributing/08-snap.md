@@ -117,7 +117,7 @@ style.textContent = style.textContent.replace(/\bself\b/g, ':host');
 
 ### 4. Data Merging & Reactivity
 
-This is where the component's state is born. The library merges data from three different sources (we will dive deeper into this "Tier System" in Topic 9) and wraps the result in the **`reactive()`** proxy.
+This is where the component's state is born. LegoDOM merges data from three different sources (we will dive deeper into this "Tier System" in Topic 9) and wraps the result in the **`reactive()`** proxy.
 
 -   The resulting proxy is stored in `el._studs`. This is the "brain" of your component.
     

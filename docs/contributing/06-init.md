@@ -73,7 +73,7 @@ It scans the entire document for any `<template>` tag that has a `b-id` attribut
 
 ### 2. Setting up the "Eyes" (`MutationObserver`)
 
-This is the most critical part of the initialization. The library creates a `MutationObserver`.
+This is the most critical part of the initialization. LegoDOM creates a `MutationObserver`.
 
 ```js
 const observer = new MutationObserver(m => m.forEach(r => {
@@ -111,7 +111,7 @@ After setting up the observer, it calls `snap(document.body)`.
 
 -   **Why?** The observer only sees _new_ things being added. It doesn't see what was already there when the page loaded.
     
--   By calling `snap` on the body, the library manually processes every custom component that was present in the initial HTML.
+-   By calling `snap` on the body, LegoDOM manually processes every custom component that was present in the initial HTML.
     
 
 ### 4. Global Data Binding

@@ -11,7 +11,7 @@ When you change data in a reactive application, you often change multiple things
 
 ### The `createBatcher` Factory
 
-The library defines `createBatcher` as a closure that manages the update cycle. It provides three critical layers of protection:
+LegoDOM defines `createBatcher` as a closure that manages the update cycle. It provides three critical layers of protection:
 
 ```js
   const createBatcher = () => {
@@ -74,7 +74,7 @@ The library defines `createBatcher` as a closure that manages the update cycle. 
 
 ### Timing: `requestAnimationFrame` (rAF)
 
-Instead of updating immediately, the library uses `requestAnimationFrame`.
+Instead of updating immediately, LegoDOM uses `requestAnimationFrame`.
 
 -   **What it does**: It tells the browser, "Wait until you are just about to draw the next frame on the screen, then run this code".
 

@@ -125,7 +125,7 @@ Access state in templates using `[[ ]]`:
 
 ### Data Merging (The Three Tiers)
 
-Lego uses a sophisticated three-tier merging strategy to initialize component state. This allows you to define defaults at the library level, customize them for a component type, and then override them for specific instances.
+LegoDOM uses a sophisticated three-tier merging strategy to initialize component state. This allows you to define defaults at the component level, customize them in templates, and then override them for specific instances.
 
 The priority is as follows (**last one wins**):
 

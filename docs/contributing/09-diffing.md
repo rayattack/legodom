@@ -1,6 +1,6 @@
 # He said, She said, They Said, Who Said?
 
-This topic is about the "Power Struggle" inside the code. When a component is born, it needs to know what its data is. The library looks at three different places to find that data, and it has a strict hierarchy of who wins in a conflict.
+This topic is about the "Power Struggle" inside the code. When a component is born, it needs to know what its data is. LegoDOM looks at three different places to find that data, and it has a strict hierarchy of who wins in a conflict.
 
 
 ## Diffing, Merging, and Priorities (The Tier System)
@@ -53,16 +53,16 @@ In JavaScript, when you spread objects, the properties on the right overwrite pr
 
 ### The `parseJSObject` Utility
 
-To make this work, the library includes a helper called `parseJSObject`.
+To make this work, LegoDOM includes a helper called `parseJSObject`.
 
 -   **Why not `JSON.parse`?** JSON is strict (requires double quotes, no functions).
     
--   **The Library's Way**: It uses `new Function('return ' + str)()`. This is a powerful (and dangerous) trick that allows you to write actual JavaScript inside your HTML attributes, including functions or arrays, which Lego then evaluates into a real object.
+-   **LegoDOM's Way**: It uses `new Function('return ' + str)()`. This is a powerful (and dangerous) trick that allows you to write actual JavaScript inside your HTML attributes, including functions or arrays, which Lego then evaluates into a real object.
     
 
 ### The Edge Case: `b-data` as a "Ref"
 
-If the `b-data` attribute starts with a `$`, like `b-data="$someGlobal"`, the library treats it as a pointer to a global variable instead of a raw object string. This allows for deep data sharing between the component and the outside world.
+If the `b-data` attribute starts with a `$`, like `b-data="$someGlobal"`, LegoDOM treats it as a pointer to a global variable instead of a raw object string. This allows for deep data sharing between the component and the outside world.
 
 ----------
 

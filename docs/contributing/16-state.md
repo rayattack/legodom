@@ -11,7 +11,7 @@ In most frameworks, data flows down like a waterfall. If a deeply nested compone
 
 ### 2. The Implementation: "The Body is the Root"
 
-When you define `Lego.globals`, the library doesn't just store your object. It wraps it in the same `reactive()` proxy, but binds it to `document.body`.
+When you define `Lego.globals`, LegoDOM doesn't just store your object. It wraps it in the same `reactive()` proxy, but binds it to `document.body`.
 
 -   **The Code**: `Globals = reactive(userState, document.body)`.
     
@@ -19,7 +19,7 @@ When you define `Lego.globals`, the library doesn't just store your object. It w
 
 ### 3. The `$global` Dependency Check (Smart Broadcast)
 
-The library uses a specific optimization to avoid re-rendering the whole world.
+LegoDOM uses a specific optimization to avoid re-rendering the whole world.
 
 -   **Depenedency Tracking**: During `scanForBindings`, if the parser sees a variable that looks global (e.g. `[[ global.user ]]`), it marks that specific component with a `hasGlobalDependency` flag.
 
@@ -28,11 +28,11 @@ The library uses a specific optimization to avoid re-rendering the whole world.
 
 ### 4. Why `Object.defineProperty` is avoided for Globals
 
-The library sticks to **Proxy** for globals because it allows for **dynamic property addition**.
+LegoDOM sticks to **Proxy** for globals because it allows for **dynamic property addition**.
 
 -   In older libraries, you had to declare all your global variables upfront.
     
--   Because Lego uses a Proxy, you can do `Lego.globals.newVar = 'surprise'` at runtime, and the library will immediately catch that "set" operation and notify all components, even though `newVar` didn't exist when the app started.
+-   Because Lego uses a Proxy, you can do `Lego.globals.newVar = 'surprise'` at runtime, and LegoDOM will immediately catch that "set" operation and notify all components, even though `newVar` didn't exist when the app started.
     
 
 ### 5. The `$go` and Globals Synergy

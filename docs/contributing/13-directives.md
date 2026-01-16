@@ -1,6 +1,6 @@
 # You know C++, I know Web Components++
 
-Let's break down the two simplest yet most vital directives in the library: b-if and b-text. These are the "workhorses" that handle visibility and data display without you having to write manual DOM manipulation code.
+Let's break down the two simplest yet most vital directives in LegoDOM: b-if and b-text. These are the "workhorses" that handle visibility and data display without you having to write manual DOM manipulation code.
 
 ## Conditional Directives `b-if` & `b-show`
 
@@ -10,7 +10,7 @@ Directives like `b-if`, `b-text`, and `b-for` are the "Instructions" that bridge
 
 The `b-show` directive is used to show or hide elements based on a truthy or falsy value in your state.
 
--   **How it works**: During the `render()` cycle, the library executes `safeEval(b.expr, { state, self: b.node })`.
+-   **How it works**: During the `render()` cycle, LegoDOM executes `safeEval(b.expr, { state, self: b.node })`.
     
 -   **The Implementation**:
 
@@ -32,7 +32,7 @@ The `b-show` directive is used to show or hide elements based on a truthy or fal
 
 When an element has `b-if="false"`, we want it to disappear. If we simply remove it (`node.remove()`), the browser "forgets" where that element was supposed to live.
 
--   **The Risk:** If that element was originally between a `<h1>` and a `<footer>`, and the condition turns `true` later, how does the library know exactly where to put it back?
+-   **The Risk:** If that element was originally between a `<h1>` and a `<footer>`, and the condition turns `true` later, how does LegoDOM know exactly where to put it back?
     
 -   **The Solution:** We leave a "bookmark" or an **Anchor** (a tiny, invisible `Comment` node) exactly where the element used to be.
 
@@ -125,25 +125,25 @@ Because both of these were "mapped" during the `scanForBindings` phase (Topic 11
 
 ## Iterative Directive: `b-for` & The Pool
 
-The library looks for the pattern `item in list` (e.g., `user in users`).
+LegoDOM looks for the pattern `item in list` (e.g., `user in users`).
 
 -   **Capture**: During the scanning phase, it saves a deep clone of the `b-for` element itself as the "template node" (using `node.cloneNode(true)`) and then empties the element so it can be filled dynamically. This approach handles both element children and text-only content correctly.
     
 
 ### The Concept of "The Pool" (`forPools`)
 
-To prevent "DOM Thrashing" (constantly creating and deleting elements), the library uses a `WeakMap` called `forPools`.
+To prevent "DOM Thrashing" (constantly creating and deleting elements), LegoDOM uses a `WeakMap` called `forPools`.
 
 -   **The Cache**: Each `b-for` node has its own `Map` inside the pool.
     
 -   **The Key**: It identifies each item in your array. If the item is an object, it assigns a hidden `__id`. If it's a primitive (like a string), it combines the index and the value.
     
--   **Why?**: If you re-order a list of 100 items, the library doesn't create 100 new elements. it finds the existing elements in the "pool" by their key and simply moves them to the new position.
+-   **Why?**: If you re-order a list of 100 items, LegoDOM doesn't create 100 new elements. it finds the existing elements in the "pool" by their key and simply moves them to the new position.
     
 
 ### 3. The Local Scope Injection
 
-This is a brilliant piece of JavaScript engineering. When rendering a list item, the library needs the item (e.g., `user`) to be available, but it also needs the parent component's data to be available.
+This is a brilliant piece of JavaScript engineering. When rendering a list item, LegoDOM needs the item (e.g., `user`) to be available, but it also needs the parent component's data to be available.
 
 
 ```js
@@ -199,14 +199,14 @@ When the `scanForBindings` function encounters a `b-sync="somePath"` attribute, 
 
 -   **The Event**: It listens for the `input` event (which fires every time a character is typed).
     
--   **The Logic**: When the event fires, the library captures the `event.target.value`.
+-   **The Logic**: When the event fires, LegoDOM captures the `event.target.value`.
     
 -   **The Update**: It uses the internal `set()` helper to reach into your component's `_studs` and update the value at the path you specified (e.g., `user.name`).
     
 
 ### 2. The Implementation: Multi-Type Support
 
-The library is smart enough to handle different types of inputs automatically:
+LegoDOM is smart enough to handle different types of inputs automatically:
 
 -   **Checkboxes**: It looks at `.checked` instead of `.value`.
     
@@ -228,11 +228,11 @@ A common problem in two-way binding is the "Infinite Update Loop":
 5.  The cursor jumps to the end of the input or triggers another event.
     
 
-**How Lego solves it**: During the `render()` phase for a `b-sync` binding, the library checks if the element is currently the `document.activeElement` (the thing you are typing in). If it is, and the value hasn't changed from what's already there, it skips the update to avoid disturbing your typing flow.
+**How Lego solves it**: During the `render()` phase for a `b-sync` binding, LegoDOM checks if the element is currently the `document.activeElement` (the thing you are typing in). If it is, and the value hasn't changed from what's already there, it skips the update to avoid disturbing your typing flow.
 
 ### 4. The `b-sync` inside `b-for` loops
 
-As mentioned in Topic 14, `b-sync` works inside loops. If you have a list of inputs generated by a `b-for`, each input is synced to its specific item in the array. The library uses the `localScope` (with its prototype chain) to ensure that typing in the 3rd input only updates the 3rd item in your data list.
+As mentioned in Topic 14, `b-sync` works inside loops. If you have a list of inputs generated by a `b-for`, each input is synced to its specific item in the array. LegoDOM uses the `localScope` (with its prototype chain) to ensure that typing in the 3rd input only updates the 3rd item in your data list.
 
 ----------
 
@@ -240,4 +240,4 @@ As mentioned in Topic 14, `b-sync` works inside loops. If you have a list of inp
 
 `b-for` is a "Reconciliation Engine". It uses a memory pool to recycle DOM nodes and clever prototype inheritance to give each row access to both its own data and the parent's data.
 
-`b-sync` automates the "Boilerplate" of web development. You no longer have to write `onchange` handlers for every input; you just name the variable, and the library handles the rest.
+`b-sync` automates the "Boilerplate" of web development. You no longer have to write `onchange` handlers for every input; you just name the variable, and LegoDOM handles the rest.

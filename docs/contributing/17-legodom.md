@@ -13,7 +13,7 @@ The core of the initialization is setting up the `MutationObserver` we discussed
     
 -   **The Configuration**: It uses `{ childList: true, subtree: true }`.
     
--   **The Why**: By starting the observer _before_ the first render, the library ensures that any elements it creates during the initial startup are also caught and "snapped" into life.
+-   **The Why**: By starting the observer _before_ the first render, LegoDOM ensures that any elements it creates during the initial startup are also caught and "snapped" into life.
     
 
 ### 3. The "Initial Snap" (The Recursive Wake-up)
@@ -22,7 +22,7 @@ Once the observer is live, the code calls `snap(document.body)`.
 
 -   **The Why**: The `MutationObserver` only sees _new_ changes. It cannot see the HTML that was already there when the page loaded.
     
--   **The Logic**: By manually calling `snap` on the body, the library recursively walks through your entire server-rendered HTML. It finds every custom tag (e.g., `<user-card>`) and "upgrades" them into components.
+-   **The Logic**: By manually calling `snap` on the body, LegoDOM recursively walks through your entire server-rendered HTML. It finds every custom tag (e.g., `<user-card>`) and "upgrades" them into components.
     
 
 ### 4. Activating the Global Listener

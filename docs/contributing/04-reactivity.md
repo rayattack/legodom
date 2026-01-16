@@ -56,7 +56,7 @@ When a component is "snapped" (created), its data is passed through this functio
         
 2.  **Handling Objects vs. Nodes**:
     
-    -   The code explicitly checks if a value is an `instanceof Node`. If you try to store a raw HTML element in your state, the library **will not** wrap it in a Proxy. This prevents the library from accidentally trying to "observe" the entire DOM tree, which would crash the browser.
+    -   The code explicitly checks if a value is an `instanceof Node`. If you try to store a raw HTML element in your state, LegoDOM **will not** wrap it in a Proxy. This prevents LegoDOM from accidentally trying to "observe" the entire DOM tree, which would crash the browser.
         
 
 ### Concrete Example

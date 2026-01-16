@@ -5,11 +5,11 @@ your **SFC** (Single File Component) autodiscovered **.lego** file, `<template /
 
 ## Event Handling (The `@event` Syntax)
 
-The library uses a shorthand syntax for event listeners: `@event-name="methodName"`. For example, `@click="increment"` or `@submit="saveUser"`.
+LegoDOM uses a shorthand syntax for event listeners: `@event-name="methodName"`. For example, `@click="increment"` or `@submit="saveUser"`.
 
 ### 1. The `bind(container, el)` Phase
 
-During the `snap()` process, after the Shadow DOM is attached, the library calls `bind(container, el)`.
+During the `snap()` process, after the Shadow DOM is attached, LegoDOM calls `bind(container, el)`.
 
 -   **Scanning for Attributes**: It looks through all elements in the Shadow DOM for any attribute starting with `@`.
     
@@ -27,18 +27,18 @@ This is a critical "under the hood" step. When you click a button, the browser u
     node.addEventListener(eventName, handler);
     ```
     
--   By using `.bind(state)`, the library ensures that when your `toggle()` function runs, `this.show = true` actually updates the proxy state, not the HTML button.
+-   By using `.bind(state)`, LegoDOM ensures that when your `toggle()` function runs, `this.show = true` actually updates the proxy state, not the HTML button.
     
 
 ### 3. Argument Support
 
-The library is flexible with how you call these methods:
+LegoDOM is flexible with how you call these methods:
 
 -   **Standard Call**: `@click="doSomething"` passes the native `Event` object as the first argument.
     
--   **Parameterized Call**: `@click="deleteItem(5)"`. The library uses a regex to check if there are parentheses. If it finds them, it parses the arguments (like `5`) and passes them to your function.
+-   **Parameterized Call**: `@click="deleteItem(5)"`. LegoDOM uses a regex to check if there are parentheses. If it finds them, it parses the arguments (like `5`) and passes them to your function.
     
--   **The "Native" `event`**: If you write `@click="move(event, 10)"`, the library injects the native browser event object into that specific slot. (Note: use `event`, not `$event`).
+-   **The "Native" `event`**: If you write `@click="move(event, 10)"`, LegoDOM injects the native browser event object into that specific slot. (Note: use `event`, not `$event`).
     
 
 ### 4. Event Modifiers

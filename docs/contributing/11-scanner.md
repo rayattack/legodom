@@ -74,7 +74,7 @@ const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | No
 
 ```
 
--   **Why not `querySelectorAll('*')`?** A `TreeWalker` is much faster and more memory-efficient. It allows the library to step through every single node (including text nodes) one by one.
+-   **Why not `querySelectorAll('*')`?** A `TreeWalker` is much faster and more memory-efficient. It allows LegoDOM to step through every single node (including text nodes) one by one.
     
 
 ### 2. The "Nested Component" Shield
@@ -110,7 +110,7 @@ When it finds something, it pushes an object like this into the list:
 
 ```
 
-By storing the **actual Node reference**, the library can update the screen later with surgical precision. It doesn't have to search the DOM again; it just goes straight to that specific memory address and updates the value.
+By storing the **actual Node reference**, LegoDOM can update the screen later with surgical precision. It doesn't have to search the DOM again; it just goes straight to that specific memory address and updates the value.
 
 ----------
 

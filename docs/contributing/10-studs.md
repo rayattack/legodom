@@ -1,6 +1,6 @@
 # State Management
 
-Let's see how the "Cake" of data we merged in Topic 9 is actually brought to life. This is the moment a static object becomes a **Reactive State**, which the library stores in a property called `_studs`.
+Let's see how the "Cake" of data we merged in Topic 9 is actually brought to life. This is the moment a static object becomes a **Reactive State**, which LegoDOM stores in a property called `_studs`.
 
 
 ## The `reactive` State (`_studs`)
@@ -43,7 +43,7 @@ In the physical world, "studs" are the bumps on top of a Lego brick that allow i
 
 ### 2. The Transformation
 
-The library executes this line during the snap process:
+LegoDOM executes this line during the snap process:
 
 ```js
 el._studs = reactive({ ...mergedLogic }, el);
@@ -57,11 +57,11 @@ el._studs = reactive({ ...mergedLogic }, el);
 
 ### 3. Contextual Binding (The `this` Keyword)
 
-After the `_studs` proxy is created, the library ensures that your methods work correctly. When you define a method in your SFC, you expect `this` to point to your data.
+After the `_studs` proxy is created, LegoDOM ensures that your methods work correctly. When you define a method in your SFC, you expect `this` to point to your data.
 
 -   Inside `snap()`, lifecycle hooks are called like this: `el._studs.mounted.call(el._studs)`.
     
--   By using `.call(el._studs)`, the library forces the execution context of your functions to be the reactive proxy.
+-   By using `.call(el._studs)`, LegoDOM forces the execution context of your functions to be the reactive proxy.
     
 -   **Result**: When you write `this.count++` in your code, you are actually interacting with the **Proxy**, which triggers the `set` trap, which notifies the **Batcher**, which triggers the **Render**.
     

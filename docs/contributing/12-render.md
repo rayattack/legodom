@@ -119,7 +119,7 @@ The function loops through `data.bindings` and performs specific actions based o
 
 ### 3. The `safeEval` Bridge & Security
 
-You’ll notice that for things like `b-show` or mustaches, the library calls `safeEval(expr, { state, self: b.node })`.
+You’ll notice that for things like `b-show` or mustaches, LegoDOM calls `safeEval(expr, { state, self: b.node })`.
 
 **Why not just `eval()`?**
 `eval()` executes code in the global scope, which is a massive security hole and performance killer.

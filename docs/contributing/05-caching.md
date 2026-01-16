@@ -28,7 +28,7 @@ This wastes memory and breaks object identity. Even worse, if an object points t
 
 ### The Solution: `proxyCache`
 
-The library uses `const proxyCache = new WeakMap()` to keep track of every object it has already turned into a Proxy.
+LegoDOM uses `const proxyCache = new WeakMap()` to keep track of every object it has already turned into a Proxy.
 
 1.  **Checking the Map**: At the very start of the `reactive()` function, the code checks: `if (proxyCache.has(obj)) return proxyCache.get(obj);`.
     
