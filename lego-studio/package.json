@@ -1,0 +1,17 @@
+{
+  "name": "@legodom/studio",
+  "version": "0.0.2",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "lego-dom": "file:.."
+  }
+}

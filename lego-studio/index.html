@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lego Studio</title>
+</head>
+<body>
+  <lego-studio></lego-studio>
+
+  <!-- Demo Component for Studio Development -->
+  <template b-id="demo-button" b-data="{ count: 0 }">
+    <button @click="count++">
+      Clk: [[ count ]]
+    </button>
+    <style>
+      button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+  </template>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
