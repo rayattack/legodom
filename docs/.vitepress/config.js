@@ -5,6 +5,10 @@ export default defineConfig({
   description: 'A feature-rich web components + SFC frontend framework',
   base: '/legodom/',
 
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/legodom/logo.svg' }]
+  ],
+
   themeConfig: {
     logo: '/logo.svg',
 
