@@ -437,20 +437,14 @@ Move complex logic to methods.
 
 ## Performance Tips
 
-### b-show vs CSS
+### b-show vs b-if
 
-`b-show` is fine for most cases, but for frequently toggled elements, use CSS:
+- **`b-show`** toggles `display: none`. The element remains in the DOM, maintaining its state (e.g., input values, scroll position). Use this for elements that toggle **frequently** (like dropdowns or tabs).
+- **`b-if`** adds/removes the element from the DOM. When removed, all internal state is destroyed and listeners attached to it are cleaned up. Use this for elements that are **rarely** shown (like a modal that might never open) or conditionally rendered branches that differ significantly.
 
-```html
-<!-- For frequent toggling -->
-<div class="[[ visible ? '' : 'hidden' ]]">Content</div>
-```
-
-```css
-.hidden {
-  display: none;
-}
-```
+**Rule of Thumb:**
+- Toggle often? Use **`b-show`**.
+- Toggle rarely? Use **`b-if`**.
 
 ### Limit b-for Items
 
@@ -523,7 +517,7 @@ Some directives are specific to certain features and are documented in their res
 ### Component Directives
 
 - **`b-id`**: Defines a component from a template.
-- **`b-styles`**: Applies shared styles to a component.
+- **`b-stylesheets`**: Applies shared styles from tagged stylesheets in Lego.init to a component.
 - See [Components Guide](/guide/components)
 
 ### Routing Directives

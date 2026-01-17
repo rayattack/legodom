@@ -550,7 +550,7 @@ const Lego = (() => {
       const tpl = templateNode.content.cloneNode(true);
       const shadow = el.attachShadow({ mode: 'open' });
 
-      const styleKeys = (templateNode.getAttribute('b-styles') || "").split(/\s+/).filter(Boolean);
+      const styleKeys = (templateNode.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
       if (styleKeys.length > 0) {
         const sheetsToApply = styleKeys.flatMap(key => styleRegistry.get(key) || []);
         if (sheetsToApply.length > 0) {

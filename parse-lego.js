@@ -56,8 +56,8 @@ export function parseLego(content, filename = 'component.lego') {
 
     if (tagName === 'template') {
       result.template = innerContent.trim();
-      // Extract b-styles attribute if present
-      const bStylesMatch = attrs.match(/b-styles=["']([^"']+)["']/);
+      // Extract b-stylesheets attribute if present
+      const bStylesMatch = attrs.match(/b-stylesheets=["']([^"']+)["']/);
       if (bStylesMatch) {
         result.stylesAttr = bStylesMatch[1];
       }

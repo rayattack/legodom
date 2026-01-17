@@ -138,6 +138,8 @@ Inside `[[ ]]`, you have access to:
 <button @click="console.log(event)">Click</button>
 ```
 
+See the [Helper Utilities](/guide/helpers) guide for a full list of available instance methods like `$ancestors`, `$emit`, etc.
+
 ## Complex Examples
 
 ### Formatting Currency

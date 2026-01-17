@@ -14,7 +14,7 @@ describe('parse-lego tests', () => {
 
   it('should extract attributes from template', () => {
     const sfcContent = `
-<template b-styles="tailwind chartist" b-id="ignored">
+<template b-stylesheets="tailwind chartist" b-id="ignored">
   <div class="p-4">Hello [[name]]</div>
 </template>
 <script>
@@ -33,7 +33,7 @@ export default { mounted() { console.log('hi') } }
   });
 
   it('should generate Lego.define call with 4th argument', () => {
-    const sfcContent = `<template b-styles="tailwind">Hi</template>`;
+    const sfcContent = `<template b-stylesheets="tailwind">Hi</template>`;
     const parsed = parseLego(sfcContent, 'test.lego');
     const defineCall = generateDefineCall(parsed);
 

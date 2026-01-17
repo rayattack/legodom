@@ -81,7 +81,8 @@ export default defineConfig({
             { text: 'Components', link: '/guide/components' },
             { text: 'Templating', link: '/guide/templating' },
             { text: 'Reactivity', link: '/guide/reactivity' },
-            { text: 'Directives', link: '/guide/directives' }
+            { text: 'Directives', link: '/guide/directives' },
+            { text: 'Helper Utilities', link: '/guide/helpers' }
           ]
         },
         {

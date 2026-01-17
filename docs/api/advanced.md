@@ -21,7 +21,7 @@ Lego.snap(element)
 1. **Checks if already initialized** - Skips if the element has already been "snapped"
 2. **Attaches Shadow DOM** - Creates and attaches a shadow root
 3. **Clones template** - Copies the component's template into the shadow root
-4. **Applies styles** - Attaches any registered stylesheets via `b-styles`
+4. **Applies styles** - Attaches any registered stylesheets via `b-stylesheets`
 5. **Merges state** - Combines SFC logic, template `b-data`, and instance `b-data`
 6. **Creates reactive state** - Wraps the state in a Proxy for reactivity
 7. **Binds events** - Attaches event listeners from `@click`, `@input`, etc.

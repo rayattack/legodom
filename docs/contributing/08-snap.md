@@ -19,7 +19,7 @@ const snap = (el) => {
     const tpl = templateNode.content.cloneNode(true);
     const shadow = el.attachShadow({ mode: 'open' });
 
-    const splitStyles = (templateNode.getAttribute('b-styles') || "").split(/\s+/).filter(Boolean);
+    const splitStyles = (templateNode.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
     if (splitStyles.length) {
        shadow.adoptedStyleSheets = splitStyles.flatMap(k => styleRegistry.get(k) || []);
     }
