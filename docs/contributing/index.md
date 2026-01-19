@@ -13,7 +13,7 @@ We avoid compilers, transpilers, and VDOMs. We use:
 - **MutationObservers** for efficiency.
 
 ## The Journey
-Follow the path of a component from HTML string to Pixel:
+Follow the path of a block from HTML string to Pixel:
 
 1.  [**Init**](./06-init) - How LegoDOM wakes up.
 2.  [**Scanner**](./11-scanner) - How we find holes in your HTML (Regex vs AST).

@@ -1,6 +1,6 @@
 # Vite Plugin API
 
-Lego includes a Vite plugin for processing `.lego` Single File Components.
+Lego includes a Vite plugin for processing `.lego` Single File Blocks.
 
 ## Installation
 
@@ -26,10 +26,10 @@ export default defineConfig({
 
 ## Options
 
-### `componentsDir`
+### `blocksDir`
 
 - **Type**: `string`
-- **Default**: `'src/components'`
+- **Default**: `'src/blocks'`
 
 Directory to search for `.lego` files.
 
@@ -49,10 +49,10 @@ Glob pattern(s) to exclude files.
 
 ## Virtual Module
 
-The plugin exposes a virtual module to register all components:
+The plugin exposes a virtual module to register all blocks:
 
 ```js
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-blocks';
 
-registerComponents();
+registerBlocks();
 ```

@@ -27,6 +27,55 @@ const reactive = (obj, el) => {
 
 When you set a property, the proxy intercepts it and schedules a re-render.
 
+## Surgical Updates
+
+LegoDOM uses **scoped rendering**—only the block whose state changed gets re-rendered.
+
+```
+┌─────────────────────────────────────────────┐
+│  1000 Blocks on Page                        │
+│                                             │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   │
+│  │     │ │     │ │ ✏️  │ │     │ │     │   │
+│  └─────┘ └─────┘ └──┬──┘ └─────┘ └─────┘   │
+│                     │                       │
+│              state.count++                  │
+│                     │                       │
+│                     ▼                       │
+│              Only THIS block                │
+│              re-renders (1/1000)            │
+└─────────────────────────────────────────────┘
+```
+
+### Why It Works This Way
+
+Each block's state is wrapped in its own Proxy, bound to that specific element:
+
+```js
+// Internally, LegoDOM does this:
+el._studs = reactive(stateObject, el);  // Proxy is bound to THIS element
+```
+
+When you mutate `this.count`, the Proxy's `set` trap only queues **that element** for re-render—not the entire page.
+
+### Performance Implications
+
+| Scenario | Blocks Re-Rendered |
+|----------|-------------------|
+| Block A's local state changes | 1 (Block A only) |
+| `Lego.globals.theme` changes | Only blocks using `[[ global.theme ]]` |
+| 1000 blocks, 1 state change | **1 block** ✅ |
+
+### Global State Optimization
+
+When you modify `Lego.globals`, LegoDOM doesn't blindly re-render everything. It tracks which blocks have a **global dependency** (i.e., they reference `global.*` in their template) and only updates those:
+
+```js
+Lego.globals.theme = 'dark';  // Only blocks with [[ global.* ]] bindings update
+```
+
+This gives you application-wide state without application-wide re-renders.
+
 ## What's Reactive
 
 ### ✅ Direct Property Assignment
@@ -60,45 +109,18 @@ Lego recursively wraps nested objects in proxies.
 delete this.user.email;       // ✅ Reactive
 ```
 
-### ⚠️ Limitations
+### 💡 Best Practice: Initialize Properties Upfront
 
-#### Replacing Arrays
-
-Don't replace the entire array reference:
-
-```js
-this.items = newItems; // ⚠️ Might not be reactive
-```
-
-Instead, mutate in place:
-
-```js
-this.items.length = 0;
-this.items.push(...newItems);  // ✅ Better
-```
-
-#### Adding New Root Properties
-
-Adding properties after initialization won't be reactive:
-
-```js
-// Initial state
-{
-  count: 0
-}
-
-// Later...
-this.newProp = 'value';  // ⚠️ Not reactive
-```
-
-Initialize all properties upfront:
+While adding new properties at runtime IS reactive, it's still good practice to initialize all properties in your initial state for clarity and maintainability:
 
 ```js
 {
   count: 0,
-  newProp: null  // ✅ Initialize with default
+  newProp: null  // ✅ Explicitly declared, easy to see what state exists
 }
 ```
+
+This makes your block's "shape" clear to other developers and avoids runtime surprises.
 
 ## Batching Updates
 
@@ -244,38 +266,41 @@ Object.assign(this.user, { name: 'Alice', age: 30 });  // ✅ Reactive
 
 ## Performance Considerations
 
-### Minimize Unnecessary Updates
+### Multiple Mutations Are Already Batched
 
-Group related changes:
+LegoDOM's batcher uses a `Set` to track blocks, so multiple mutations in the same tick result in **one re-render**:
 
 ```js
-// ❌ Bad - 3 separate updates
 this.user.name = 'Alice';
 this.user.age = 30;
 this.user.email = 'alice@example.com';
+// ✅ Only one re-render! The batcher deduplicates.
+```
 
-// ✅ Better - 1 update
+`Object.assign` is fine for readability, but not required for performance:
+
+```js
 Object.assign(this.user, {
   name: 'Alice',
   age: 30,
   email: 'alice@example.com'
 });
+// Also one re-render - same result
 ```
 
-### Avoid Reactive Overhead for Static Data
+### Constants Are Fine in State
 
-Don't make everything reactive:
+All properties on state are reactive—but constants never change, so it doesn't matter:
 
 ```js
 {
-  // Reactive data
-  count: 0,
-  
-  // Constants (not reactive, but that's fine)
-  MAX_COUNT: 100,
-  API_URL: 'https://api.example.com'
+  count: 0,              // Mutable - reactivity matters
+  MAX_COUNT: 100,        // Immutable by convention - reactivity doesn't hurt anything
+  API_URL: '/api/v1'     // Same - just never mutate it
 }
 ```
+
+There's no performance penalty for including constants in your state.
 
 ## Debugging Reactivity
 
@@ -294,8 +319,8 @@ Don't make everything reactive:
 ### Inspect Proxy
 
 ```js
-console.log(component.state);  // Proxy object
-console.log(component.state.count);  // Actual value
+console.log(block.state);  // Proxy object
+console.log(block.state.count);  // Actual value
 ```
 
 ## Comparing with Other Frameworks
@@ -392,11 +417,9 @@ Use methods:
 
 ## Best Practices
 
-1. **Initialize all properties** - Define them upfront
-2. **Use array methods** - push(), splice(), etc.
-3. **Batch related changes** - Use Object.assign()
-4. **Keep state flat when possible** - Shallow is faster
-5. **Use methods for computed values** - They're called on every render
+1. **Initialize all properties** - Makes your block's shape clear to other developers
+2. **Use array mutating methods** - `push()`, `splice()`, etc. trigger updates
+3. **Use methods for computed values** - They're recalculated on every render
 
 ## Next Steps
 

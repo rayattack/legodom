@@ -68,7 +68,7 @@ const snap = (el) => {
 
 ### 1. The Blueprint Lookup
 
-When `snap(el)` runs, the first thing it does is determine if the element is a Lego component.
+When `snap(el)` runs, the first thing it does is determine if the element is a Lego block.
 
 -   It converts the tag name to lowercase (e.g., `<MY-COMP>` becomes `my-comp`).
     
@@ -88,7 +88,7 @@ const shadow = el.attachShadow({ mode: 'open' });
 
 ```
 
--   **Encapsulation**: By using `attachShadow`, the component’s internal styles and HTML are shielded from the rest of the page.
+-   **Encapsulation**: By using `attachShadow`, the block’s internal styles and HTML are shielded from the rest of the page.
     
 -   **Template Injection**: It clones the content of the template and appends it to this new Shadow Root.
 
@@ -112,14 +112,14 @@ style.textContent = style.textContent.replace(/\bself\b/g, ':host');
 
 -   This allows you to write `self { color: red; }` in your template CSS.
     
--   During the snap process, Lego converts the word `self` to the official Web Component selector `:host`, which targets the component itself.
+-   During the snap process, Lego converts the word `self` to the official Web Component selector `:host`, which targets the block itself.
     
 
 ### 4. Data Merging & Reactivity
 
-This is where the component's state is born. LegoDOM merges data from three different sources (we will dive deeper into this "Tier System" in Topic 9) and wraps the result in the **`reactive()`** proxy.
+This is where the block's state is born. LegoDOM merges data from three different sources (we will dive deeper into this "Tier System" in Topic 9) and wraps the result in the **`reactive()`** proxy.
 
--   The resulting proxy is stored in `el._studs`. This is the "brain" of your component.
+-   The resulting proxy is stored in `el._studs`. This is the "brain" of your block.
     
 
 ### 5. The First Render and Lifecycle
@@ -130,11 +130,11 @@ Once the data is ready and the Shadow DOM is attached:
     
 2.  **`render(el)`**: Performs the initial pass to fill in <code v-pre>{{ variables }}</code> and handle `b-show/b-for` logic.
     
-3.  **`mounted()`**: If you defined a `mounted` function in your logic, Lego calls it now. This is your signal that the component is officially "alive" and visible on the page.
+3.  **`mounted()`**: If you defined a `mounted` function in your logic, Lego calls it now. This is your signal that the block is officially "alive" and visible on the page.
 
 ---------
 
-**Crucial Logic Note:** At the very end of the function, `snap` calls itself on every child of the element: `[...el.children].forEach(snap)`. This ensures that if you have components nested inside components, they all "wake up" in a top-down order.
+**Crucial Logic Note:** At the very end of the function, `snap` calls itself on every child of the element: `[...el.children].forEach(snap)`. This ensures that if you have blocks nested inside blocks, they all "wake up" in a top-down order.
     
 
 **Summary**: `snap()` takes a raw tag, gives it a Shadow DOM "soul," injects its HTML blueprint, sets up its reactive "brain" (`_studs`), and triggers its first breath (`mounted`).

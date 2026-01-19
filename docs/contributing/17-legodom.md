@@ -22,7 +22,7 @@ Once the observer is live, the code calls `snap(document.body)`.
 
 -   **The Why**: The `MutationObserver` only sees _new_ changes. It cannot see the HTML that was already there when the page loaded.
     
--   **The Logic**: By manually calling `snap` on the body, LegoDOM recursively walks through your entire server-rendered HTML. It finds every custom tag (e.g., `<user-card>`) and "upgrades" them into components.
+-   **The Logic**: By manually calling `snap` on the body, LegoDOM recursively walks through your entire server-rendered HTML. It finds every custom tag (e.g., `<user-card>`) and "upgrades" them into blocks.
     
 
 ### 4. Activating the Global Listener
@@ -38,7 +38,7 @@ This is where the **Router Hijack** (Topic 17) is installed.
 
 Finally, `init()` calls `router()` manually for the first time.
 
--   **The Why**: If a user navigates directly to `mysite.com/dashboard`, the browser loads the page, but the JavaScript needs to know which component to put into the `router-view` immediately. This manual call ensures the UI matches the URL on the very first frame.
+-   **The Why**: If a user navigates directly to `mysite.com/dashboard`, the browser loads the page, but the JavaScript needs to know which block to put into the `router-view` immediately. This manual call ensures the UI matches the URL on the very first frame.
     
 
 ----------

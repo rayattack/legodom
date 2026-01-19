@@ -31,7 +31,7 @@ That's it! For the full tutorial, see [Adding Routes](/tutorial/03-adding-routes
 
 | I want to... | Code |
 |--------------|------|
-| Define a route | `Lego.route('/path', 'component-name')` |
+| Define a route | `Lego.route('/path', 'block-name')` |
 | Link to a page | `<a href="/path" b-link>Click</a>` |
 | Navigate via JS | `this.$go('/path').get()` |
 | Get URL params | `this.$route.params.id` |
@@ -62,10 +62,10 @@ The best way to use LegoDOM is to define a static "Shell" that holds your persis
 Then, you simply tell links *where* to render their content:
 
 ```html
-<!-- Updates component in #stage (Default URL navigation) -->
+<!-- Updates block in #stage (Default URL navigation) -->
 <a href="/dashboard" b-target="#stage">Dashboard</a>
 
-<!-- Updates component in #tools (Keeps URL sync, but only touches right panel) -->
+<!-- Updates block in #tools (Keeps URL sync, but only touches right panel) -->
 <a href="/tools/settings" b-target="#tools">Settings</a>
 ```
 
@@ -108,7 +108,7 @@ Controls browser history behavior.
 If a user refreshes the page, surgical targets (like `#sidebar`) usually won't have content because the `b-target` click never happened.
 
 **The Golden Rule:** Always have a `<lego-router>` as your default "Main" outlet.
-When the page loads, Lego looks for `<lego-router>` to render the URL's matching component.
+When the page loads, Lego looks for `<lego-router>` to render the URL's matching block.
 
 ```html
 <body>
@@ -149,7 +149,7 @@ Lego.globals.$go('/modals/login', '#modal').get(false);
 
 ### Interactive Example: "The Shell"
 You can update **multiple** targets at once (future feature) or chain them.
-Commonly, you use `$go` inside your component logic:
+Commonly, you use `$go` inside your block logic:
 
 ```html
 <script>
@@ -196,7 +196,7 @@ Keep a persistent Main Content while swapping sidebars.
   </template>
 </aside>
 
-<!-- Inside Dashboard Component -->
+<!-- Inside Dashboard Block -->
 <button onclick="Lego.globals.$go('/tools/chart-config', '#context-pane').get(false)">
   Configure Chart
 </button>
@@ -241,7 +241,7 @@ This is where LegoDOM outshines traditional routers. You can have static sidebar
 When handling deep routes like `/customers/:id/orders/:orderId`, you have two architectural choices.
 
 ### Option A: The Shell Strategy (Self-Healing)
-Map everything to a single "Shell" component. The Shell determines what to show in its sub-outlets based on the URL params.
+Map everything to a single "Shell" block. The Shell determines what to show in its sub-outlets based on the URL params.
 
 *   **Pros:** Highly surgical. The Shell never re-renders, only its children do.
 *   **Cons:** Requires logic in `mounted()` to "heal" the state on page load.
@@ -251,7 +251,7 @@ Map everything to a single "Shell" component. The Shell determines what to show 
 Lego.route('/customers/:id', 'customers-shell');
 Lego.route('/customers/:id/orders/:orderId', 'customers-shell');
 
-// Component Logic (Self-Healing)
+// Block Logic (Self-Healing)
 mounted() {
   if (this.$route.params.orderId) {
     this.$go(window.location.pathname, '#details-pane').get();
@@ -259,8 +259,8 @@ mounted() {
 }
 ```
 
-### Option B: The Page Strategy (Component Nesting)
-Map deep routes to specific "Page" components. Each page imports and wraps itself in a shared Layout.
+### Option B: The Page Strategy (Block Nesting)
+Map deep routes to specific "Page" blocks. Each page imports and wraps itself in a shared Layout.
 
 *   **Pros:** Simpler logic. No "healing" code required.
 *   **Cons:** The Layout is technically re-created on every route change (though diffing makes it cheap).

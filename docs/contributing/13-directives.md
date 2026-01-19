@@ -74,7 +74,7 @@ LegoDOM was designed in a way that the `render()` function runs every time state
 
 ### 4. Memory Safety
 
-By using `getPrivateData` (which is a `WeakMap`), we ensure that if the component is destroyed, the reference to the `anchor` is garbage collected. If we didn't store it here, we would have to scan the entire DOM or maintain complex external maps to find where to re-insert hidden elements, which would be a massive performance hit.
+By using `getPrivateData` (which is a `WeakMap`), we ensure that if the block is destroyed, the reference to the `anchor` is garbage collected. If we didn't store it here, we would have to scan the entire DOM or maintain complex external maps to find where to re-insert hidden elements, which would be a massive performance hit.
 
 **In short:** The anchor is the "Reserved Seat" sign at a theater. `getPrivateData` is the list that remembers which seat belongs to which person while they are out in the lobby.
 
@@ -143,7 +143,7 @@ To prevent "DOM Thrashing" (constantly creating and deleting elements), LegoDOM 
 
 ### 3. The Local Scope Injection
 
-This is a brilliant piece of JavaScript engineering. When rendering a list item, LegoDOM needs the item (e.g., `user`) to be available, but it also needs the parent component's data to be available.
+This is a brilliant piece of JavaScript engineering. When rendering a list item, LegoDOM needs the item (e.g., `user`) to be available, but it also needs the parent block's data to be available.
 
 
 ```js
@@ -151,7 +151,7 @@ const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
 
 ```
 
--   **Prototype Inheritance**: It creates a new object where the **prototype** is the component's state (`_studs`).
+-   **Prototype Inheritance**: It creates a new object where the **prototype** is the block's state (`_studs`).
     
 - **The Result**: Inside the loop, if you reference <code v-pre>{{user.name}}</code>, it finds it on the `localScope`. If you reference <code v-pre>{{globalTitle}}</code> (defined in the parent), it doesn't find it on `localScope`, so it automatically looks up the prototype chain to find it in the parent `state`.
     
@@ -174,7 +174,7 @@ if (child.hasAttribute('b-sync')) {
     const updateState = () => {
         let target, last;
         if (loopCtx && prop.startsWith(loopCtx.name + '.')) {
-        const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: componentRoot });
+        const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: blockRoot });
         const item = list[loopCtx.index];
         if (!item) return;
         const subPath = prop.split('.').slice(1);
@@ -201,7 +201,7 @@ When the `scanForBindings` function encounters a `b-sync="somePath"` attribute, 
     
 -   **The Logic**: When the event fires, LegoDOM captures the `event.target.value`.
     
--   **The Update**: It uses the internal `set()` helper to reach into your component's `_studs` and update the value at the path you specified (e.g., `user.name`).
+-   **The Update**: It uses the internal `set()` helper to reach into your block's `_studs` and update the value at the path you specified (e.g., `user.name`).
     
 
 ### 2. The Implementation: Multi-Type Support

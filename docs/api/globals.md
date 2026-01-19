@@ -4,7 +4,7 @@ LegoDOM exposes a few globals for managing state and routing across the applicat
 
 ## Lego.globals
 
-A reactive global state object. Changes to this object will automatically update any component that uses it.
+A reactive global state object. Changes to this object will automatically update any block that uses it.
 
 ### Usage
 
@@ -14,7 +14,7 @@ Initialize it via `Lego.init()` which binds it to the document body (or root).
 // main.js
 Lego.globals.user = { name: 'Alice', isLoggedIn: true };
 
-// In any component HTML
+// In any block HTML
 // <span>[[ global.user.name ]]</span>
 ```
 

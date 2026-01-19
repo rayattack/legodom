@@ -2,9 +2,9 @@
 
 The fastest way to get started with Lego is using the CDN. No build tools required!
 
-## Your First Component
+## Your First Block
 
-Let's create a simple counter component.
+Let's create a simple counter block.
 
 ### Using HTML
 
@@ -87,7 +87,7 @@ Then use it in your HTML:
 
 ### Using .lego Files (with Vite)
 
-Create `src/components/click-counter.lego`:
+Create `src/blocks/click-counter.lego`:
 
 ```html
 <style>

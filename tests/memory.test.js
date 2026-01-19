@@ -50,7 +50,7 @@ describe('LegoDOM Memory Management', () => {
     expect(window.Lego.getActiveBlocksCount()).toBe(0);
   });
 
-  it('should cleanup nested components recursively', async () => {
+  it('should cleanup nested blocks recursively', async () => {
     window.Lego.define('parent-comp', '<child-comp></child-comp>');
     window.Lego.define('child-comp', '<span>Child</span>');
 

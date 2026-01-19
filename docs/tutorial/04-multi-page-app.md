@@ -7,7 +7,7 @@ Let's bring it all together! In this step, we'll complete the **index → login 
 By the end of this page, you'll have:
 
 ```
-src/components/
+src/blocks/
 ├── home-page.lego      ← Landing page (/)
 ├── login-page.lego     ← Login form (/login)
 └── welcome-page.lego   ← Dashboard (/welcome)
@@ -15,7 +15,7 @@ src/components/
 
 ## Step 1: Create the Welcome Page
 
-Create `src/components/welcome-page.lego`:
+Create `src/blocks/welcome-page.lego`:
 
 ```html
 <template>
@@ -190,7 +190,7 @@ export default {
 
 ## Step 2: Update Login to Set Global State
 
-The login page needs to store the user in global state. Update `src/components/login-page.lego`'s script section:
+The login page needs to store the user in global state. Update `src/blocks/login-page.lego`'s script section:
 
 ```javascript
 <script>
@@ -201,7 +201,7 @@ export default {
   handleSubmit(event) {
     event.preventDefault();
     
-    // Store user in GLOBAL state (accessible from any component!)
+    // Store user in GLOBAL state (accessible from any block!)
     Lego.globals.user = {
       name: this.email.split('@')[0],  // Use email prefix as name
       email: this.email,
@@ -219,7 +219,7 @@ export default {
 
 ## Step 3: Update Home Page Navigation
 
-Update `src/components/home-page.lego`'s `handleClick` method:
+Update `src/blocks/home-page.lego`'s `handleClick` method:
 
 ```javascript
 handleClick() {
@@ -233,10 +233,10 @@ Here's the final `src/app.js`:
 
 ```javascript
 import { Lego } from 'lego-dom';
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-blocks';
 
-// Register all .lego components
-registerComponents();
+// Register all .lego blocks
+registerBlocks();
 
 // Define routes
 Lego.route('/', 'home-page');
@@ -303,7 +303,7 @@ Lego.route('/settings', 'settings-page', requireAuth);
 ## What You've Built
 
 ✅ A complete login flow: home → login → welcome  
-✅ Global state shared across components  
+✅ Global state shared across blocks  
 ✅ Logout functionality that clears state  
 ✅ Automatic redirect when not authenticated  
 ✅ Route protection with middleware  
@@ -314,7 +314,7 @@ Lego.route('/settings', 'settings-page', requireAuth);
 |------|---------|
 | `index.html` | Entry HTML with `<lego-router>` |
 | `src/app.js` | Routes, globals, initialization |
-| `src/components/*.lego` | Your page components |
+| `src/blocks/*.lego` | Your page blocks |
 | `vite.config.js` | Vite + LegoDOM plugin setup |
 
 ---

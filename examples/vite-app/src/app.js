@@ -5,14 +5,14 @@ import './app.css';
 import { Lego } from '../../../lego.js';
 import '../../../lego-studio/src/lego-studio.lego';
 
-// Import virtual module that auto-discovers and registers all .lego components
-import registerComponents from 'virtual:lego-components';
+// Import virtual module that auto-discovers and registers all .lego blocks
+import registerComponents from 'virtual:lego-blocks';
 
-// Register all auto-discovered components
+// Register all auto-discovered blocks
 registerComponents();
 
 // 10. Define SPA Routes
-Lego.route('/', 'sample-component');
+Lego.route('/', 'sample-block');
 Lego.route('/todo', 'todo-list');
 Lego.route('/card', 'user-card');
 Lego.route('/customers/:id/orders', 'customer-orders');

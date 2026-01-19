@@ -5,7 +5,7 @@ Now let's get into the "eyes" of the rendering engine. For LegoDOM to be able to
 
 ## Scanning for Bindings (The `TreeWalker`)
 
-In `main.js`, the `scanForBindings` function is called the very first time a component renders. Instead of re-scanning the DOM every time a variable changes, Lego scans **once**, creates a "map" of all the dynamic spots, and saves that map in the element's `privateData`.
+In `main.js`, the `scanForBindings` function is called the very first time a block renders. Instead of re-scanning the DOM every time a variable changes, Lego scans **once**, creates a "map" of all the dynamic spots, and saves that map in the element's `privateData`.
 
 ```js
 const scanForBindings = (container) => {
@@ -77,13 +77,13 @@ const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | No
 -   **Why not `querySelectorAll('*')`?** A `TreeWalker` is much faster and more memory-efficient. It allows LegoDOM to step through every single node (including text nodes) one by one.
     
 
-### 2. The "Nested Component" Shield
+### 2. The "Nested Block" Shield
 
 One of the smartest parts of this function is the `isInsideBFor` check.
 
--   If the scanner finds an element that is inside a `b-for` loop or belongs to a **different** custom component (i.e. user-profile, product-card etc.), it stops.
+-   If the scanner finds an element that is inside a `b-for` loop or belongs to a **different** custom block (i.e. user-profile, product-card etc.), it stops.
     
--   **Reasoning**: You don't want the parent component to try and manage the internal text of a child component. This maintains **Encapsulation**.
+-   **Reasoning**: You don't want the parent block to try and manage the internal text of a child block. This maintains **Encapsulation**.
     
 
 ### 3. What it looks for
@@ -114,4 +114,4 @@ By storing the **actual Node reference**, LegoDOM can update the screen later wi
 
 ----------
 
-**Summary**: `scanForBindings` is a one-time "reconnaissance mission." it maps out every dynamic part of your component so that future updates are lightning-fast.
+**Summary**: `scanForBindings` is a one-time "reconnaissance mission." it maps out every dynamic part of your block so that future updates are lightning-fast.

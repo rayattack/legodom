@@ -24,7 +24,7 @@ global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 const libCode = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
 eval(libCode);
 
-describe('Component Naming Policy', () => {
+describe('Block Naming Policy', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
   });

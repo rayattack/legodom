@@ -83,7 +83,7 @@ Crucially, you must initialize the Lego background engine in your entry file (`s
 
 ```js
 import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-blocks';
 
 // 1. Register SFCs
 registerBlocks();

@@ -37,12 +37,12 @@ features:
     details: Built on standard Web Components with Shadow DOM. Works anywhere, plays well with existing code.
   
   - icon: 📦
-    title: Single File Components
+    title: Single File Blocks
     details: Use .lego files with Vite for a modern development experience, or load directly in the browser.
   
   - icon: 🎨
     title: Scoped Styles
-    details: Shadow DOM encapsulation means your styles never leak. Use the 'self' keyword to target component root.
+    details: Shadow DOM encapsulation means your styles never leak. Use the 'self' keyword to target block root.
   
   - icon: 🛣️
     title: Built-in Router

@@ -19,7 +19,7 @@ If the sidebar reloads:
 
 ## The Solution: `b-target`
 
-The `b-target` directive allows a link to specify exactly where the new component should be rendered. It implies `b-link` (history update) by default.
+The `b-target` directive allows a link to specify exactly where the new block should be rendered. It implies `b-link` (history update) by default.
 
 
 ### Example: messaging-shell.html
@@ -79,7 +79,7 @@ You can tell Lego to find a specific element by its ID and replace its contents.
   <div class="layout">
     <aside class="sidebar">
       <div b-for="chat in threads">
-        <!-- Parent component (this shell) binds data to these links -->
+        <!-- Parent block (this shell) binds data to these links -->
         <a href="/messaging/[[chat.id]]" b-target="#chat-window">
           [[chat.userName]]
         </a>
@@ -95,9 +95,9 @@ You can tell Lego to find a specific element by its ID and replace its contents.
 
 ```
 
-### 2. Targeting by Component Tag (The Web Component Way)
+### 2. Targeting by Block Tag (The Web Component Way)
 
-Because Lego is built on Custom Elements, you can target a component tag directly. The framework will find that tag and swap its internal content.
+Because Lego is built on Custom Elements, you can target a block tag directly. The framework will find that tag and swap its internal content.
 
 ```html
 <a href="/profile/settings" b-target="settings-view">Edit Settings</a>
@@ -112,9 +112,9 @@ Because Lego is built on Custom Elements, you can target a component tag directl
 
 When you click a link with a `b-target`, the LegoDOM **Target Resolver** follows a specific hierarchy:
 
-1.  **Local Scope**: It looks for the target inside the current component first. This prevents "ID collisions" if you have multiple instances of a layout.
+1.  **Local Scope**: It looks for the target inside the current block first. This prevents "ID collisions" if you have multiple instances of a layout.
     
-2.  **Component Match**: If the target doesn't start with `#`, it treats it as a tag name (e.g., `thread-view`).
+2.  **Block Match**: If the target doesn't start with `#`, it treats it as a tag name (e.g., `thread-view`).
     
 3.  **Global Fallback**: If it can't find a local match, it searches the entire document.
     

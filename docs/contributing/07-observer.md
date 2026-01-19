@@ -4,7 +4,7 @@ In Topic 6, we saw that Lego.init() sets up a "watchdog." Now, let's look at exa
 
 ## Mutation Observer
 
-The `MutationObserver` is a built-in browser API that provides the ability to watch for changes being made to the DOM tree. In this library, it acts as the "Event Loop" for component lifecycles.
+The `MutationObserver` is a built-in browser API that provides the ability to watch for changes being made to the DOM tree. In this library, it acts as the "Event Loop" for block lifecycles.
 
 ### 1. The Configuration
 
@@ -17,7 +17,7 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 -   **`childList: true`**: Tells the observer to watch for elements being added or removed.
 
--   **`subtree: true`**: This is vital. Without this, LegoDOM would only see things added directly to the `<body>`. With it, LegoDOM sees changes happening deep inside nested divs or other components.
+-   **`subtree: true`**: This is vital. Without this, LegoDOM would only see things added directly to the `<body>`. With it, LegoDOM sees changes happening deep inside nested divs or other blocks.
 
 
 ### 2. Processing `addedNodes`
@@ -28,7 +28,7 @@ Whenever a new piece of HTML is injected (via `innerHTML`, `appendChild`, etc.),
 
 -   **The Action**: It calls `snap(n)`. This triggers the entire initialization process: attaching the Shadow DOM, creating reactive state, and rendering the template.
     
--   **Auto-Discovery (v2.0)**: If `snap(n)` doesn't find a template in the registry, the observer now checks `Lego.config.loader`. If configured, it pauses to fetch the component definition from the server.
+-   **Auto-Discovery (v2.0)**: If `snap(n)` doesn't find a template in the registry, the observer now checks `Lego.config.loader`. If configured, it pauses to fetch the block definition from the server.
 
 
 
@@ -38,12 +38,12 @@ When an element is deleted from the page, the observer catches it in `removedNod
 
 -   **Cleanup**: It calls `unsnap(n)`.
 
--   **Lifecycle Hook**: `unsnap` checks the component's state for an `unmounted` function. This allows you to perform cleanup, like stopping timers or closing WebSocket connections, preventing memory leaks.
+-   **Lifecycle Hook**: `unsnap` checks the block's state for an `unmounted` function. This allows you to perform cleanup, like stopping timers or closing WebSocket connections, preventing memory leaks.
 
 
 ### Why this is superior to manual initialization
 In most frameworks, you have to tell LegoDOM when you’ve changed the page (e.g., calling `root.render()`). This library turns that upside down by using the browser's native **MutationObserver** to watch the DOM and react automatically.
-Unlike some libraries where adding a button via `innerHTML` requires a manual "re-scan" or "re-bind" call, this setup makes LegoDOM **reactive to the DOM itself**: the moment a tag like `<user-card>` appears in the document, it is automatically detected and upgraded into a functional, living component.
+Unlike some libraries where adding a button via `innerHTML` requires a manual "re-scan" or "re-bind" call, this setup makes LegoDOM **reactive to the DOM itself**: the moment a tag like `<user-card>` appears in the document, it is automatically detected and upgraded into a functional, living block.
 
 ### 1. The Strategy: "Observe Once, Act Everywhere"
 
@@ -51,7 +51,7 @@ LegoDOM sets up a single observer on `document.body`.
 
 -   **`childList: true`**: This tells the observer to watch for the addition or removal of direct children.
 
--   **`subtree: true`**: This is the "secret sauce." It extends the observation to the entire DOM tree. If you have a deeply nested `div` and you inject a Lego component into it, the observer will see it.
+-   **`subtree: true`**: This is the "secret sauce." It extends the observation to the entire DOM tree. If you have a deeply nested `div` and you inject a Lego block into it, the observer will see it.
 
 
 ### 2. The Logic Loop: Added Nodes
@@ -69,4 +69,4 @@ This is equally important for "garbage collection." When an element is deleted, 
 
 -   **The `unsnap` Trigger**: LegoDOM calls `unsnap(n)`.
 
--   **Lifecycle Cleanup**: Inside `unsnap`, LegoDOM looks for a developer-defined `unmounted` function. This is where you'd kill `setInterval` timers or close database connections. Without this, your app would suffer from "Memory Leaks"—processes that keep running even though the component is gone.
+-   **Lifecycle Cleanup**: Inside `unsnap`, LegoDOM looks for a developer-defined `unmounted` function. This is where you'd kill `setInterval` timers or close database connections. Without this, your app would suffer from "Memory Leaks"—processes that keep running even though the block is gone.

@@ -19,7 +19,7 @@ When the page loads, the LegoDOM router looks at the current browser URL and sea
 
 ## Defining Your First Routes
 
-Routes are defined using the `Lego.route(path, componentName)` method. This creates a contract between a URL pattern and a Web Component.
+Routes are defined using the `Lego.route(path, blockName)` method. This creates a contract between a URL pattern and a Web Component.
 
 ```js
 // Static Route
@@ -34,9 +34,9 @@ Lego.route('/user/:id', 'profile-page');
 
 1.  **The Match**: LegoDOM uses Regex to compare the window location with your defined paths.
     
-2.  **The Injection**: If a match is found, LegoDOM creates an instance of the associated component (e.g., `<home-page>`) and injects it into the `<lego-router>` tag.
+2.  **The Injection**: If a match is found, LegoDOM creates an instance of the associated block (e.g., `<home-page>`) and injects it into the `<lego-router>` tag.
     
-3.  **The Hydration**: The framework then "snaps" the component to life, initializing its state and running its `mounted()` lifecycle hook.
+3.  **The Hydration**: The framework then "snaps" the block to life, initializing its state and running its `mounted()` lifecycle hook.
     
 
 ## The Global Fallback
@@ -50,9 +50,9 @@ Lego.route('*', 'not-found-page');
 
 ## Handling Parameters (`$params`)
 
-When you use a dynamic path like `/user/:id`, LegoDOM automatically parses the URL and makes the data available to the component via the global `$route` object.
+When you use a dynamic path like `/user/:id`, LegoDOM automatically parses the URL and makes the data available to the block via the global `$route` object.
 
-In your component template:
+In your block template:
 
 ```html
 <template b-id="profile-page">
@@ -62,7 +62,7 @@ In your component template:
 
 ```
 
-In your component logic:
+In your block logic:
 
 ```js
 mounted() {

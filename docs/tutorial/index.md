@@ -1,6 +1,6 @@
 # Your First LegoDOM App
 
-Welcome! In the next 15 minutes, you'll build a complete multi-page application with beautiful components, smooth navigation, and a login flow. No prior framework experience needed.
+Welcome! In the next 15 minutes, you'll build a complete multi-page application with beautiful blocks, smooth navigation, and a login flow. No prior framework experience needed.
 
 ## What You'll Build
 
@@ -9,7 +9,7 @@ A polished app with:
 - 🔐 **Login Page** – A form that validates and navigates
 - 🎉 **Welcome Page** – Personalized dashboard after login
 
-All using Single File Components (`.lego` files) and client-side routing.
+All using Single File Blocks (`.lego` files) and client-side routing.
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ All using Single File Components (`.lego` files) and client-side routing.
 | Step | You'll Learn |
 |------|--------------|
 | [1. Project Setup](./01-project-setup) | Create a new project with Vite |
-| [2. Your First Component](./02-your-first-component) | Build a `.lego` file |
+| [2. Your First Block](./02-your-first-block) | Build a `.lego` file |
 | [3. Adding Routes](./03-adding-routes) | Navigate between pages |
 | [4. Multi-Page App](./04-multi-page-app) | Complete login flow |
 | [5. State & Globals](./05-state-and-globals) | Share data across pages |

@@ -11,9 +11,9 @@ Quick answers to the most common LegoDOM questions.
 ```javascript
 // src/app.js
 import { Lego } from 'lego-dom';
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-blocks';
 
-registerComponents();
+registerBlocks();
 
 // Define routes HERE ⭐
 Lego.route('/', 'home-page');
@@ -29,7 +29,7 @@ Everything related to app configuration belongs in your entry file:
 
 | What | Where |
 |------|-------|
-| Component registration | `registerComponents()` |
+| Block registration | `registerBlocks()` |
 | Route definitions | `Lego.route(...)` |
 | Global state init | `Lego.globals.user = null` |
 | Engine start | `Lego.init()` |
@@ -44,18 +44,18 @@ Either works! It's just a naming convention. Use whatever your Vite template cre
 
 ---
 
-## Components
+## Blocks
 
-### Why isn't my component showing?
+### Why isn't my block showing?
 
 Check these common issues:
 
-1. **No route defined** – Did you add `Lego.route('/', 'my-component')`?
+1. **No route defined** – Did you add `Lego.route('/', 'my-block')`?
 2. **Missing `<lego-router>`** – Your HTML needs `<lego-router></lego-router>`
-3. **Wrong component name** – Filename `user-card.lego` → component `<user-card>`
-4. **Not registered** – Did you call `registerComponents()` before `init()`?
+3. **Wrong block name** – Filename `user-card.lego` → block `<user-card>`
+4. **Not registered** – Did you call `registerBlocks()` before `init()`?
 
-### Why do component names need hyphens?
+### Why do block names need hyphens?
 
 It's a Web Components standard! Custom elements must contain a hyphen to avoid conflicts with future HTML elements.
 
@@ -67,7 +67,7 @@ It's a Web Components standard! Custom elements must contain a hyphen to avoid c
 Yes! LegoDOM automatically converts:
 - `UserCard.lego` → `<user-card>`
 - `AppNav.lego` → `<app-nav>`
-- `my_component.lego` → `<my-component>`
+- `my_block.lego` → `<my-block>`
 
 ---
 
@@ -102,7 +102,7 @@ Use global state:
 Lego.globals.selectedUser = { id: 42, name: 'John' };
 this.$go('/user-details').get();
 
-// In the target component
+// In the target block
 mounted() {
   console.log(Lego.globals.selectedUser.name);  // 'John'
 }
@@ -114,7 +114,7 @@ Or use route parameters:
 // Route: Lego.route('/users/:id', 'user-profile')
 this.$go('/users/42').get();
 
-// In user-profile component
+// In user-profile block
 mounted() {
   const userId = this.$route.params.id;  // '42'
 }
@@ -124,15 +124,15 @@ mounted() {
 
 ## State
 
-### How do I share data between components?
+### How do I share data between blocks?
 
 Use `Lego.globals`:
 
 ```javascript
-// Component A sets it
+// Block A sets it
 Lego.globals.user = { name: 'John' };
 
-// Component B reads it
+// Block B reads it
 console.log(Lego.globals.user.name);  // 'John'
 
 // In templates
@@ -141,16 +141,20 @@ console.log(Lego.globals.user.name);  // 'John'
 
 ### Why isn't my data updating the view?
 
-Make sure you're mutating the reactive object, not replacing references:
+Make sure you're mutating the reactive proxy, not a detached reference:
 
 ```javascript
-// ✅ This works - mutating property
+// ✅ This works - mutating the reactive state directly
 this.items.push(newItem);
 this.user.name = 'Jane';
 
-// ❌ This might not work - reassigning local variable
-let items = this.items;
-items.push(newItem);  // Won't trigger re-render!
+// ⚠️ Be careful with local copies
+let items = this.items;  // 'items' is still reactive (same proxy)
+items.push(newItem);     // ✅ This actually works fine!
+
+// ❌ This WON'T work - creating a non-reactive copy
+let items = [...this.items];  // Spread creates a plain array
+items.push(newItem);          // Won't trigger re-render
 ```
 
 ---
@@ -159,7 +163,7 @@ items.push(newItem);  // Won't trigger re-render!
 
 ### What is `self` in styles?
 
-`self` is a special keyword that targets the component's root element (like `:host` in Shadow DOM):
+`self` is a special keyword that targets the block's root element (like `:host` in Shadow DOM):
 
 ```html
 <style>
@@ -172,9 +176,9 @@ items.push(newItem);  // Won't trigger re-render!
 
 LegoDOM automatically transforms this to `:host` for Shadow DOM.
 
-### Do styles leak to other components?
+### Do styles leak to other blocks?
 
-No! Styles are scoped via Shadow DOM. Your `.button` class won't affect buttons in other components.
+No! Styles are scoped via Shadow DOM. Your `.button` class won't affect buttons in other blocks.
 
 ---
 
@@ -186,8 +190,8 @@ Yes! Use the CDN approach:
 
 ```html
 <script src="https://unpkg.com/lego-dom/main.js"></script>
-<template b-id="my-component">...</template>
-<my-component></my-component>
+<template b-id="my-block">...</template>
+<my-block></my-block>
 <script>Lego.init();</script>
 ```
 
@@ -197,8 +201,8 @@ See [CDN Usage](/guide/cdn-usage) for details.
 
 Benefits of Vite + `.lego` files:
 - **Hot reload** – Changes appear instantly
-- **Auto-discovery** – No manual component registration
-- **Better organization** – One file per component
+- **Auto-discovery** – No manual block registration
+- **Better organization** – One file per block
 - **Syntax highlighting** – Editor support for `.lego` files
 
 ---

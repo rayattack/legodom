@@ -29,7 +29,7 @@ Change an object → the DOM updates. That's it. No `setState`, no `dispatch`, n
 
 ```js
 // This just works
-component.state.count++;
+block.state.count++;
 ```
 
 ### 4. Web Standards First
@@ -46,7 +46,7 @@ No proprietary APIs. Everything is built on web standards.
 
 ### ✅ Lego is Great For:
 
-- **Applications of any scale** - From prototypes to enterprise systems with hundreds of components
+- **Applications of any scale** - From prototypes to enterprise systems with hundreds of blocks
 - **Multi-domain applications** - HRIS, CRM, Finance, Planning systems with complex business logic
 - **Embedded widgets** that need to work anywhere without conflicts
 - **Progressive enhancement** of existing sites
@@ -56,12 +56,12 @@ No proprietary APIs. Everything is built on web standards.
 
 ### ⚠️ Consider Alternatives If:
 
-- You need a massive ecosystem of pre-built UI components (though LegoDOM components are easy to build)
+- You need a massive ecosystem of pre-built UI blocks (though LegoDOM blocks are easy to build)
 - Your team is already deeply invested in React/Vue/Angular and migration isn't justified
 - You require TypeScript with full type inference (LegoDOM works with TS but doesn't provide built-in types)
 
 ::: tip SSC vs SSR
-LegoDOM supports **SSC (Server-Side Components)** - you can render components on the server and hydrate them on the client. This is simpler and more efficient than traditional SSR frameworks that require complex hydration strategies.
+LegoDOM supports **SSC (Server-Side Blocks)** - you can render blocks on the server and hydrate them on the client. This is simpler and more efficient than traditional SSR frameworks that require complex hydration strategies.
 :::
 
 ## How Small Is It?
@@ -90,4 +90,4 @@ Compare that to:
 
 ## Next Steps
 
-Ready to dive in? Head to the [Getting Started](/guide/getting-started) guide to build your first component in under 5 minutes.
+Ready to dive in? Head to the [Getting Started](/guide/getting-started) guide to build your first Lego block in under 5 minutes.

@@ -1,6 +1,6 @@
 # Lights, Camera, Action
 
-This is how LegoDOM makes your components interactive by connecting DOM events (clicks, keypresses, submits) directly to the methods you wrote in
+This is how LegoDOM makes your blocks interactive by connecting DOM events (clicks, keypresses, submits) directly to the methods you wrote in
 your **Lego File** (Single File Block) autodiscovered **.lego** file, `<template />` tag or Lego.block call.
 
 ## Event Handling (The `@event` Syntax)
@@ -54,4 +54,4 @@ Lego includes built-in modifiers to handle common web patterns without writing e
 
 ----------
 
-**Summary**: The `@` syntax automates `addEventListener`, ensures the correct `this` context for your methods, and provides powerful modifiers to keep your component logic clean.
+**Summary**: The `@` syntax automates `addEventListener`, ensures the correct `this` context for your methods, and provides powerful modifiers to keep your block logic clean.

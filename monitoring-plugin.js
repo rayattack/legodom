@@ -9,7 +9,7 @@ export const Monitoring = {
     renders: 0,
     errors: 0,
     slowRenders: 0,
-    components: new Map(), // tagName -> { count, avgTime }
+    blocks: new Map(), // tagName -> { count, avgTime }
   },
 
   // Configuration options
@@ -83,7 +83,7 @@ export const Monitoring = {
         this.metrics.renders = 0;
         this.metrics.errors = 0;
         this.metrics.slowRenders = 0;
-        this.metrics.components.clear();
+        this.metrics.blocks.clear();
       }
     };
 
@@ -99,11 +99,11 @@ export const Monitoring = {
       }
     }
 
-    if (!this.metrics.components.has(tagName)) {
-      this.metrics.components.set(tagName, { count: 0, totalTime: 0, avg: 0 });
+    if (!this.metrics.blocks.has(tagName)) {
+      this.metrics.blocks.set(tagName, { count: 0, totalTime: 0, avg: 0 });
     }
 
-    const stats = this.metrics.components.get(tagName);
+    const stats = this.metrics.blocks.get(tagName);
     stats.count++;
     stats.totalTime += duration;
     stats.avg = stats.totalTime / stats.count;

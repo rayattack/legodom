@@ -5,7 +5,7 @@ In Topic 11, we mapped out where the dynamic "holes" in your HTML are. Now, we l
 
 ## Rendering `render()` Engine
 
-The `render(el)` function doesn't refresh the whole component. Instead, it iterates through the "Instruction Objects" (bindings) created during the scanning phase and updates only what is necessary.
+The `render(el)` function doesn't refresh the whole block. Instead, it iterates through the "Instruction Objects" (bindings) created during the scanning phase and updates only what is necessary.
 
 ```js
 const render = (el) => {

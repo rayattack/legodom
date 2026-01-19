@@ -1,12 +1,12 @@
 # Helper Utilities
 
-LegoDOM provides a set of instance properties and methods available within your component's logic and templates. These helpers provide access to the DOM, navigation, events, and component hierarchy.
+LegoDOM provides a set of instance properties and methods available within your block's logic and templates. These helpers provide access to the DOM, navigation, events, and block hierarchy.
 
 ## $element
 
 **Type:** `HTMLElement`
 
-The root DOM element of the current component instance. Use this when you need direct access to the native DOM node.
+The root DOM element of the current block instance. Use this when you need direct access to the native DOM node.
 
 ```js
 {
@@ -21,7 +21,7 @@ The root DOM element of the current component instance. Use this when you need d
 
 **Type:** `Function`
 
-Dispatches a custom event from the component. This is the primary way for children to communicate with parents.
+Dispatches a custom event from the block. This is the primary way for children to communicate with parents.
 
 - **name**: `String` - The name of the event.
 - **detail**: `Any` - The data to pass with the event.
@@ -41,7 +41,7 @@ The event bubbles and is composed, meaning it can cross Shadow DOM boundaries.
 
 **Type:** `Function`
 
-Finds the nearest ancestor component with the specified tag name. This is useful for dependency injection or communicating with a specific parent container.
+Finds the nearest ancestor block with the specified tag name. This is useful for dependency injection or communicating with a specific parent container.
 
 - **tagName**: `String` - The tag name of the ancestor to find (case-insensitive).
 - **Returns**: `HTMLElement | undefined`
@@ -61,11 +61,30 @@ Finds the nearest ancestor component with the specified tag name. This is useful
 While you *can* modify the parent's state, it is generally better to use events (`$emit`) for child-to-parent communication to maintain unidirectional data flow.
 :::
 
+## $parent
+
+**Type:** `HTMLElement | undefined` (Getter)
+
+Returns the nearest ancestor block element. This is a shorthand for `$ancestors('*')` that finds any registered LegoDOM block above the current one.
+
+```js
+{
+  mounted() {
+    if (this.$parent) {
+      console.log('Parent block:', this.$parent.tagName);
+      console.log('Parent state:', this.$parent.state);
+    }
+  }
+}
+```
+
+Use `$parent` when you need quick access to the immediate parent block. Use `$ancestors('tag-name')` when you need a specific ancestor.
+
 ## $route
 
 **Type:** `Object` (Reactive)
 
-Access the current route state. This object is globally reactive and shared across all components.
+Access the current route state. This object is globally reactive and shared across all block.
 
 Properties:
 - **url**: `String` - Full URL with query string.
@@ -110,7 +129,7 @@ this.$go('/submit', '#result').post({ name: 'Alice' });
 
 **Type:** `Object`
 
-A dictionary of elements marked with the `b-var` directive inside the component.
+A dictionary of elements marked with the `b-var` directive inside the block.
 
 ```html
 <input b-var="usernameInput">
@@ -121,11 +140,27 @@ A dictionary of elements marked with the `b-var` directive inside the component.
 
 **Type:** `Function`
 
-Access the shared state of another component type. This allows for cross-component communication via a shared global store pattern.
+Access the shared state of another block type. This allows for cross-block communication via a shared global store pattern.
 
-- **tagName**: `String` - The tag name of the component registry to access.
+- **tagName**: `String` - The tag name of the block registry to access.
 
 ```js
-// In a shopping cart component
+// In a shopping cart block
 const store = this.$registry('product-store');
 ```
+
+## $db
+
+**Type:** `Function`
+
+A factory for creating persistent, reactive state that syncs with `localStorage`. The `$db` helper is available globally via `Lego.db` or as `$db` in `.lego` file templates.
+
+```js
+{
+  theme: $db('user-theme').default('light'),
+  settings: $db('app-settings').default({}).debounce(500)
+}
+```
+
+For complete documentation, see the [Persistence Guide](/guide/persistence).
+

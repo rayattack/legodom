@@ -11,7 +11,7 @@ In Lego, we don't nest routes in a config file. Instead, we use the **URL as the
 
 |Concept | Traditional SPAs | LegoDOM |
 |-----------|---------------|--------|
-| **Route Map** | Nested JSON Objects | Flat Component List |
+| **Route Map** | Nested JSON Objects | Flat Block List |
 | **Nesting** | Defined in JS | Defined by your HTML structure |
 | **UI Updates** | "Nuclear" (Re-renders parent + children) | "Surgical" (Swaps exactly one fragment"|
 | **State** | Lost unless lifted to Global Store | Persists naturally in unaffected siblings |
@@ -30,17 +30,17 @@ Lego.route('/settings', 'settings-shell');
 
 ```
 
-By pointing `/messaging` and `/messaging/:id` to the same **Shell**, you are telling Lego: _"I want the same layout for both URLs, but I'll decide how to fill the holes inside the component based on the URL parameters."_
+By pointing `/messaging` and `/messaging/:id` to the same **Shell**, you are telling Lego: _"I want the same layout for both URLs, but I'll decide how to fill the holes inside the block based on the URL parameters."_
 
 ## Why This Scales
 
 In a LinkedIn-sized project, a traditional router would need to know that the `ChatWindow` is a child of the `MessagingLayout`. If you wanted to move that `ChatWindow` to the `HomeLayout`, you’d have to refactor your entire route tree.
 
-In Lego, you just change the **Target**. Because the components are agnostic, they don't care who their parent is. They just care about where the `b-target` tells them to go.
+In Lego, you just change the **Target**. Because the blocks are agnostic, they don't care who their parent is. They just care about where the `b-target` tells them to go.
 
 ### Defining with Lego Files
 
-LegoDOM supports the use of Single File Components and this works seamlessly with the Router. You can define your Shell components via the `<template>` tag. This keeps our architectural "Shells" clean and readable.
+LegoDOM supports the use of Single File Blocks and this works seamlessly with the Router. You can define your Shell blocks via the `<template>` tag. This keeps our architectural "Shells" clean and readable.
 
 ```html
 <style></style>
@@ -70,4 +70,4 @@ Throughout this guide, we will refer to three primary concepts:
 
 ## What's Next?
 
-We will move away from the theory and look at **Basic Routing**. We'll see how the `<lego-router>` element acts as the default gateway for your application and how Lego identifies which component to mount when the page first loads.
+We will move away from the theory and look at **Basic Routing**. We'll see how the `<lego-router>` element acts as the default gateway for your application and how Lego identifies which block to mount when the page first loads.

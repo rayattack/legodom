@@ -16,7 +16,7 @@ The #1 question developers ask: **"I have a `.lego` file – now where do I put 
 // src/app.js – The control center of your app
 
 import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-components'; // Plugin still uses this name for now
+import registerBlocks from 'virtual:lego-blocks'; // Plugin still uses this name for now
 
 // 1. Register all .lego files automatically
 registerBlocks();
@@ -168,7 +168,7 @@ import legoPlugin from 'lego-dom/vite-plugin';
 export default defineConfig({
   plugins: [
     legoPlugin({
-      componentsDir: './src/blocks',  // Where to look
+      blocksDir: './src/blocks',  // Where to look
       include: ['**/*.lego']          // What to match
     })
   ]
@@ -196,7 +196,7 @@ In your `src/main.js`:
 
 ```js
 import { Lego } from 'lego-dom/main.js';
-import registerBlocks from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-blocks';
 
 // Auto-register all discovered blocks
 registerBlocks();

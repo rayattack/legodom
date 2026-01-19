@@ -11,7 +11,7 @@ Lego works perfectly without any build tools. Just include it via CDN and start 
   <title>My App</title>
 </head>
 <body>
-  <!-- Define your component -->
+  <!-- Define your block -->
   <template b-id="hello-world">
     <h1>[[ message ]]</h1>
   </template>
@@ -179,7 +179,7 @@ Lego is perfect for progressively enhancing existing sites:
   <p>This works without JavaScript</p>
 </div>
 
-<!-- Add interactive components -->
+<!-- Add interactive block -->
 <user-widget></user-widget>
 
 <template b-id="user-widget" b-data="{
@@ -216,15 +216,15 @@ Lego is perfect for progressively enhancing existing sites:
 
 ## Embedding in Existing Apps
 
-Lego components work alongside other frameworks:
+Lego block work alongside other frameworks:
 
 ```html
 <!-- Works fine with jQuery, Bootstrap, etc. -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 
-<!-- Your Lego component -->
-<my-component></my-component>
+<!-- Your Lego block -->
+<my-block></my-block>
 
 <!-- Your jQuery code -->
 <script>
@@ -285,13 +285,13 @@ No polyfills needed for these browsers!
 
 ## Using .lego Files without Build Tools
 
-You can use full Single File Components (`.lego` files) directly in the browser without any build step! 
-Lego provides a `loader` configuration that lets you fetch component files on demand.
+You can use full Single File Blocks (`.lego` files) directly in the browser without any build step! 
+Lego provides a `loader` configuration that lets you fetch block files on demand.
 
 ### How it Works
 
-1. **Serve your files**: Make sure your `.lego` files are accessible via HTTP (e.g., in a `/components` folder).
-2. **Configure the loader**: Tell Lego how to fetch a component when it encounters an unknown tag.
+1. **Serve your files**: Make sure your `.lego` files are accessible via HTTP (e.g., in a `/block` folder).
+2. **Configure the loader**: Tell Lego how to fetch a block when it encounters an unknown tag.
 
 ### Example
 
@@ -299,10 +299,10 @@ Lego provides a `loader` configuration that lets you fetch component files on de
 <script>
   Lego.init(document.body, {
     // The loader function receives the tag name (e.g., 'user-card')
-    // and must return a Promise that resolves to the component's source code.
+    // and must return a Promise that resolves to the block's source code.
     loader: (tagName) => {
       // Fetch the raw text content of the .lego file
-      return fetch(`/components/${tagName}.lego`).then(res => res.text());
+      return fetch(`/block/${tagName}.lego`).then(res => res.text());
     }
   });
 </script>
@@ -312,8 +312,8 @@ Lego provides a `loader` configuration that lets you fetch component files on de
 ```
 
 This is perfect for:
-- **Micro-frontends**: Load components from different services.
-- **CMS Integration**: Store component code in a database.
+- **Micro-frontends**: Load block from different services.
+- **CMS Integration**: Store block code in a database.
 - **Dynamic Apps**: Load features only when they are needed.
 
 ## Pros and Cons
@@ -335,13 +335,13 @@ This is perfect for:
 
 **Perfect for:**
 - Prototypes and demos
-- Small websites (1-5 components)
+- Small websites (1-5 block)
 - Progressive enhancement
 - Learning and experimentation
 - CodePen/JSFiddle examples
 
 **Consider bundling for:**
-- Large applications (10+ components)
+- Large applications (10+ block)
 - Production apps requiring optimization
 - Projects needing TypeScript
 - Teams wanting Lego File (SFB) workflow

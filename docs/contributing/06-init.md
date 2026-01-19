@@ -1,6 +1,6 @@
 # In the beginning - `Lego.init()`
 
-The `init()` function is the heart of LegoDOM. It orchestrates the entire initialization process, setting up the observer, connecting the global state, and processing existing components.
+The `init()` function is the heart of LegoDOM. It orchestrates the entire initialization process, setting up the observer, connecting the global state, and processing existing blocks.
 
 ## The LegoDOM Entry Point
 
@@ -69,7 +69,7 @@ document.querySelectorAll('template[b-id]').forEach(t => {
 
 ```
 
-It scans the entire document for any `<template>` tag that has a `b-id` attribute. It then adds these to the `registry` object we discussed in [Topic 2](/contributing/02-registry). This allows you to define components directly in your HTML file without writing a single line of JavaScript.
+It scans the entire document for any `<template>` tag that has a `b-id` attribute. It then adds these to the `registry` object we discussed in [Topic 2](/contributing/02-registry). This allows you to define blocks directly in your HTML file without writing a single line of JavaScript.
 
 ### 2. Setting up the "Eyes" (`MutationObserver`)
 
@@ -81,7 +81,7 @@ const observer = new MutationObserver(m => m.forEach(r => {
     if (n.nodeType === Node.ELEMENT_NODE) {
       snap(n);
       
-      // Auto-Discovery (v2.0): Check for remote components
+      // Auto-Discovery (v2.0): Check for remote blocks
       const tagName = n.tagName.toLowerCase();
       if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
         // ... Call loader ...
@@ -94,13 +94,13 @@ observer.observe(document.body, { childList: true, subtree: true });
 ```
 
 - **What it does**: It watches the `document.body` for any changes to the HTML structure.
-- **Auto-Discovery (New in v2.0)**: If `snap(n)` fails because the component isn't in the registry, the observer now checks `config.loader`. If a loader is defined, it triggers a fetch to pull the component definition from the server. This enables the "HTMX+Components" pattern.
+- **Auto-Discovery (New in v2.0)**: If `snap(n)` fails because the block isn't in the registry, the observer now checks `config.loader`. If a loader is defined, it triggers a fetch to pull the block definition from the server. This enables the "HTMX+Blocks" pattern.
     
 -   **The Config**: It observes `{ childList: true, subtree: true }`. This means it sees if an element is added to the body, or if an element is added deep inside another element.
     
 -   **The Reaction**:
     
-    -   If a new node is **added**, it calls `snap(n)` (which we will cover soon) to turn that raw HTML into a living component.
+    -   If a new node is **added**, it calls `snap(n)` (which we will cover soon) to turn that raw HTML into a living block.
         
     -   If a node is **removed**, it calls `unsnap(n)` to clean up memory and fire lifecycle hooks.
         
@@ -111,7 +111,7 @@ After setting up the observer, it calls `snap(document.body)`.
 
 -   **Why?** The observer only sees _new_ things being added. It doesn't see what was already there when the page loaded.
     
--   By calling `snap` on the body, LegoDOM manually processes every custom component that was present in the initial HTML.
+-   By calling `snap` on the body, LegoDOM manually processes every custom block that was present in the initial HTML.
     
 
 ### 4. Global Data Binding
@@ -125,7 +125,7 @@ bind(document.body, { _studs: Lego.globals, _data: { bound: false } });
 
 ```
 
-This is a clever move: it treats the entire website body as if it were a giant component. This allows you to use reactive data in your "Light DOM" (the regular HTML outside of components) by referencing values stored in `Lego.globals`.
+This is a clever move: it treats the entire website body as if it were a giant block. This allows you to use reactive data in your "Light DOM" (the regular HTML outside of blocks) by referencing values stored in `Lego.globals`.
 
 ### 5. Routing Initialization
 

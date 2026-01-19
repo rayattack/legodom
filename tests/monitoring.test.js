@@ -50,7 +50,7 @@ describe('LegoDOM Monitoring Plugin', () => {
     const metrics = window.Lego.metrics.get();
     expect(metrics.renders).toBeGreaterThan(0);
 
-    const stats = metrics.components.get('monitor-test');
+    const stats = metrics.blocks.get('monitor-test');
     expect(stats).toBeDefined();
     expect(stats.count).toBe(1);
     // Since we mocked getEntriesByName to return 20ms

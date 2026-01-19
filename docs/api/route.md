@@ -11,13 +11,13 @@ Lego.route(path: string, tagName: string, middleware?: Function)
 ## Arguments
 
 - **path**: The URL path pattern (e.g., `/users/:id`).
-- **tagName**: The tag name of the component to render in the router outlet.
+- **tagName**: The tag name of the block to render in the router outlet.
 - **middleware**: Optional async function for guards (returns boolean).
 
 ## Example
 
 ```js
-// Route to a component
+// Route to a block
 Lego.route('/', 'home-page');
 Lego.route('/about', 'about-page');
 

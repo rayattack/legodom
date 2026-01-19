@@ -8,7 +8,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [
     legoPlugin({
-      componentsDir: './src/components',
+      blocksDir: './src/components',
       include: ['**/*.lego'],
       importPath: 'lego-dom/main.js' // Use the alias defined below
     }),

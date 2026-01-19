@@ -9,11 +9,11 @@ Welcome to the Lego API documentation.
 - [Lego.route()](/api/route) - Client-side routing
 - [Lego.globals](/api/globals) - Global state
 - [Lego.config](/api/config) - Configuration & Error Handling
-- [Lifecycle Hooks](/api/lifecycle) - Component lifecycle methods
+- [Lifecycle Hooks](/api/lifecycle) - Block lifecycle methods
 
 ## Advanced
 
-- [Lego.snap() & Lego.unsnap()](/api/advanced) - Manual component initialization and cleanup
+- [Lego.snap() & Lego.unsnap()](/api/advanced) - Manual block initialization and cleanup
 
 ## Templates & Binding
 

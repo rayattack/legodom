@@ -1,14 +1,14 @@
 # Lego Studio
 
-Lego Studio is a zero-config component development environment built into LegoDOM. It provides a visual interface to browse, preview, and inspect your components during development.
+Lego Studio is a zero-config Lego blocks development environment built into LegoDOM. It provides a visual interface to browse, preview, and inspect your legos during development.
 
 ![Lego Studio Interface](https://via.placeholder.com/800x450/1e293b/ffffff?text=Lego+Studio+Screenshot)
 
 ## Features
 
-- **Component Browser** - Browse all registered components in your app
-- **Live Preview** - See components render in isolation
-- **State Inspector** - View and edit component state in real-time
+- **Block Browser** - Browse all registered blocks in your app
+- **Live Preview** - See blocks render in isolation
+- **State Inspector** - View and edit block state in real-time
 - **Hot Reload** - Changes reflect instantly during development
 - **Zero Config** - Enable with a single option
 
@@ -38,11 +38,11 @@ http://localhost:5173/_/studio
 
 When `studio: true` is set, LegoDOM automatically:
 
-1. **Loads the Studio component** from CDN (`@legodom/studio`)
+1. **Loads the Studio block** from CDN (`@legodom/studio`)
 2. **Registers two routes**:
    - `/_/studio` - Studio home page
-   - `/_/studio/:component` - Component preview page
-3. **Discovers all components** using `Lego.getLegos()`
+   - `/_/studio/:block` - Block preview page
+3. **Discovers all blocks** using `Lego.getLegos()`
 
 The Studio runs entirely in your browser - no backend required!
 
@@ -50,15 +50,15 @@ The Studio runs entirely in your browser - no backend required!
 
 ## Using the Studio
 
-### Browsing Components
+### Browsing Blocks
 
-The left sidebar shows all registered components in your app. Use the search box to filter by name.
+The left sidebar shows all registered blocks in your app. Use the search box to filter by name.
 
-Click any component to preview it in the center canvas.
+Click any block to preview it in the center canvas.
 
 ### Inspecting State
 
-The right panel shows the component's reactive state as JSON. You can:
+The right panel shows the block's reactive state as JSON. You can:
 
 - **View** current state values
 - **Edit** state directly in the JSON editor
@@ -66,15 +66,15 @@ The right panel shows the component's reactive state as JSON. You can:
 
 ### URL Deep Linking
 
-Each component has a unique URL:
+Each block has a unique URL:
 
 ```
-/_/studio/my-component
+/_/studio/my-block
 /_/studio/todo-list
 /_/studio/user-card
 ```
 
-Share these URLs with your team to showcase specific components!
+Share these URLs with your team to showcase specific blocks!
 
 ---
 
@@ -126,7 +126,7 @@ Lego.init(document.body, {
 
 ### Why Disable in Production?
 
-- **Security**: Exposes component internals and state
+- **Security**: Exposes block internals and state
 - **Performance**: Adds ~6KB gzipped overhead
 - **UX**: Users don't need development tools
 
@@ -139,15 +139,15 @@ Lego.init(document.body, {
 ```javascript
 // src/main.js
 import { Lego } from 'lego-dom';
-import './components/button.lego';
-import './components/card.lego';
+import './blocks/button.lego';
+import './blocks/card.lego';
 
 Lego.init(document.body, {
   studio: true
 });
 ```
 
-Visit `http://localhost:5173/_/studio` to see your components!
+Visit `http://localhost:5173/_/studio` to see your blocks!
 
 ### With Vite
 
@@ -189,17 +189,17 @@ Your app routes (`/`, `/about`) and Studio routes (`/_/studio`) coexist peaceful
 2. **Version mismatch** - Ensure LegoDOM and Studio versions are compatible
 3. **Route conflict** - Make sure you don't have a route for `/_/studio`
 
-### Components don't appear
+### Blocks don't appear
 
-Make sure your components are registered before navigating to Studio:
+Make sure your blocks are registered before navigating to Studio:
 
 ```javascript
-// ❌ Wrong - components not loaded yet
+// ❌ Wrong - blocks not loaded yet
 Lego.init(document.body, { studio: true });
-import './components/button.lego';  // Too late!
+import './blocks/button.lego';  // Too late!
 
-// ✅ Correct - load components first
-import './components/button.lego';
+// ✅ Correct - load blocks first
+import './blocks/button.lego';
 Lego.init(document.body, { studio: true });
 ```
 
@@ -216,11 +216,11 @@ This is by design - Studio is for experimentation, not data persistence.
 You can build your own Studio-like tool using LegoDOM's public APIs:
 
 ```javascript
-// Get all registered components
-const components = Lego.getLegos();
+// Get all registered blocks
+const blocks = Lego.getLegos();
 
-// Create a component instance
-const el = document.createElement('my-component');
+// Create a block instance
+const el = document.createElement('my-block');
 document.body.appendChild(el);
 
 // Initialize it manually
@@ -260,11 +260,11 @@ Yes! Studio works with both npm and CDN setups:
 
 ### Can I customize the Studio UI?
 
-Not currently. Studio is a pre-built component. If you need customization, consider building your own dev tools using the [Advanced API](/api/advanced).
+Not currently. Studio is a pre-built block. If you need customization, consider building your own dev tools using the [Advanced API](/api/advanced).
 
 ### Does it support TypeScript?
 
-Studio itself is JavaScript, but it works with TypeScript projects. Component state is displayed as JSON regardless of the source language.
+Studio itself is JavaScript, but it works with TypeScript projects. Block state is displayed as JSON regardless of the source language.
 
 ---
 
@@ -273,7 +273,7 @@ Studio itself is JavaScript, but it works with TypeScript projects. Component st
 - [Lego.init()](/api/config#init) - Initialization options
 - [Advanced API](/api/advanced) - `Lego.snap()`, `Lego.unsnap()`
 - [Block Development](/guide/blocks) - Building blocks
-- [Lifecycle Hooks](/api/lifecycle) - Component lifecycle
+- [Lifecycle Hooks](/api/lifecycle) - Block lifecycle
 
 ---
 

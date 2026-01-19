@@ -1,6 +1,6 @@
 # Step 1: Project Setup
 
-Let's create a new LegoDOM project from scratch. By the end of this page, you'll have a fully configured development environment ready to build components.
+Let's create a new LegoDOM project from scratch. By the end of this page, you'll have a fully configured development environment ready to build blocks.
 
 ## Create a New Project
 
@@ -31,7 +31,7 @@ import legoPlugin from 'lego-dom/vite-plugin';
 export default defineConfig({
   plugins: [
     legoPlugin({
-      componentsDir: './src/components',  // Where your .lego files live
+      blocksDir: './src/blocks',  // Where your .lego files live
       include: ['**/*.lego']              // File pattern to match
     })
   ]
@@ -47,7 +47,7 @@ my-lego-app/
 ├── index.html          ← Your app's entry HTML
 ├── src/
 │   ├── app.js          ← Your app's entry JavaScript ⭐
-│   └── components/     ← Your .lego files go here
+│   └── blocks/     ← Your .lego files go here
 │       └── (empty for now)
 ├── vite.config.js      ← Vite configuration
 └── package.json
@@ -66,10 +66,10 @@ Replace the contents of `src/app.js` (create it if it doesn't exist):
 import { Lego } from 'lego-dom';
 
 // 2. Import the virtual module that auto-discovers .lego files
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-blocks';
 
-// 3. Register all discovered components
-registerComponents();
+// 3. Register all discovered blocks
+registerBlocks();
 
 // 4. Define your routes (we'll add these soon!)
 // Lego.route('/', 'home-page');
@@ -80,8 +80,8 @@ await Lego.init();
 ```
 
 > **What's happening here?**
-> - Lines 1-3: Import LegoDOM and auto-register every `.lego` file in your `components/` folder
-> - Line 4: Routes map URLs to components (commented out until we create them)
+> - Lines 1-3: Import LegoDOM and auto-register every `.lego` file in your `blocks/` folder
+> - Line 4: Routes map URLs to blocks (commented out until we create them)
 > - Line 5: `Lego.init()` starts the reactivity engine, routing, and DOM observation
 
 ## Set Up Your HTML
@@ -105,7 +105,7 @@ Replace `index.html`:
   </style>
 </head>
 <body>
-  <!-- The router renders your page components here -->
+  <!-- The router renders your page blocks here -->
   <lego-router></lego-router>
   
   <!-- Load your app -->
@@ -120,7 +120,7 @@ Replace `index.html`:
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser. You'll see a blank page—that's expected! We haven't created any components yet.
+Open `http://localhost:5173` in your browser. You'll see a blank page—that's expected! We haven't created any blocks yet.
 
 ## What You've Done
 
@@ -134,7 +134,7 @@ Open `http://localhost:5173` in your browser. You'll see a blank page—that's e
 
 ::: tip Where Config Goes: The Golden Rule
 **Everything related to your app's setup goes in `app.js`:**
-- Component registration → `registerComponents()`
+- Block registration → `registerBlocks()`
 - Route definitions → `Lego.route(...)`
 - Global state → `Lego.globals.user = ...`
 - Initialization → `Lego.init()`
@@ -146,7 +146,7 @@ Your `index.html` just needs `<lego-router>` and a script tag. That's it.
 
 <div style="display: flex; justify-content: space-between; margin-top: 3rem;">
   <span></span>
-  <a href="./02-your-first-component" style="display: inline-block; background: #4CAF50; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
-    Next: Your First Component →
+  <a href="./02-your-first-block" style="display: inline-block; background: #4CAF50; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
+    Next: Your First Block →
   </a>
 </div>

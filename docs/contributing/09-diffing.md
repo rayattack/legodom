@@ -1,6 +1,6 @@
 # He said, She said, They Said, Who Said?
 
-This topic is about the "Power Struggle" inside the code. When a component is born, it needs to know what its data is. LegoDOM looks at three different places to find that data, and it has a strict hierarchy of who wins in a conflict.
+This topic is about the "Power Struggle" inside the code. When a block is born, it needs to know what its data is. LegoDOM looks at three different places to find that data, and it has a strict hierarchy of who wins in a conflict.
 
 
 ## Diffing, Merging, and Priorities (The Tier System)
@@ -26,7 +26,7 @@ Inside the `snap(el)` function, you will see a variable called `logic`. This isn
     
     ```
     
-    Lego looks at the `<template>` tag itself in your HTML. If you added a `b-data` attribute there, it overrides the global definition. This is useful for creating "variants" of a component template without writing new JavaScript.
+    Lego looks at the `<template>` tag itself in your HTML. If you added a `b-data` attribute there, it overrides the global definition. This is useful for creating "variants" of a block template without writing new JavaScript.
     
 3.  **Tier 3: The Instance Attributes (Highest Priority)**
     
@@ -62,8 +62,8 @@ To make this work, LegoDOM includes a helper called `parseJSObject`.
 
 ### The Edge Case: `b-data` as a "Ref"
 
-If the `b-data` attribute starts with a `$`, like `b-data="$someGlobal"`, LegoDOM treats it as a pointer to a global variable instead of a raw object string. This allows for deep data sharing between the component and the outside world.
+If the `b-data` attribute starts with a `$`, like `b-data="$someGlobal"`, LegoDOM treats it as a pointer to a global variable instead of a raw object string. This allows for deep data sharing between the block and the outside world.
 
 ----------
 
-**Summary**: A component's data is a "Cake" with three layers. The Global Logic is the bottom, the Template Logic is the middle, and the Instance Logic is the frosting. The "Frosting" (Instance) is what the user ultimately sees.
+**Summary**: A block's data is a "Cake" with three layers. The Global Logic is the bottom, the Template Logic is the middle, and the Instance Logic is the frosting. The "Frosting" (Instance) is what the user ultimately sees.

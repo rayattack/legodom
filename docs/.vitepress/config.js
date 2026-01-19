@@ -59,7 +59,7 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/tutorial/' },
             { text: '1. Project Setup', link: '/tutorial/01-project-setup' },
-            { text: '2. Your First Component', link: '/tutorial/02-your-first-component' },
+            { text: '2. Your First Block', link: '/tutorial/02-your-first-block' },
             { text: '3. Adding Routes', link: '/tutorial/03-adding-routes' },
             { text: '4. Multi-Page App', link: '/tutorial/04-multi-page-app' },
             { text: '5. State & Globals', link: '/tutorial/05-state-and-globals' }
@@ -96,7 +96,7 @@ export default defineConfig({
             { text: 'CDN Usage', link: '/guide/cdn-usage' },
             { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
             { text: 'Large Apps', link: '/guide/directory-structure' },
-            { text: 'Server Side Components', link: '/guide/server-side' },
+            { text: 'Server Side Blocks', link: '/guide/server-side' },
           ]
         }
       ],

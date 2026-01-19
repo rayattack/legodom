@@ -21,8 +21,8 @@ npm run dev
 ```
 examples/vite-app/
 ├── src/
-│   ├── components/          # .lego files auto-discovered here
-│   │   ├── sample-component.lego
+│   ├── blocks/          # .lego files auto-discovered here
+│   │   ├── sample-block.lego
 │   │   └── greeting-card.lego
 │   └── main.js              # Entry point
 ├── index.html               # HTML shell
@@ -32,14 +32,14 @@ examples/vite-app/
 
 ## How It Works
 
-1. The Vite plugin scans `src/components/` for `.lego` files
+1. The Vite plugin scans `src/blocks/` for `.lego` files
 2. Each `.lego` file is parsed and transformed into a `Lego.define()` call
-3. The virtual module `virtual:lego-components` imports all discovered components
+3. The virtual module `virtual:lego-blocks` imports all discovered blocks
 4. Components are automatically registered and available in your HTML
 
 ## Creating Components
 
-Create a new `.lego` file in `src/components/`:
+Create a new `.lego` file in `src/blocks/`:
 
 ```html
 <template>
@@ -65,7 +65,7 @@ export default {
 Then use it in your HTML:
 
 ```html
-<your-component-name></your-component-name>
+<your-block-name></your-block-name>
 ```
 
-The component name is automatically derived from the filename (kebab-case required).
+The block name is automatically derived from the filename (kebab-case required).

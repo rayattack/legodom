@@ -3,30 +3,30 @@
 
 In the previous chapters, we used `b-target` to send content to different parts of the page. But how does LegoDOM actually find those "holes" in a complex, nested DOM? This is where the **Target Resolver** comes in.
 
-The Target Resolver is a prioritized logic engine that ensures your links always find the correct destination, even in massive applications with thousands of components.
+The Target Resolver is a prioritized logic engine that ensures your links always find the correct destination, even in massive applications with thousands of blocks.
 
 ## The Problem with Global Selectors
 
 In traditional JavaScript, if you use `document.querySelector('#detail-view')`, the browser searches the entire page. This is fine for small sites, but in a "Web Component First" architecture, it causes two major issues:
 
-1.  **ID Collisions**: If you accidentally use the same ID in two different components, your link might update the wrong part of the page.
+1.  **ID Collisions**: If you accidentally use the same ID in two different blocks, your link might update the wrong part of the page.
     
-2.  **Tight Coupling**: Your sidebar link has to know the exact global ID of the main content area, making it harder to move components around.
+2.  **Tight Coupling**: Your sidebar link has to know the exact global ID of the main content area, making it harder to move blocks around.
     
 
 ## The Resolver Hierarchy
 
 When you click a `b-link` with a `b-target`, LegoDOM follows a strict search order to resolve the target:
 
-### 1. Local Component Scope (The Primary Search)
+### 1. Local Block Scope (The Primary Search)
 
-LegoDOM first looks for the target **inside the component that contains the link**.
+LegoDOM first looks for the target **inside the block that contains the link**.
 
 If you use `b-target="email-view"`, Lego looks for an `<email-view>` tag _within the current parent shell_. This allows you to have multiple instances of the same layout on one screen without them interfering with each other.
 
 ### 2. Tag Name Resolution (The Web Component Way)
 
-If your target doesn't start with a `#`, Lego treats it as a **Component Tag Name**.
+If your target doesn't start with a `#`, Lego treats it as a **Block Tag Name**.
 
 ```
 <!-- Lego looks for a <thread-view> tag nearby -->
@@ -66,7 +66,7 @@ For highly dynamic UIs, `b-target` can even be a function or a dynamic expressio
 
 ## Why This Matters
 
-By prioritizing local tags over global IDs, LegoDOM encourages **Encapsulation**. Your components become "Black Boxes" that manage their own internal routing targets. This means you can take a complex "Messaging Shell" and drop it into a "Dashboard Shell" without changing a single line of routing code—the targets will still resolve correctly because they are scoped to their parents.
+By prioritizing local tags over global IDs, LegoDOM encourages **Encapsulation**. Your blocks become "Black Boxes" that manage their own internal routing targets. This means you can take a complex "Messaging Shell" and drop it into a "Dashboard Shell" without changing a single line of routing code—the targets will still resolve correctly because they are scoped to their parents.
 
 ## Summary
 

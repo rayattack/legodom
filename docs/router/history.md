@@ -11,9 +11,9 @@ In a standard SPA, the router usually manages a single "current view." When you 
 
 1.  The URL changes.
     
-2.  The old component is destroyed.
+2.  The old block is destroyed.
     
-3.  The new component is mounted.
+3.  The new block is mounted.
     
 
 Because the whole page (or the main outlet) is replaced, the browser's history stack is simple: Page A -> Page B. But in a complex layout like LinkedIn, you might have changed the chat window 5 times while the sidebar stayed exactly the same. Users expect the "Back" button to cycle through those chats, not take them back to the login screen.

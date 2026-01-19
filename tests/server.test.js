@@ -24,13 +24,13 @@ global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 const libCode = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
 eval(libCode);
 
-describe('LegoDOM Server-Side Components', () => {
+describe('LegoDOM Server-Side Blocks', () => {
   beforeEach(async () => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
   });
 
-  it('should auto-load undefined components via loader config', async () => {
+  it('should auto-load undefined blocks via loader config', async () => {
     // 1. Mock the server response
     const mockSFC = `
       <template>
@@ -51,12 +51,12 @@ describe('LegoDOM Server-Side Components', () => {
     // 2. Initialize with loader
     await window.Lego.init(document.body, {
       loader: (tag) => {
-        if (tag === 'remote-widget') return '/components/remote-widget.lego';
+        if (tag === 'remote-widget') return '/blocks/remote-widget.lego';
         return null;
       }
     });
 
-    // 3. Inject undefined component
+    // 3. Inject undefined block
     const el = document.createElement('remote-widget');
     document.body.appendChild(el);
 
@@ -64,7 +64,7 @@ describe('LegoDOM Server-Side Components', () => {
     await new Promise(r => setTimeout(r, 100));
 
     // 4. Verify fetch called
-    expect(global.fetch).toHaveBeenCalledWith('/components/remote-widget.lego');
+    expect(global.fetch).toHaveBeenCalledWith('/blocks/remote-widget.lego');
 
     // 5. Verify render
     expect(el.shadowRoot).toBeDefined();

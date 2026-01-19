@@ -43,7 +43,7 @@ This is a critical "expert-level" choice.
 
 -   A regular `Map` holds a "strong reference" to its keys. If you deleted a piece of data from your state, but that data was still a key in a regular `Map`, the browser could never delete it from memory.
     
--   Because `proxyCache` is a `WeakMap`, as soon as your component is destroyed and the original object is no longer needed, the browser’s Garbage Collector can automatically wipe it from the cache.
+-   Because `proxyCache` is a `WeakMap`, as soon as your block is destroyed and the original object is no longer needed, the browser’s Garbage Collector can automatically wipe it from the cache.
     
 
 ### Summary of Logic:

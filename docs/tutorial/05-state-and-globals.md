@@ -4,37 +4,37 @@ You've built a complete app! Now let's understand how state management works in 
 
 ## Two Levels of State
 
-### 1. Component State (Local)
+### 1. Block State (Local)
 
-Each component has its own reactive state defined in the `<script>` section:
+Each block has its own reactive state defined in the `<script>` section:
 
 ```javascript
 export default {
-  // This is local to THIS component instance
+  // This is local to THIS block instance
   count: 0,
   items: [],
   
   increment() {
-    this.count++;  // Triggers re-render of THIS component only
+    this.count++;  // Triggers re-render of THIS block only
   }
 }
 ```
 
 ### 2. Global State (`Lego.globals`)
 
-Shared across ALL components. Perfect for user sessions, themes, shopping carts, etc.
+Shared across ALL blocks. Perfect for user sessions, themes, shopping carts, etc.
 
 ```javascript
-// In app.js or any component
+// In app.js or any block
 Lego.globals.user = { name: 'John' };
 Lego.globals.theme = 'dark';
 Lego.globals.cart = [];
 
-// In any component
+// In any block
 console.log(Lego.globals.user.name);  // 'John'
 ```
 
-## Accessing Globals in Components
+## Accessing Globals in Blocks
 
 ### In JavaScript (Methods)
 
@@ -70,7 +70,7 @@ Use the `global` keyword:
 Access current route information:
 
 ```javascript
-// Available in any component
+// Available in any block
 this.$route.url       // '/users/42?tab=posts'
 this.$route.route     // '/users/:id'
 this.$route.params    // { id: '42' }
@@ -98,7 +98,7 @@ handleLogin() {
   this.$go('/dashboard').get();
 }
 
-// Any protected component
+// Any protected block
 mounted() {
   if (!Lego.globals.user) {
     this.$go('/login').get();
@@ -185,12 +185,12 @@ export default {
 </template>
 ```
 
-## Cross-Component Communication
+## Cross-Block Communication
 
 ### Using `$emit` (Child to Parent)
 
 ```html
-<!-- child-component.lego -->
+<!-- child-block.lego -->
 <template>
   <button @click="notifyParent()">Click Me</button>
 </template>
@@ -205,9 +205,9 @@ export default {
 ```
 
 ```html
-<!-- parent-component.lego -->
+<!-- parent-block.lego -->
 <template>
-  <child-component @custom-event="handleEvent(event)"></child-component>
+  <child-block @custom-event="handleEvent(event)"></child-block>
 </template>
 
 <script>
@@ -222,7 +222,7 @@ export default {
 ### Using `$ancestors` (Access Parent Element + State)
 
 ```javascript
-// In a deeply nested component
+// In a deeply nested block
 mounted() {
   // Get state from a specific ancestor by tag name
   const parentState = this.$ancestors('user-profile');
@@ -235,21 +235,21 @@ mounted() {
 | Do | Don't |
 |----|-------|
 | ✅ Use `Lego.globals` for truly global state (user, theme) | ❌ Put everything in globals |
-| ✅ Keep component state local when possible | ❌ Over-engineer state management |
-| ✅ Initialize globals in `app.js` | ❌ Initialize globals in random components |
-| ✅ Use `$emit` for child→parent communication | ❌ Reach into child component internals |
+| ✅ Keep block state local when possible | ❌ Over-engineer state management |
+| ✅ Initialize globals in `app.js` | ❌ Initialize globals in random blocks |
+| ✅ Use `$emit` for child→parent communication | ❌ Reach into child block internals |
 
 ## Complete State Cheatsheet
 
 | I want to... | Use this |
 |--------------|----------|
-| Store component-local data | `export default { myData: ... }` |
+| Store block-local data | `export default { myData: ... }` |
 | Share data app-wide | `Lego.globals.myData = ...` |
 | Read global in template | `[[ global.myData ]]` |
 | Read global in JS | `Lego.globals.myData` |
 | Get route params | `this.$route.params.id` |
 | Get query string | `this.$route.query.tab` |
-| Notify parent component | `this.$emit('event-name', data)` |
+| Notify parent block | `this.$emit('event-name', data)` |
 | Navigate with state | Set globals before `$go()` |
 
 ## What's Next?
@@ -258,7 +258,7 @@ mounted() {
 
 You now know how to:
 - Set up a project from scratch
-- Create beautiful components
+- Create beautiful blocks
 - Navigate between pages
 - Share state across your app
 

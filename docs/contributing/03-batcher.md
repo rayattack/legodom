@@ -16,20 +16,20 @@ LegoDOM defines `createBatcher` as a closure that manages the update cycle. It p
 ```js
   const createBatcher = () => {
     let queued = false;
-    const componentsToUpdate = new Set();
+    const blocksToUpdate = new Set();
     let isProcessing = false;
 
     return {
       add: (el) => {
         if (!el || isProcessing) return;
-        componentsToUpdate.add(el);
+        blocksToUpdate.add(el);
         if (queued) return;
         queued = true;
 
         requestAnimationFrame(() => {
           isProcessing = true;
-          const batch = Array.from(componentsToUpdate);
-          componentsToUpdate.clear();
+          const batch = Array.from(blocksToUpdate);
+          blocksToUpdate.clear();
           queued = false;
 
           batch.forEach(el => render(el));
@@ -57,9 +57,9 @@ LegoDOM defines `createBatcher` as a closure that manages the update cycle. It p
 
 1.  **Deduplication with `Set`**:
     
-    -   The batcher maintains a `componentsToUpdate = new Set()`.
+    -   The batcher maintains a `blocksToUpdate = new Set()`.
         
-    -   Because a `Set` only stores unique values, if you trigger an update on the same component 50 times in a single loop, it is only added to the "todo" list **once**.
+    -   Because a `Set` only stores unique values, if you trigger an update on the same block 50 times in a single loop, it is only added to the "todo" list **once**.
         
 2.  **The `queued` Gatekeeper**:
     
@@ -69,7 +69,7 @@ LegoDOM defines `createBatcher` as a closure that manages the update cycle. It p
         
 3.  **The `isProcessing` Lock**:
     
-    -   This flag ensures that if a component’s state changes _while_ the render is actually happening, it doesn't cause a collision or infinite loop.
+    -   This flag ensures that if a block’s state changes _while_ the render is actually happening, it doesn't cause a collision or infinite loop.
         
 
 ### Timing: `requestAnimationFrame` (rAF)
@@ -78,7 +78,7 @@ Instead of updating immediately, LegoDOM uses `requestAnimationFrame`.
 
 -   **What it does**: It tells the browser, "Wait until you are just about to draw the next frame on the screen, then run this code".
 
--   **Efficiency**: It bundles every single change from every component into a single "tick."
+-   **Efficiency**: It bundles every single change from every block into a single "tick."
     
 -   **The Benefit**: This syncs your JavaScript logic with the monitor's refresh rate (usually 60 times per second), making animations and updates look buttery smooth.
     
@@ -91,7 +91,7 @@ When the "frame" triggers, the batcher:
     
 2.  Clears the `Set` for the next round.
     
-3.  Runs `render(el)` for every component in that batch.
+3.  Runs `render(el)` for every block in that batch.
     
 
 ### The `updated` Lifecycle Hook
@@ -101,10 +101,10 @@ After the render is complete, the batcher uses a `setTimeout(() => ..., 0)`.
 -   **The Trick**: Even with a delay of `0`, this "macro-task" ensures the code inside runs **after** the browser has finished its rendering work.
     
 -   **The Hook**: It looks for `our` lifecycle hook function a.k.a or notoriously known as `updated`
-in each component's state (`_studs`) and executes it. This is the perfect place for us to run code that needs to measure the new size of an element or scroll a list to the bottom.
+in each block's state (`_studs`) and executes it. This is the perfect place for us to run code that needs to measure the new size of an element or scroll a list to the bottom.
 
 **Example**
-If you have a `chat-box` component and you update the messages, you might use the `updated()` hook to scroll to the bottom. Because of this batcher, you are guaranteed that the DOM has finished changing before your scroll logic runs.
+If you have a `chat-box` block and you update the messages, you might use the `updated()` hook to scroll to the bottom. Because of this batcher, you are guaranteed that the DOM has finished changing before your scroll logic runs.
 
 
 > **Visualizing the flow:** State Change -> `batcher.add(el)` -> `Set` collects `el` -> `rAF` triggers -> `render(el)` runs -> `updated()` hook fires.

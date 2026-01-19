@@ -13,7 +13,7 @@ When a "Cold Start" occurs:
     
 2.  The server returns the base `index.html`.
     
-3.  LegoDOM matches the route `/messaging/:id` to the `messaging-shell` component.
+3.  LegoDOM matches the route `/messaging/:id` to the `messaging-shell` block.
     
 4.  The `messaging-shell` mounts, but the `#chat-window` target is empty (or showing its default "Select a conversation" text).
     
@@ -26,7 +26,7 @@ To fix this, the Parent Shell must be responsible for "healing" its own internal
 
 ### Step 1: Define the Shared Route
 
-First, ensure your route configuration points both the list and the detail view to the same Shell component.
+First, ensure your route configuration points both the list and the detail view to the same Shell block.
 
 ```js
 Lego.route('/messaging', 'messaging-shell');
@@ -36,7 +36,7 @@ Lego.route('/messaging/:id', 'messaging-shell');
 
 ### Step 2: Implement the Healing Logic
 
-Inside your `messaging-shell` component, use the `mounted()` hook to check for the presence of a parameter.
+Inside your `messaging-shell` block, use the `mounted()` hook to check for the presence of a parameter.
 
 ```js
 Lego.define('messaging-shell', `
@@ -88,4 +88,4 @@ You can use the native `<slot>` tag inside your target area to provide a better 
 
 ## Summary
 
-"Self-Healing" is the bridge between a static website and a dynamic application. It ensures that your surgical routing works perfectly even on hard refreshes. By using the `mounted()` hook and the `$go` helper, your components become intelligent enough to manage their own internal layout based on the global URL state.
+"Self-Healing" is the bridge between a static website and a dynamic application. It ensures that your surgical routing works perfectly even on hard refreshes. By using the `mounted()` hook and the `$go` helper, your blocks become intelligent enough to manage their own internal layout based on the global URL state.

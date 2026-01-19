@@ -14,19 +14,19 @@ Lego.init(root = document.body, options = {});
 
 When you call `init`, LegoDOM does three critical things:
 
-1.  **Starts the MutationObserver**: It begins watching the DOM for any new elements that match your registered components. If you insert a `<user-card>` via innerHTML or `document.createElement`, LegoDOM detects it and "snaps" it to life immediately.
+1.  **Starts the MutationObserver**: It begins watching the DOM for any new elements that match your registered blocks. If you insert a `<user-card>` via innerHTML or `document.createElement`, LegoDOM detects it and "snaps" it to life immediately.
 2.  **Binds Global State**: It ensures `Lego.globals` is reactive and linked to the DOM.
-3.  **Starts the Render Loop**: It initializes the update batcher that efficiently re-renders components when state changes.
+3.  **Starts the Render Loop**: It initializes the update batcher that efficiently re-renders blocks when state changes.
 
 ### Options
 
 -   `styles`: A map of shared stylesheets (see [Styling](/guide/blocks#styling-the-host)).
--   `loader`: An async function to dynamically fetch and compile components that haven't been loaded yet.
+-   `loader`: An async function to dynamically fetch and compile blocks that haven't been loaded yet.
 -   `studio`: Enables the visual development environment.
 
 ## The Registry: `Lego.block()`
 
-There is no "Lego Component" base class you extends. Instead, you **define** the relationship between a Tag Name and its Logic.
+There is no "Lego Block" base class you extends. Instead, you **define** the relationship between a Tag Name and its Logic.
 
 ```js
 Lego.block('user-card', template, logic, styles);
@@ -48,49 +48,49 @@ Lego.globals.theme = 'dark';
 Lego.globals.user = { name: 'Alice' };
 ```
 
-Any component that uses `[[ global.theme ]]` in its template will automatically re-render when this value changes. You don't need providers, context, or reducers. Just direct assignment.
+Any block that uses `[[ global.theme ]]` in its template will automatically re-render when this value changes. You don't need providers, context, or reducers. Just direct assignment.
 
 ## Configuration: `Lego.config`
 
 You can tap into the internal behavior of the framework for error handling.
 
 ```js
-Lego.config.onError = (error, type, componentName) => {
-  console.error(`Error in ${componentName} (${type}):`, error);
+Lego.config.onError = (error, type, blockName) => {
+  console.error(`Error in ${blockName} (${type}):`, error);
   // Send to Sentry/logging service
 };
 ```
 
 This catches errors in:
-- Component lifecycle hooks (`mounted`, `updated`, `unmounted`)
+- Block lifecycle hooks (`mounted`, `updated`, `unmounted`)
 - Event handlers (`@click`, etc.)
-- Component definitions
+- Block definitions
 
 ## Developer Tools
 
 LegoDOM exposes a few methods useful for debugging or building tools (like the Lego Studio):
 
 ### `Lego.getLegos()`
-Returns an array of all registered component tag names.
+Returns an array of all registered block tag names.
 
 ```js
 console.log(Lego.getLegos()); // ['user-card', 'nav-bar', ...]
 ```
 
 ### `Lego.getActiveBlocksCount()`
-Returns the number of live component instances currently in the DOM. useful for detecting memory leaks.
+Returns the number of live block instances currently in the DOM. useful for detecting memory leaks.
 
 ```js
 setInterval(() => {
-  console.log('Active components:', Lego.getActiveBlocksCount());
+  console.log('Active blocks:', Lego.getActiveBlocksCount());
 }, 1000);
 ```
 
 ## Manual Control
 
-For advanced manual DOM manipulation (e.g. testing libraries or strict integrations), you can manually manage component lifecycles:
+For advanced manual DOM manipulation (e.g. testing libraries or strict integrations), you can manually manage block lifecycles:
 
--   **`Lego.snap(element)`**: Manually initialize a component on an existing element.
--   **`Lego.unsnap(element)`**: Manually destroy a component and clean up its listeners.
+-   **`Lego.snap(element)`**: Manually initialize a block on an existing element.
+-   **`Lego.unsnap(element)`**: Manually destroy a block and clean up its listeners.
 
 See [Advanced API](/api/advanced) for details.

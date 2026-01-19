@@ -1,15 +1,15 @@
 # Lifecycle Hooks
 
-Components in LegoDOM have a simple lifecycle managed by the `snap` (mount) and `unsnap` (unmount) mechanism.
+Blocks in LegoDOM have a simple lifecycle managed by the `snap` (mount) and `unsnap` (unmount) mechanism.
 
 ## mounted()
 
-Called immediately after the component is connected to the DOM and its template has been rendered. This is the place to fetch data or set up subscriptions.
+Called immediately after the block is connected to the DOM and its template has been rendered. This is the place to fetch data or set up subscriptions.
 
 ```js
 {
   mounted() {
-    console.log("Component mounted!", this.$element);
+    console.log("Block mounted!", this.$element);
     this.fetchData();
   }
 }
@@ -17,7 +17,7 @@ Called immediately after the component is connected to the DOM and its template 
 
 ## unmounted()
 
-Called when the component is removed from the DOM (unsnapped). Use this to clean up timers or event listeners that were not attached via `b-*` directives.
+Called when the block is removed from the DOM (unsnapped). Use this to clean up timers or event listeners that were not attached via `b-*` directives.
 
 ```js
 {
@@ -30,12 +30,12 @@ Called when the component is removed from the DOM (unsnapped). Use this to clean
 
 ## updated()
 
-Called after the component's state changes and the DOM has been updated. LegoDOM batches updates, so this will only run once per render cycle even if multiple state properties change.
+Called after the block's state changes and the DOM has been updated. LegoDOM batches updates, so this will only run once per render cycle even if multiple state properties change.
 
 ```js
 {
   updated() {
-    console.log("Component re-rendered");
+    console.log("Block re-rendered");
   }
 }
 ```

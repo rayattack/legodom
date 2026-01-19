@@ -1,6 +1,6 @@
 # Reacting to stimuli is how we react to stimuli
 
-If living things react to stimuli, then so should our components.
+If living things react to stimuli, then so should our blocks.
 
 
 ## Topic 4: Reactivity (The Proxy)
@@ -9,7 +9,7 @@ LegoDOM uses the JavaScript **`Proxy`** object to create its reactivity. Think o
 
 ### The `reactive(obj, el, batcher)` Function
 
-When a component is "snapped" (created), its data is passed through this function.
+When a block is "snapped" (created), its data is passed through this function.
 
 ```js
   //... rest of the code
@@ -61,7 +61,7 @@ When a component is "snapped" (created), its data is passed through this functio
 
 ### Concrete Example
 
-Imagine you have a component defined like this:
+Imagine you have a block defined like this:
 
 ```js
 Lego.define('counter-app', '<h1>{{count}}</h1>', {
@@ -84,4 +84,4 @@ Lego.define('counter-app', '<h1>{{count}}</h1>', {
 
 ### Why this is "Surgical"
 
-Because the `reactive` function is passed the specific element (`el`) it belongs to, it knows exactly which component in the DOM needs to re-render. It doesn't have to guess or refresh the whole page; it targets the specific "Lego block" that owns that data.
+Because the `reactive` function is passed the specific element (`el`) it belongs to, it knows exactly which block in the DOM needs to re-render. It doesn't have to guess or refresh the whole page; it targets the specific "Lego block" that owns that data.

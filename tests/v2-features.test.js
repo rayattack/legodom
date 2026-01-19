@@ -50,7 +50,7 @@ describe('LegoDOM v2 New Features', () => {
     Lego.block('grand-parent', '<parent-wrapper></parent-wrapper>');
     Lego.block('parent-wrapper', '<div><child-item></child-item></div>'); // Nested in div
     // Child uses $parent.tagName in template. 
-    // $parent should refer to 'parent-wrapper' (its component parent)
+    // $parent should refer to 'parent-wrapper' (its block parent)
     Lego.block('child-item', '<span>[[ $parent.tagName ]]</span>');
 
     document.body.innerHTML = '<grand-parent></grand-parent>';

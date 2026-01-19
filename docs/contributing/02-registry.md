@@ -8,7 +8,7 @@ we talk about Light DOM and Shadow DOM in a minute ;-).
 
 ## Topic 2: The Registry & Internal Storage
 
-LegoDOM uses three specialized collections to store the "DNA" of your application. This separation allows the framework to distinguish between what a component **looks like** versus how it **behaves**.
+LegoDOM uses three specialized collections to store the "DNA" of your application. This separation allows the framework to distinguish between what a block **looks like** versus how it **behaves**.
 
 ```js
 const registry = {};
@@ -20,7 +20,7 @@ const sharedStates = new Map();
 
 `const registry = {}` is a plain object that stores references to `<template>` elements.
 
--   When LegoDOM initializes, it scans the DOM for any `<template b-id="my-component">` and saves it here.
+-   When LegoDOM initializes, it scans the DOM for any `<template b-id="my-block">` and saves it here.
     
 -   The `b-id` becomes the key, and the DOM node itself is the value.
     
@@ -40,11 +40,11 @@ const sharedStates = new Map();
 
 `const sharedStates = new Map();` is one of the most powerful "hidden" features of LegoDOM.
 
--   Every time you define a component, Lego creates a **reactive version** of its logic and stores it here.
+-   Every time you define a block, Lego creates a **reactive version** of its logic and stores it here.
     
--   This allows other components to access a specific component's state globally via the `$registry('tag-name')` helper. **NOTE** the component's (template/blueprint) state, not the instance state.
+-   This allows other blocks to access a specific block's state globally via the `$registry('tag-name')` helper. **NOTE** the block's (template/blueprint) state, not the instance state.
     
--   **Example:** If you have 3 `user-profile` components, any other component on the page can peek at their (shared) state data by asking the `sharedStates` map.
+-   **Example:** If you have 3 `user-profile` blocks, any other block on the page can peek at their (shared) state data by asking the `sharedStates` map.
 
 
 #### Dissecting Registration
@@ -88,7 +88,7 @@ async load(id) {
     
 3.  **The Lego File Automatic Method (The "Vite Way"):** * The **Vite Plugin** (as seen in `vite-plugin.js`) acts as a build-time robot.
     
-    -   It uses `fast-glob` (`fg`) to scan your entire `src/components` directory for any file ending in `.lego`.
+    -   It uses `fast-glob` (`fg`) to scan your entire `src/blocks` directory for any file ending in `.lego`.
         
     -   It parses the `<template>` and `<script>` inside that `.lego` file.
         
@@ -96,7 +96,7 @@ async load(id) {
         
     -   **Result:** You just create a file named `user-card.lego`, and suddenly `<user-card>` is a valid HTML tag in your app.
 
-**Paradigm 3: Runtime Component Definition (New in v2.0)**
+**Paradigm 3: Runtime Block Definition (New in v2.0)**
 
 ```js
 defineSFC: (content, filename) => {
@@ -111,9 +111,9 @@ defineSFC: (content, filename) => {
 
 This is the power behind the **Server Loader**. We can fetch a string from the server and "compile" it in the browser using `new Function()`. It populates `registry` and `legoFileLogic` just like the build-time tools, but on the fly.
 
-### 4. Component Naming Conventions ("Explicit or Go Home")
+### 4. Block Naming Conventions ("Explicit or Go Home")
 
-When you define a component via a file (e.g. `.lego`), LegoDOM automatically derives the tag name. To keep the web platform happy, we enforce **Custom Element Best Practices**:
+When you define a block via a file (e.g. `.lego`), LegoDOM automatically derives the tag name. To keep the web platform happy, we enforce **Custom Element Best Practices**:
 
 1.  **Automatic Conversion**: All filenames are converted to `kebab-case`.
     -   `UserProfile.lego` -> `<user-profile>`
@@ -125,8 +125,8 @@ When you define a component via a file (e.g. `.lego`), LegoDOM automatically der
     -   `Adidas.lego` -> Error
 
 > [!TIP]
-> **Single Word Component? Namespace It!** 
-> Custom Element specs require a hyphen to distinguish from native tags. To ensure forward compatibility, **LegoDOM will throw an error** if you try to define a single-word component.
+> **Single Word Block? Namespace It!** 
+> Custom Element specs require a hyphen to distinguish from native tags. To ensure forward compatibility, **LegoDOM will throw an error** if you try to define a single-word block.
 > Simply add your app or product prefix to the filename:
 > -   `fb-button.lego` -> `<fb-button>`
 > -   `shop-card.lego` -> `<shop-card>`

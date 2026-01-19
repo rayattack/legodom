@@ -58,7 +58,7 @@ You can also sync nested properties or list items in a `b-for` loop:
 
 ## b-var
 
-Creates a reference to the DOM element in the component's state under `$vars`.
+Creates a reference to the DOM element in the block's state under `$vars`.
 
 ```html
 <div b-var="myDiv"></div>

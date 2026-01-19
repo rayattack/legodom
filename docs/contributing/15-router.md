@@ -1,6 +1,6 @@
 # Where do you want to go?
 
-The true power of the Lego router isn't just changing the URL; it's the **targeted DOM injection** that allows you to swap _any_ part of the page with _any_ component, without writing a single line of `fetch` or `innerHTML` logic.
+The true power of the Lego router isn't just changing the URL; it's the **targeted DOM injection** that allows you to swap _any_ part of the page with _any_ block, without writing a single line of `fetch` or `innerHTML` logic.
 
 ## The "Surgical" Philosophy
 
@@ -20,7 +20,7 @@ const _go = (path, ...targets) => {
   // 1. Update History API
   history.pushState({ legoTargets: targets }, "", path);
   
-  // 2. Find the component for this route
+  // 2. Find the block for this route
   const route = routes.find(r => r.path === path);
   const template = registry[route.tagName];
 
@@ -39,7 +39,7 @@ const _go = (path, ...targets) => {
 
 ### Why this matters
 
-This architecture enables **Persistent Shells**. You can have a sidebar that plays music or holds chat state, while the main content navigates freely. Traditional routers usually require complex "Layout Components" to achieve this. LegoDOM does it by simply *not touching the sidebar*.
+This architecture enables **Persistent Shells**. You can have a sidebar that plays music or holds chat state, while the main content navigates freely. Traditional routers usually require complex "Layout Blocks" to achieve this. LegoDOM does it by simply *not touching the sidebar*.
 
 ## Intelligent Defaults
 

@@ -24,12 +24,12 @@ Lego.config.syntax = 'mustache';
 *   **Type**: `(tagName: string) => string | Promise<string> | null`
 *   **Default**: `undefined`
 
-Use this hook to implement **Server-Side Component Delivery**.
+Use this hook to implement **Server-Side Block Delivery**.
 
 **Option 1: Simple Mode (Return URL)**
 We fetch it for you.
 ```javascript
-loader: (tag) => `/components/${tag}.lego`
+loader: (tag) => `/blocks/${tag}.lego`
 ```
 
 **Option 2: Power Mode (Return Promise)**
@@ -39,7 +39,7 @@ You control the fetch. Useful for **Authentication** (Cookies, JWT) or Custom He
 Lego.init(document.body, {
   loader: async (tagName) => {
     // Custom Authenticated Fetch
-    const res = await fetch(`/components/${tagName}.lego`, {
+    const res = await fetch(`/blocks/${tagName}.lego`, {
       credentials: 'include', // Send Cookies
       headers: { 'Authorization': getToken() }
     });
@@ -62,7 +62,7 @@ Lego.init(document.body, {
 Global error handler hook. Called when an error occurs during:
 *   `render`: Template rendering (expression evaluation)
 *   `event-handler`: `@event` callbacks
-*   `define`: Component definition
+*   `define`: Block definition
 *   `sync-update`: `b-sync` updates
 
 ```javascript
@@ -79,8 +79,8 @@ Lego.config.onError = (err, type, context) => {
 
 Performance monitoring hooks, primarily used by plugins.
 
-*   `onRenderStart(el)`: Called before a component renders.
-*   `onRenderEnd(el)`: Called after a component finishes rendering.
+*   `onRenderStart(el)`: Called before a block renders.
+*   `onRenderEnd(el)`: Called after a block finishes rendering.
 
 ```javascript
 // Example monitoring implementation

@@ -98,10 +98,10 @@ const Lego = (() => {
 
   const createBatcher = () => {
     let queued = false;
-    const componentsToUpdate = new Set();
+    const blocksToUpdate = new Set();
     let isProcessing = false;
 
-    // Optimization: Single timer for all updated hooks instead of one per component
+    // Optimization: Single timer for all updated hooks instead of one per block
     let updatedTimer = null;
     const pendingUpdated = new Set();
 
@@ -122,14 +122,14 @@ const Lego = (() => {
     return {
       add: (el) => {
         if (!el || isProcessing) return;
-        componentsToUpdate.add(el);
+        blocksToUpdate.add(el);
         if (queued) return;
         queued = true;
 
         requestAnimationFrame(() => {
           isProcessing = true;
-          const batch = Array.from(componentsToUpdate);
-          componentsToUpdate.clear();
+          const batch = Array.from(blocksToUpdate);
+          blocksToUpdate.clear();
           queued = false;
 
           // Simple synchronous render loop (faster for small batches, no overhead)
@@ -736,9 +736,9 @@ const Lego = (() => {
 
     resolvedElements.forEach(el => {
       if (el) {
-        const component = document.createElement(match.tagName);
+        const block = document.createElement(match.tagName);
         // Atomic swap: MutationObserver in init() will pick this up
-        el.replaceChildren(component);
+        el.replaceChildren(block);
       }
     });
   };
@@ -822,7 +822,7 @@ const Lego = (() => {
           document.head.appendChild(script);
         }
         Lego.route('/_/studio', 'lego-studio');
-        Lego.route('/_/studio/:component', 'lego-studio');
+        Lego.route('/_/studio/:block', 'lego-studio');
       }
 
       if (routes.length > 0) {

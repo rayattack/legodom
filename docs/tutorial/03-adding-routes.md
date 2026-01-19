@@ -10,10 +10,10 @@ Now let's make your app navigable. By the end of this page, you'll understand ex
 // src/app.js
 
 import { Lego } from 'lego-dom';
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-blocks';
 
-// 1. Register components
-registerComponents();
+// 1. Register blocks
+registerBlocks();
 
 // 2. Define ALL your routes here ⭐
 Lego.route('/', 'home-page');
@@ -32,13 +32,13 @@ await Lego.init();
 ## Route Syntax
 
 ```javascript
-Lego.route(path, componentName, middleware?)
+Lego.route(path, blockName, middleware?)
 ```
 
 | Argument | Description | Example |
 |----------|-------------|---------|
 | `path` | URL pattern | `'/'`, `'/login'`, `'/users/:id'` |
-| `componentName` | The component to render (filename minus `.lego`) | `'home-page'`, `'login-page'` |
+| `blockName` | The block to render (filename minus `.lego`) | `'home-page'`, `'login-page'` |
 | `middleware` | Optional guard function | `(params, globals) => boolean` |
 
 ### Dynamic Routes
@@ -50,7 +50,7 @@ Lego.route('/users/:id', 'user-profile');
 Lego.route('/posts/:postId/comments/:commentId', 'comment-view');
 ```
 
-Access them in your component:
+Access them in your block:
 
 ```javascript
 // In your .lego file's <script>
@@ -65,7 +65,7 @@ mounted() {
 ### Method 1: The `b-link` Attribute (Declarative)
 
 ```html
-<!-- In any component template -->
+<!-- In any block template -->
 <a href="/login" b-link>Go to Login</a>
 <a href="/users/42" b-link>View User 42</a>
 ```
@@ -75,7 +75,7 @@ The `b-link` attribute turns a regular `<a>` tag into a SPA link. No page reload
 ### Method 2: The `$go()` Helper (Programmatic)
 
 ```javascript
-// In your component methods
+// In your block methods
 handleLoginClick() {
   this.$go('/login').get();
 }
@@ -97,7 +97,7 @@ Want to update only a specific part of the page?
 
 Let's add a login page to navigate to.
 
-Create `src/components/login-page.lego`:
+Create `src/blocks/login-page.lego`:
 
 ```html
 <template>
@@ -218,9 +218,9 @@ export default {
 ```javascript
 // src/app.js
 import { Lego } from 'lego-dom';
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-blocks';
 
-registerComponents();
+registerBlocks();
 
 Lego.route('/', 'home-page');
 Lego.route('/login', 'login-page');    // Add this!
@@ -253,7 +253,7 @@ npm run dev
 ## What You've Learned
 
 ✅ Routes go in `app.js`, before `Lego.init()`  
-✅ `Lego.route(path, component)` maps URLs to components  
+✅ `Lego.route(path, block)` maps URLs to blocks  
 ✅ `b-link` on `<a>` tags for declarative navigation  
 ✅ `$go(path).get()` for programmatic navigation  
 ✅ Dynamic routes with `:param` syntax  
@@ -262,7 +262,7 @@ npm run dev
 
 | I want to... | Use this |
 |--------------|----------|
-| Define a route | `Lego.route('/path', 'component-name')` |
+| Define a route | `Lego.route('/path', 'block-name')` |
 | Navigate via link | `<a href="/path" b-link>Click</a>` |
 | Navigate via JS | `this.$go('/path').get()` |
 | Get route params | `this.$route.params.id` |
@@ -270,8 +270,8 @@ npm run dev
 ---
 
 <div style="display: flex; justify-content: space-between; margin-top: 3rem;">
-  <a href="./02-your-first-component" style="display: inline-block; background: #eee; color: #333; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
-    ← Previous: Your First Component
+  <a href="./02-your-first-block" style="display: inline-block; background: #eee; color: #333; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
+    ← Previous: Your First Block
   </a>
   <a href="./04-multi-page-app" style="display: inline-block; background: #4CAF50; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
     Next: Multi-Page App →

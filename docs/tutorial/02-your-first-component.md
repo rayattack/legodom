@@ -1,10 +1,10 @@
-# Step 2: Your First Component
+# Step 2: Your First Block
 
-Now let's create a component! By the end of this page, you'll understand the `.lego` file format and have a working home page.
+Now let's create a block! By the end of this page, you'll understand the `.lego` file format and have a working home page.
 
 ## Create Your First `.lego` File
 
-Create `src/components/home-page.lego`:
+Create `src/blocks/home-page.lego`:
 
 ```html
 <template>
@@ -106,7 +106,7 @@ export default {
   
   features: [
     { icon: '⚡', title: 'Lightning Fast', description: 'No virtual DOM overhead' },
-    { icon: '🧩', title: 'Component-Based', description: 'Reusable building blocks' },
+    { icon: '🧩', title: 'Block-Based', description: 'Reusable building blocks' },
     { icon: '🎨', title: 'Scoped Styles', description: 'CSS that never leaks' }
   ],
   
@@ -141,12 +141,12 @@ Every `.lego` file has three sections:
 ```html
 <style>
   self {
-    /* 'self' targets the component root (like :host) */
+    /* 'self' targets the block root (like :host) */
     display: block;
   }
   
   button {
-    /* These styles ONLY affect this component */
+    /* These styles ONLY affect this block */
   }
 </style>
 ```
@@ -168,7 +168,7 @@ export default {
   
   // Lifecycle
   mounted() {
-    console.log('Component is ready');
+    console.log('Block is ready');
   }
 }
 </script>
@@ -176,13 +176,13 @@ export default {
 
 ## Register the Route
 
-Now update `src/app.js` to show your component:
+Now update `src/app.js` to show your block:
 
 ```javascript{7-8}
 import { Lego } from 'lego-dom';
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-blocks';
 
-registerComponents();
+registerBlocks();
 
 // Add this line:
 Lego.route('/', 'home-page');
@@ -202,17 +202,17 @@ Open `http://localhost:5173` and you'll see your beautiful home page!
 
 ✅ The three-section `.lego` file structure  
 ✅ Template syntax: `[[ ]]` for data, `@click` for events, `b-for` for loops  
-✅ The `self` keyword for component root styling  
+✅ The `self` keyword for block root styling  
 ✅ How to export state and methods from `<script>`  
-✅ Connecting a component to a route  
+✅ Connecting a block to a route  
 
-## Key Pattern: Component → Route → Display
+## Key Pattern: Block → Route → Display
 
 ```
 home-page.lego  →  Lego.route('/', 'home-page')  →  <lego-router> shows it
 ```
 
-The filename (minus `.lego`) becomes the component name. Routes map URLs to component names. The router displays the matched component.
+The filename (minus `.lego`) becomes the block name. Routes map URLs to block names. The router displays the matched block.
 
 ---
 

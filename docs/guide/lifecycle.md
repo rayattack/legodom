@@ -1,18 +1,18 @@
 # Lifecycle Hooks
 
-Learn about component lifecycle hooks in Lego.
+Learn about block lifecycle hooks in Lego.
 
 ## Overview
 
-Components have three lifecycle hooks:
+Lego blocks have three lifecycle hooks:
 
-- `mounted()` - Called after component is added to DOM
+- `mounted()` - Called after block is added to DOM
 - `updated()` - Called after state changes and re-render
-- `unmounted()` - Called when component is removed from DOM
+- `unmounted()` - Called when block is removed from DOM
 
 ## mounted()
 
-Called once when the component is first attached to the DOM.
+Called once when the block is first attached to the DOM.
 
 ### Usage
 
@@ -21,7 +21,7 @@ Called once when the component is first attached to the DOM.
   data: null,
   
   mounted() {
-    console.log('Component is now in the DOM');
+    console.log('Block is now in the DOM');
     this.fetchData();
   },
   
@@ -87,7 +87,7 @@ Called after every state change and re-render.
   count: 0,
   
   updated() {
-    console.log('Component re-rendered, count is:', this.count);
+    console.log('Block re-rendered, count is:', this.count);
   }
 }
 ```
@@ -129,7 +129,7 @@ Called after every state change and re-render.
   updated() {
     if (window.gtag) {
       gtag('event', 'state_change', {
-        component: 'my-component',
+        block: 'my-block',
         count: this.count
       });
     }
@@ -143,14 +143,14 @@ Called after every state change and re-render.
 
 ## unmounted()
 
-Called when the component is removed from the DOM.
+Called when the block is removed from the DOM.
 
 ### Usage
 
 ```js
 {
   unmounted() {
-    console.log('Component is being removed');
+    console.log('Block is being removed');
     this.cleanup();
   }
 }
@@ -239,11 +239,11 @@ Called when the component is removed from the DOM.
 
 ## Performance Hooks (Metrics)
 
-For advanced monitoring, LegoDOM provides global hooks in `Lego.config.metrics`. These run for **every** component.
+For advanced monitoring, LegoDOM provides global hooks in `Lego.config.metrics`. These run for **every** block.
 
 ### `onRenderStart` & `onRenderEnd`
 
-Useful for tracking how long renders take, which helps identify slow components.
+Useful for tracking how long renders take, which helps identify slow blocks.
 
 ```javascript
 Lego.config.metrics = {
@@ -258,7 +258,7 @@ Lego.config.metrics = {
 
 ### `onAllSettled` (New in v2.0)
 
-Called when the entire component tree (including Shadow DOM children) has finished its initial render pass. This is perfect for removing loading spinners or measuring "Time to Interactive".
+Called when the entire block tree (including Shadow DOM children) has finished its initial render pass. This is perfect for removing loading spinners or measuring "Time to Interactive".
 
 ```javascript
 /* main.js */
@@ -270,15 +270,15 @@ Lego.init(document.body).then(() => {
 ## Lifecycle Flow
 
 ```
-1. Component created (HTML element instantiated)
+1. Block created (HTML element instantiated)
 2. Shadow DOM attached
 3. Template rendered
-4. mounted() hook called → Component is interactive
+4. mounted() hook called → Block is interactive
 5. User interaction / state change
-6. Component re-rendered
+6. Block re-rendered
 7. updated() hook called
 8. (repeat steps 5-7 as needed)
-9. Component removed from DOM
+9. Block removed from DOM
 10. unmounted() hook called → Cleanup
 ```
 
@@ -291,9 +291,9 @@ Lego.init(document.body).then(() => {
   timer: null,
   data: null,
   
-  // Lifecycle: Component mounted
+  // Lifecycle: Block mounted
   mounted() {
-    console.log('[mounted] Component added to DOM');
+    console.log('[mounted] Block added to DOM');
     
     // Fetch initial data
     this.fetchData();
@@ -312,9 +312,9 @@ Lego.init(document.body).then(() => {
     document.addEventListener('keydown', this.handleKeyPress);
   },
   
-  // Lifecycle: Component updated
+  // Lifecycle: Block updated
   updated() {
-    console.log('[updated] Component re-rendered, count:', this.count);
+    console.log('[updated] Block re-rendered, count:', this.count);
     
     // Log when count reaches milestone
     if (this.count % 10 === 0) {
@@ -322,9 +322,9 @@ Lego.init(document.body).then(() => {
     }
   },
   
-  // Lifecycle: Component unmounted
+  // Lifecycle: Block unmounted
   unmounted() {
-    console.log('[unmounted] Component removed from DOM');
+    console.log('[unmounted] Block removed from DOM');
     
     // Clear interval
     if (this.timer) {
@@ -356,7 +356,7 @@ Don't fetch data or start timers in the state object:
 // ❌ Bad
 {
   data: fetch('/api/data').then(r => r.json()),  // Executes immediately
-  timer: setInterval(() => {}, 1000)  // Starts before component exists
+  timer: setInterval(() => {}, 1000)  // Starts before block exists
 }
 
 // ✅ Good
@@ -500,7 +500,7 @@ If you start something in `mounted()`, stop it in `unmounted()`:
 
 ## Debugging Lifecycle
 
-Log lifecycle events to understand component behavior:
+Log lifecycle events to understand block behavior:
 
 ```js
 {

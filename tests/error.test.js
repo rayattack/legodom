@@ -38,7 +38,7 @@ describe('LegoDOM Error Handling', () => {
     const errorSpy = vi.fn();
     window.Lego.config.onError = errorSpy;
 
-    // Define a component that throws an error when accessing a property used in template
+    // Define a block that throws an error when accessing a property used in template
     window.Lego.define('error-comp', '<div>[[ throwErr() ]]</div>', {
       throwErr() {
         throw new Error('Render Failure');
