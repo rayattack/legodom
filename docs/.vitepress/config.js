@@ -20,7 +20,7 @@ export default defineConfig({
       { text: 'Examples', link: '/examples/' },
       { text: 'Router', link: '/router/' },
       {
-        text: 'v2.0.1',
+        text: 'v2.0.3',
         items: [
           { text: 'Changelog', link: 'https://github.com/rayattack/LegoDOM/releases' }
 
@@ -83,6 +83,7 @@ export default defineConfig({
             { text: 'Templating', link: '/guide/templating' },
             { text: 'Reactivity', link: '/guide/reactivity' },
             { text: 'Directives', link: '/guide/directives' },
+            { text: 'Persistence ($db)', link: '/guide/persistence' },
             { text: 'Helper Utilities', link: '/guide/helpers' }
           ]
         },

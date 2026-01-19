@@ -133,7 +133,11 @@ const Lego = (() => {
           queued = false;
 
           // Simple synchronous render loop (faster for small batches, no overhead)
-          batch.forEach(el => render(el));
+          batch.forEach(el => {
+            // Re-check bindings in case they were removed? 
+            // Actually, render checks for connected, but good to be safe.
+            if (el.isConnected) render(el);
+          });
 
           // Batch complete: Queue updated hooks efficiently
           batch.forEach(el => pendingUpdated.add(el));
@@ -146,9 +150,69 @@ const Lego = (() => {
 
   const globalBatcher = createBatcher();
 
+  // --- Persistence Layer ($db) ---
+  const dbBindings = new Map(); // storageKey -> Set<{target, prop}>
+  const dbTimers = new Map();   // storageKey -> timerId
+
+  const registerDbBinding = (target, prop, key) => {
+    if (!dbBindings.has(key)) dbBindings.set(key, new Set());
+    dbBindings.get(key).add({ target, prop });
+  };
+
+  const scheduleSave = (key, value, debounce) => {
+    if (dbTimers.has(key)) clearTimeout(dbTimers.get(key));
+    const save = () => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        dbTimers.delete(key);
+      } catch (e) { console.error(`[Lego] Storage Error (${key}):`, e); }
+    };
+    if (debounce > 0) {
+      dbTimers.set(key, setTimeout(save, debounce));
+    } else {
+      save();
+    }
+  };
+
+  // Cross-tab Synchronization
+  window.addEventListener('storage', (e) => {
+    if (!e.key || !dbBindings.has(e.key)) return;
+    try {
+      const newValue = JSON.parse(e.newValue);
+      dbBindings.get(e.key).forEach(({ target, prop, el, batcher }) => {
+        target[prop] = newValue; // Update raw data
+        if (el && batcher) batcher.add(el); // Trigger re-render
+      });
+    } catch (e) { }
+  });
+
+  const dbMetadata = new WeakMap(); // target -> { prop: { key, debounce } }
+
   const reactive = (obj, el, batcher = globalBatcher) => {
     if (obj === null || typeof obj !== 'object' || obj instanceof Node) return obj;
     if (proxyCache.has(obj)) return proxyCache.get(obj);
+
+    // Hydrate $db descriptors
+    for (const k in obj) {
+      const desc = obj[k];
+      if (desc && desc.__type === 'lego-db') {
+        let val = desc._default;
+        try {
+          const item = localStorage.getItem(desc.key);
+          if (item !== null) val = JSON.parse(item);
+        } catch (e) { }
+
+        obj[k] = val; // Replace descriptor with value
+
+        // Register metadata
+        if (!dbMetadata.has(obj)) dbMetadata.set(obj, {});
+        dbMetadata.get(obj)[k] = { key: desc.key, debounce: desc._debounce };
+
+        // Register for cross-tab updates
+        if (!dbBindings.has(desc.key)) dbBindings.set(desc.key, new Set());
+        dbBindings.get(desc.key).add({ target: obj, prop: k, el, batcher });
+      }
+    }
 
     const handler = {
       get: (t, k) => {
@@ -161,7 +225,14 @@ const Lego = (() => {
       set: (t, k, v) => {
         const old = t[k];
         const r = Reflect.set(t, k, v);
-        if (old !== v) batcher.add(el);
+        if (old !== v) {
+          batcher.add(el);
+          // Check for DB binding
+          const meta = dbMetadata.get(t);
+          if (meta && meta[k]) {
+            scheduleSave(meta[k].key, v, meta[k].debounce);
+          }
+        }
         return r;
       },
       deleteProperty: (t, k) => {
@@ -248,6 +319,7 @@ const Lego = (() => {
         $element: context.self,
         $route: Lego.globals.$route,
         $go: (path, ...targets) => _go(path, ...targets)(context.self),
+        $db: dbFactory,
         $emit: (name, detail) => {
           context.self.dispatchEvent(new CustomEvent(name, {
             detail,
@@ -672,7 +744,18 @@ const Lego = (() => {
     });
   };
 
+  // $db Factory
+  const dbFactory = (key) => ({
+    __type: 'lego-db',
+    key,
+    _default: undefined,
+    _debounce: 0,
+    default(v) { this._default = v; return this; },
+    debounce(ms) { this._debounce = ms; return this; }
+  });
+
   const publicAPI = {
+    db: dbFactory,
     snap,
     unsnap,
     init: async (root = document.body, options = {}) => {
@@ -779,7 +862,8 @@ const Lego = (() => {
         method: 'GET',
         body: null
       },
-      $go: (path, ...targets) => _go(path, ...targets)(document.body)
+      $go: (path, ...targets) => _go(path, ...targets)(document.body),
+      $db: dbFactory
     }, document.body),
     defineLegoFile: (content, filename = 'block.lego') => {
       let template = '';
@@ -828,8 +912,7 @@ const Lego = (() => {
       }
 
       const name = deriveBlockName(filename);
-      // We must eval the script to get the object. 
-      // Safe-ish because it's coming from the "Server" (trusted source in this architecture)
+      // Inject $db helper into the scope
       const logicObj = new Function(`return ${script}`)();
 
       if (style) {

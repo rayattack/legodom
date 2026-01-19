@@ -2,6 +2,25 @@
 
 # Changelog
 
+## [2.0.3] - 2026-01-19
+
+### Features
+
+- **Reactive Persistence (`$db`):** New helper for persisting state to `localStorage` with automatic hydration, debouncing, and cross-tab synchronization.
+  ```html
+  <user-prefs b-logic="{
+    theme: $db('app.theme').default('light'),
+    volume: $db('app.vol').default(50).debounce(300)
+  }"></user-prefs>
+  ```
+  - **Auto-Load:** Values are automatically hydrated from `localStorage` on block creation.
+  - **Auto-Save:** Changes are automatically persisted (with optional debounce).
+  - **Cross-Tab Sync:** Updates in one tab automatically reflect in other tabs.
+
+### Documentation
+
+- Added `docs/guide/persistence.md` covering the `$db` API, namespacing best practices, and performance warnings.
+
 ## [2.0.2] - 2026-01-19
 
 ### Features
