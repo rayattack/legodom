@@ -22,7 +22,7 @@ Lego.snap(element)
 2. **Attaches Shadow DOM** - Creates and attaches a shadow root
 3. **Clones template** - Copies the component's template into the shadow root
 4. **Applies styles** - Attaches any registered stylesheets via `b-stylesheets`
-5. **Merges state** - Combines SFC logic, template `b-data`, and instance `b-data`
+5. **Merges state** - Combines Block logic, template `b-logic`, and instance `b-logic`
 6. **Creates reactive state** - Wraps the state in a Proxy for reactivity
 7. **Binds events** - Attaches event listeners from `@click`, `@input`, etc.
 8. **Renders** - Processes all directives (`b-show`, `b-for`, etc.)

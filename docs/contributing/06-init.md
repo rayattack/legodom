@@ -83,7 +83,7 @@ const observer = new MutationObserver(m => m.forEach(r => {
       
       // Auto-Discovery (v2.0): Check for remote components
       const tagName = n.tagName.toLowerCase();
-      if (tagName.includes('-') && !registry[tagName] && config.loader && !activeComponents.has(n)) {
+      if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
         // ... Call loader ...
       }
     }

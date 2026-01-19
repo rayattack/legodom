@@ -57,9 +57,9 @@ features:
     details: Battle-tested patterns from Vue and React, adapted for pure Web Components. No framework lock-in.
 ---
 
-## Components & Naming
+## Blocks & Naming
 
-How you name your components depends on how you use LegoDOM:
+How you name your blocks depends on how you use LegoDOM:
 
 ### 1. Vite / Build Tools (Recommended)
 **Convention over Configuration.** The filename *is* the tag name.
@@ -69,7 +69,7 @@ How you name your components depends on how you use LegoDOM:
 You do not need `b-id` inside `.lego` files; the build system handles registration automatically.
 
 ### 2. CDN / Script Tags
-Since there are no files, you must explicitly name your components using the `b-id` attribute on the `<template>` tag.
+Since there are no files, you must explicitly name your blocks using the `b-id` attribute on the `<template>` tag.
 
 ```html
 <!-- Only needed for CDN usage -->
@@ -81,8 +81,8 @@ Since there are no files, you must explicitly name your components using the `b-
 ## Quick Start (CDN)
 
 ```html
-<!-- Define a component -->
-<template b-id="counter-button" b-data="{
+<!-- Define a block -->
+<template b-id="counter-button" b-logic="{
   title: 'My counter',
   count: 0
 }">
@@ -97,35 +97,35 @@ Since there are no files, you must explicitly name your components using the `b-
     }
   </style>
   
-  <h2>{{ title }}</h2>
+  <h2>[[ title ]]</h2>
   <button @click="count++">
-    Clicked {{ count }} times
+    Clicked [[ count ]] times
   </button>
 </template>
 
 <!-- Use it -->
-<counter-button b-data="{ title: 'Override b-data title' }"></counter-button>
+<counter-button b-logic="{ title: 'Override b-logic title' }"></counter-button>
 
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 <script>
   // Complete the initialization
-  LegoDOM.init();
+  Lego.init();
 </script>
 ```
 
 That's it. No build step, no npm, no configuration.
 
 > [!IMPORTANT]
-> **Why call `LegoDOM.init()`?**
-> While `LegoDOM.define()` will "snap" your components into the page immediately, you must call `LegoDOM.init()` to start the background engine. Without it:
+> **Why call `Lego.init()`?**
+> While `Lego.block()` (or simple templates) will "snap" your blocks into the page immediately, you must call `Lego.init()` to start the background engine. Without it:
 > - **Reactivity** to data changes won't work.
-> - **Mustaches** (<code v-pre>{{...}}</code>) outside of components won't hydrate.
+> - **Mustaches** (`[[...]]`) outside of blocks won't hydrate.
 > - **Single Page Routing** won't be activated.
-> - **New components** added to the DOM dynamically won't be auto-initialized.
+> - **New blocks** added to the DOM dynamically won't be auto-initialized.
 
 ## Why LegoDOM?
 
-**For small projects**, you get reactive components without the overhead of a full framework.
+**For small projects**, you get reactive blocks without the overhead of a full framework.
 
 **For large projects**, you get a clear mental model and Web Standards compliance.
 

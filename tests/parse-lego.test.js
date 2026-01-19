@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseLego,
-  deriveComponentName,
-  generateDefineCall,
+  deriveBlockName,
+  generateBlockCall,
   validateLego
 } from '../parse-lego.js';
 
 describe('parse-lego tests', () => {
-  it('should derive component name correctly', () => {
-    expect(deriveComponentName('user-card.lego')).toBe('user-card');
-    expect(deriveComponentName('src/components/nav-bar.lego')).toBe('nav-bar');
+  it('should derive block name correctly', () => {
+    expect(deriveBlockName('user-card.lego')).toBe('user-card');
+    expect(deriveBlockName('src/blocks/nav-bar.lego')).toBe('nav-bar');
   });
 
   it('should extract attributes from template', () => {
@@ -25,40 +25,40 @@ export default { mounted() { console.log('hi') } }
 </style>
 `;
     const parsed = parseLego(sfcContent, 'user-profile.lego');
-    expect(parsed.componentName).toBe('user-profile');
+    expect(parsed.blockName).toBe('user-profile');
     expect(parsed.stylesAttr).toBe('tailwind chartist');
     expect(parsed.template).toContain('[[name]]');
     expect(parsed.script).toContain('mounted');
     expect(parsed.style).toContain('color: red');
   });
 
-  it('should generate Lego.define call with 4th argument', () => {
+  it('should generate Lego.block call with 4th argument', () => {
     const sfcContent = `<template b-stylesheets="tailwind">Hi</template>`;
     const parsed = parseLego(sfcContent, 'test.lego');
-    const defineCall = generateDefineCall(parsed);
+    const blockCall = generateBlockCall(parsed);
 
-    expect(defineCall).toContain("Lego.define('test'");
-    expect(defineCall).toContain(", 'tailwind');");
+    expect(blockCall).toContain("Lego.block('test'");
+    expect(blockCall).toContain(", 'tailwind');");
   });
 
   it('should escape correctly in template', () => {
     const complexContent = {
-      componentName: 'test-comp',
+      blockName: 'test-block',
       template: 'I cost $5 and use `backticks`',
       script: 'export default {}',
       style: '',
       stylesAttr: 'css-set'
     };
-    const escapedCall = generateDefineCall(complexContent);
+    const escapedCall = generateBlockCall(complexContent);
     expect(escapedCall).toContain('\\$5');
     expect(escapedCall).toContain('\\`backticks\\`');
   });
 
-  it('should validate lego component names', () => {
-    const validResult = validateLego({ componentName: 'valid-name', template: '<div></div>' });
+  it('should validate lego block names', () => {
+    const validResult = validateLego({ blockName: 'valid-name', template: '<div></div>' });
     expect(validResult.valid).toBe(true);
 
-    const invalidResult = validateLego({ componentName: 'badname' });
+    const invalidResult = validateLego({ blockName: 'badname' });
     expect(invalidResult.valid).toBe(false);
     expect(invalidResult.errors.some(e => e.includes('kebab-case'))).toBe(true);
   });

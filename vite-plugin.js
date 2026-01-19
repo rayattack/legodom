@@ -1,25 +1,25 @@
 /**
- * Vite plugin for Lego Single File Components
+ * Vite plugin for Lego Single File Blocks
  * Auto-discovers and transforms .lego files
  */
 
-import { parseLego, generateDefineCall, validateLego } from './parse-lego.js';
+import { parseLego, generateBlockCall, validateLego } from './parse-lego.js';
 import path from 'path';
 import fg from 'fast-glob';
 
-const VIRTUAL_MODULE_ID = 'virtual:lego-components';
+const VIRTUAL_MODULE_ID = 'virtual:lego-blocks';
 const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID;
 
 /**
  * Vite plugin for Lego SFC support
  * @param {object} options - Plugin options
- * @param {string} options.componentsDir - Directory to search for .lego files
+ * @param {string} options.blocksDir - Directory to search for .lego files
  * @param {string[]} options.include - Glob patterns to include
  * @returns {import('vite').Plugin}
  */
 export default function legoPlugin(options = {}) {
   const {
-    componentsDir = './src/components',
+    blocksDir = './src/blocks',
     include = ['**/*.lego'],
     importPath = 'lego-dom'
   } = options;
@@ -30,7 +30,7 @@ export default function legoPlugin(options = {}) {
 
   const getSearchPath = () => {
     const root = config?.root || process.cwd();
-    return path.resolve(root, componentsDir);
+    return path.resolve(root, blocksDir);
   };
 
   const scanFiles = async () => {
@@ -75,13 +75,13 @@ export default function legoPlugin(options = {}) {
       server.watcher.add(searchPath);
       server.watcher.on('add', (file) => {
         if (file.endsWith('.lego')) {
-          console.log(`[vite-plugin-lego] New component detected: ${path.basename(file)}`);
+          console.log(`[vite-plugin-lego] New block detected: ${path.basename(file)}`);
           scanFiles().then(invalidateVirtualModule);
         }
       });
       server.watcher.on('unlink', (file) => {
         if (file.endsWith('.lego')) {
-          console.log(`[vite-plugin-lego] Component removed: ${path.basename(file)}`);
+          console.log(`[vite-plugin-lego] Block removed: ${path.basename(file)}`);
           scanFiles().then(invalidateVirtualModule);
         }
       });
@@ -90,7 +90,7 @@ export default function legoPlugin(options = {}) {
     async buildStart() {
       await scanFiles();
       if (legoFiles.length > 0) {
-        console.log(`[vite-plugin-lego] Discovered ${legoFiles.length} component(s):`);
+        console.log(`[vite-plugin-lego] Discovered ${legoFiles.length} block(s):`);
         legoFiles.forEach(file => {
           const name = path.basename(file);
           console.log(`  - ${name}`);
@@ -105,13 +105,13 @@ export default function legoPlugin(options = {}) {
     },
 
     async load(id) {
-      // Handle virtual module that imports all .lego components
+      // Handle virtual module that imports all .lego blocks
       if (id === RESOLVED_VIRTUAL_MODULE_ID) {
         const imports = legoFiles.map((file, index) =>
-          `import component${index} from '${file}?lego-component';`
+          `import block${index} from '${file}?lego-block';`
         ).join('\n');
 
-        const exports = `export default function registerComponents() {\n  // Components are auto-registered when imported\n}`;
+        const exports = `export default function registerBlocks() {\n  // Blocks are auto-registered when imported\n}`;
 
         return `${imports}\n\n${exports}`;
       }
@@ -130,14 +130,14 @@ export default function legoPlugin(options = {}) {
           throw new Error(`Invalid .lego file "${filename}":\n${validation.errors.join('\n')}`);
         }
 
-        const defineCall = generateDefineCall(parsed);
+        const blockCall = generateBlockCall(parsed);
 
         return `
 import { Lego } from '${importPath}';
 
-${defineCall}
+${blockCall}
 
-export default '${parsed.componentName}';
+export default '${parsed.blockName}';
 `;
       }
     },
@@ -145,7 +145,7 @@ export default '${parsed.componentName}';
     handleHotUpdate({ file, server }) {
       if (file.endsWith('.lego')) {
         console.log(`[vite-plugin-lego] Hot reload: ${path.basename(file)}`);
-        // Trigger full reload for component content changes
+        // Trigger full reload for block content changes
         server.ws.send({
           type: 'full-reload',
           path: '*'

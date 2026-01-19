@@ -23,7 +23,7 @@ LegoDOM uses a specific optimization to avoid re-rendering the whole world.
 
 -   **Depenedency Tracking**: During `scanForBindings`, if the parser sees a variable that looks global (e.g. `[[ global.user ]]`), it marks that specific component with a `hasGlobalDependency` flag.
 
--   **The Broadcast Loop**: When you change a global (e.g., `Lego.globals.theme = 'dark'`), the Proxy's `set` trap fires on `document.body`. The `render` function sees this is a global update and iterates through **activeComponents**, checking which ones have the flag. Only those components re-render.
+-   **The Broadcast Loop**: When you change a global (e.g., `Lego.globals.theme = 'dark'`), the Proxy's `set` trap fires on `document.body`. The `render` function sees this is a global update and iterates through **activeBlocks**, checking which ones have the flag. Only those components re-render.
     
 
 ### 4. Why `Object.defineProperty` is avoided for Globals

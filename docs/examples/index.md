@@ -17,7 +17,7 @@ A simple reactive counter demonstrating basic state and events.
   <button @click="count++">Increment</button>
 </template>
 
-<click-counter b-data="{ count: 0 }"></click-counter>
+<click-counter b-logic="{ count: 0 }"></click-counter>
 ```
 
 ### Input Binding
@@ -30,7 +30,7 @@ Two-way data binding with `b-sync`.
   <p b-show="name">Hello, [[ name ]]!</p>
 </template>
 
-<name-input b-data="{ name: '' }"></name-input>
+<name-input b-logic="{ name: '' }"></name-input>
 ```
 
 ### Todo List
@@ -47,7 +47,7 @@ Lists with `b-for`.
   </ul>
 </template>
 
-<todo-list b-data="{
+<todo-list b-logic="{
   todos: [
     { text: 'Learn Lego', done: true },
     { text: 'Build an app', done: false }
@@ -75,7 +75,7 @@ Single-page application with:
 
 ### [SFC Showcase](/examples/sfc-showcase)
 
-Using Single File Components:
+Using Single File Blocks:
 - User cards
 - Product grid
 - Modal dialogs

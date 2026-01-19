@@ -24,7 +24,7 @@ The `b-target` directive allows a link to specify exactly where the new componen
 
 ### Example: messaging-shell.html
 
-In this SFC, we define a layout with a sidebar and a main content area. Clicking a contact updates _only_ the `<main>` area.
+In this Block, we define a layout with a sidebar and a main content area. Clicking a contact updates _only_ the `<main>` area.
 
 ```html
 <!-- messaging-shell.html -->

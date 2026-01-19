@@ -24,7 +24,7 @@ Handling forms in Lego.
 </template>
 
 <script>
-  Lego.define('login-form', {
+  Lego.block('login-form', {
     email: '',
     password: '',
     error: '',

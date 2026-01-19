@@ -1,5 +1,5 @@
 import { Lego as o } from "lego-dom";
-o.define("lego-studio", `<style>self {
+o.block("lego-studio", `<style>self {
     display: block;
     position: fixed;
     top: 0;
@@ -67,7 +67,7 @@ o.define("lego-studio", `<style>self {
     box-sizing: border-box;
   }
   .search-input:focus { border-color: #2563eb; }
-  .component-list {
+  .block-list {
     list-style: none;
     padding: 0 1rem;
     margin: 0;
@@ -221,11 +221,11 @@ o.define("lego-studio", `<style>self {
       <div class="search-box">
         <input 
           b-sync="search" 
-          placeholder="Filter components..." 
+          placeholder="Filter blocks..." 
           class="search-input"
-          @input="filterComponents()">
+          @input="filterBlocks()">
       </div>
-      <div class="component-list">
+      <div class="block-list">
         <div b-for="name in filtered" class="nav-wrapper">
           <button @click="select(name)" class="nav-item [[ active === name ? 'active' : '' ]]">
             <span class="icon">📦</span>
@@ -240,10 +240,10 @@ o.define("lego-studio", `<style>self {
         <div class="breadcrumbs">
           <span class="crumb">App</span>
           <span class="separator">/</span>
-          <span class="crumb active">[[ active || 'Select a component' ]]</span>
+          <span class="crumb active">[[ active || 'Select a block' ]]</span>
         </div>
         <div class="actions">
-          <button @click="refresh()" title="Reload Component">🔄</button>
+          <button @click="refresh()" title="Reload Block">🔄</button>
         </div>
       </div>
       <div class="stage-container">
@@ -254,7 +254,7 @@ o.define("lego-studio", `<style>self {
           </div>
           <div class="empty-state" b-show="!active">
             <div class="empty-icon">👈</div>
-            <p>Select a component to inspect</p>
+            <p>Select a block to inspect</p>
           </div>
         </div>
       </div>
@@ -283,7 +283,7 @@ o.define("lego-studio", `<style>self {
       </div>
     </aside>
   </div>`, {
-  components: [],
+  blocks: [],
   filtered: [],
   search: "",
   active: null,
@@ -291,18 +291,18 @@ o.define("lego-studio", `<style>self {
   isDirty: !1,
   error: null,
   async mounted() {
-    this.components = o.getLegos().filter((e) => e !== "lego-studio"), this.filtered = [...this.components], this.$route.params && this.$route.params.component && this.select(this.$route.params.component, !1);
+    this.blocks = o.getLegos().filter((e) => e !== "lego-studio"), this.filtered = [...this.blocks], this.$route.params && this.$route.params.block && this.select(this.$route.params.block, !1);
   },
-  filterComponents() {
+  filterBlocks() {
     const e = this.search.toLowerCase();
-    this.filtered = this.components.filter(
+    this.filtered = this.blocks.filter(
       (t) => t.toLowerCase().includes(e)
     );
   },
   select(e, t = !0) {
-    this.active = e, t && this.$go("/_/studio/" + e).get(), this.renderComponent();
+    this.active = e, t && this.$go("/_/studio/" + e).get(), this.renderBlock();
   },
-  renderComponent() {
+  renderBlock() {
     this.active && setTimeout(() => {
       const e = this.$element.shadowRoot.getElementById("mount-point");
       if (e) {
@@ -311,16 +311,16 @@ o.define("lego-studio", `<style>self {
           const t = document.createElement(this.active);
           e.appendChild(t), o.snap(t), this.activeInstance = t;
         } catch (t) {
-          this.error = `Failed to render component: ${t.message}`;
+          this.error = `Failed to render block: ${t.message}`;
         }
         this.syncInspector();
       }
     }, 10);
   },
   syncInspector() {
-    var n;
-    if (!((n = this.activeInstance) != null && n.state)) return;
-    const e = this.activeInstance.state, t = Object.keys(e).filter((i) => !i.startsWith("$") && typeof e[i] != "function").reduce((i, r) => ({ ...i, [r]: e[r] }), {});
+    var r;
+    if (!((r = this.activeInstance) != null && r.state)) return;
+    const e = this.activeInstance.state, t = Object.keys(e).filter((i) => !i.startsWith("$") && typeof e[i] != "function").reduce((i, s) => ({ ...i, [s]: e[s] }), {});
     this.$vars.editor && (this.$vars.editor.textContent = JSON.stringify(t, null, 2)), this.isDirty = !1;
   },
   onEditorInput() {
@@ -337,10 +337,10 @@ o.define("lego-studio", `<style>self {
     e.key === "Tab" && (e.preventDefault(), document.execCommand("insertText", !1, "  "));
   },
   refresh() {
-    this.active && this.renderComponent();
+    this.active && this.renderBlock();
   }
 }, "");
-const a = "lego-studio";
+const n = "lego-studio";
 export {
-  a as default
+  n as default
 };

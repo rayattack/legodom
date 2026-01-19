@@ -277,8 +277,8 @@ A multi-page application demonstrating client-side routing.
     Lego.route('/users/:id', 'user-profile');
     Lego.route('/contact', 'contact-page');
     
-    // Users page component
-    Lego.define('users-page', 
+    // Users page block
+    Lego.block('users-page', 
       document.querySelector('template[b-id="users-page"]').innerHTML, {
         users: [],
         
@@ -289,8 +289,8 @@ A multi-page application demonstrating client-side routing.
       }
     );
     
-    // User profile component (dynamic route)
-    Lego.define('user-profile',
+    // User profile block (dynamic route)
+    Lego.block('user-profile',
       document.querySelector('template[b-id="user-profile"]').innerHTML, {
         loading: true,
         user: null,
@@ -304,8 +304,8 @@ A multi-page application demonstrating client-side routing.
       }
     );
     
-    // Contact page component
-    Lego.define('contact-page',
+    // Contact page block
+    Lego.block('contact-page',
       document.querySelector('template[b-id="contact-page"]').innerHTML, {
         form: {
           name: '',

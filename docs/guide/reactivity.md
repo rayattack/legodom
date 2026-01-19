@@ -7,8 +7,8 @@ Understand how Lego makes your UI automatically update when data changes.
 When you change an object, the DOM updates automatically:
 
 ```js
-component._studs.count = 5;  // DOM updates!
-component._studs.items.push('new item');  // DOM updates!
+block.state.count = 5;  // DOM updates!
+block.state.items.push('new item');  // DOM updates
 ```
 
 No `setState()`, no `dispatch()`, no special syntax. Just mutate the data.
@@ -20,17 +20,7 @@ Lego uses **ES6 Proxies** to track changes:
 ```js
 const reactive = (obj, el) => {
   return new Proxy(obj, {
-    set(target, key, value) {
-      const oldValue = target[key];
-      target[key] = value;
-      
-      if (oldValue !== value) {
-        // Schedule re-render
-        render(el);
-      }
-      
-      return true;
-    }
+    // ...
   });
 };
 ```
@@ -127,7 +117,7 @@ This prevents unnecessary DOM updates and improves performance.
 
 1. **State Change** - You mutate data
 2. **Proxy Intercepts** - Change is detected
-3. **Batch Queue** - Component added to update queue
+3. **Batch Queue** - Block added to update queue
 4. **requestAnimationFrame** - Browser schedules render
 5. **Re-render** - DOM is updated
 6. **updated() Hook** - Called after render
@@ -151,7 +141,7 @@ This prevents unnecessary DOM updates and improves performance.
 
 ## Global Reactivity
 
-Lego also supports **Global State** available to all components and the main document.
+Lego also supports **Global State** available to all blocks and the main document.
 
 ```js
 // src/main.js
@@ -165,7 +155,7 @@ For global state to automatically update mustaches in your `index.html`, you mus
 Lego.init();
 ```
 
-Inside any component, you can access global state via `global`:
+Inside any block, you can access global state via `global`:
 
 ```html
 <p b-show="global.isLoggedIn">Welcome!</p>
@@ -304,8 +294,8 @@ Don't make everything reactive:
 ### Inspect Proxy
 
 ```js
-console.log(component._studs);  // Proxy object
-console.log(component._studs.count);  // Actual value
+console.log(component.state);  // Proxy object
+console.log(component.state.count);  // Actual value
 ```
 
 ## Comparing with Other Frameworks

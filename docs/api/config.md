@@ -52,7 +52,7 @@ Lego.init(document.body, {
 2. `Lego` calls `config.loader('admin-widget')`.
 3. If URL returned, it fetches the file.
 4. The server returns raw SFC content (`<template>...`).
-5. `Lego.defineSFC()` parses and upgrades the element instantly.
+5. `Lego.defineLegoFile()` parses and upgrades the element instantly.
 
 ### `onError`
 

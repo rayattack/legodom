@@ -4,7 +4,7 @@ Using `.lego` files with Vite.
 
 ## File Structure
 
-**Counter.lego**
+**block-counter.lego**
 ```html
 <template>
   <button @click="count++">Count: [[ count ]]</button>
@@ -25,10 +25,10 @@ Using `.lego` files with Vite.
 
 **main.js**
 ```js
-import './Counter.lego';
+import './block-counter.lego';
 ```
 
 **index.html**
 ```html
-<counter-component></counter-component>
+<block-counter></block-counter>
 ```

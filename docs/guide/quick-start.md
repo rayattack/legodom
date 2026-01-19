@@ -8,8 +8,8 @@ Let's create a simple counter component.
 
 ### Using HTML
 
-::: tip 🚀 HTML vs SFC
-In HTML `<style>` goes inside `<template></template>` tags but in SFCs the appear outside
+::: tip 🚀 HTML vs Lego Files
+In HTML `<style>` goes inside `<template></template>` tags but in Lego Files they appear outside
 `<template></template>` tags.
 :::
 

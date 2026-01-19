@@ -1,9 +1,9 @@
 const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
-  const activeComponents = new Set();
+  const activeBlocks = new Set();
 
-  const sfcLogic = new Map();
+  const legoFileLogic = new Map();
   const sharedStates = new Map();
   const expressionCache = new Map(); // Cache for compiled expressions
 
@@ -39,7 +39,7 @@ const Lego = (() => {
     }[m]));
   };
 
-  const deriveComponentName = (filename) => {
+  const deriveBlockName = (filename) => {
     const basename = filename.split('/').pop().replace(/\.lego$/, '');
     // 1. Convert snake_case to kebab-case
     // 2. Convert PascalCase/camelCase to kebab-case
@@ -49,7 +49,7 @@ const Lego = (() => {
       .toLowerCase();
 
     if (!name.includes('-')) {
-      throw new Error(`[Lego] Invalid component definition: "${filename}". Component names must contain a hyphen (e.g. user-card.lego or UserCard.lego).`);
+      throw new Error(`[Lego] Invalid block definition: "${filename}". Block names must contain a hyphen (e.g. user-card.lego or UserCard.lego).`);
     }
     return name;
   };
@@ -68,7 +68,7 @@ const Lego = (() => {
       const el = document.getElementById(query.slice(1));
       return el ? [el] : [];
     }
-    // Scoped search first (within the calling component), then global fallback
+    // Scoped search first (within the calling block), then global fallback
     const scoped = contextEl?.querySelectorAll(query) || [];
     return scoped.length > 0 ? [...scoped] : [...document.querySelectorAll(query)];
   };
@@ -274,8 +274,8 @@ const Lego = (() => {
     }
   };
 
-  const bind = (container, componentRoot, loopCtx = null) => {
-    const state = componentRoot._studs;
+  const bind = (container, blockRoot, loopCtx = null) => {
+    const state = blockRoot._studs;
 
     const bindNode = (child) => {
       const childData = getPrivateData(child);
@@ -291,7 +291,7 @@ const Lego = (() => {
               try {
                 let evalScope = state;
                 if (loopCtx) {
-                  const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: componentRoot });
+                  const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: blockRoot });
                   const item = list[loopCtx.index];
                   evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
                 }
@@ -309,7 +309,7 @@ const Lego = (() => {
             try {
               let target, last;
               if (loopCtx && prop.startsWith(loopCtx.name + '.')) {
-                const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: componentRoot });
+                const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: blockRoot });
                 const item = list[loopCtx.index];
                 if (!item) return;
                 const subPath = prop.split('.').slice(1);
@@ -357,7 +357,7 @@ const Lego = (() => {
         let curr = n.parentNode;
         while (curr && curr !== container) {
           if (curr.hasAttribute && curr.hasAttribute('b-for')) return true;
-          // Only stop at Shadow Roots or explicit boundaries, NOT component tags in Light DOM
+          // Only stop at Shadow Roots or explicit boundaries, NOT block tags in Light DOM
           // The parent MUST be able to bind data to the slots of its children.
           curr = curr.parentNode;
         }
@@ -462,7 +462,7 @@ const Lego = (() => {
     if (config.metrics && config.metrics.onRenderStart) config.metrics.onRenderStart(el);
 
     try {
-      // Use shadowRoot if it's a component, otherwise render the element itself (light DOM)
+      // Use shadowRoot if it's a block, otherwise render the element itself (light DOM)
       const target = el.shadowRoot || el;
       if (!data.bindings) data.bindings = scanForBindings(target);
 
@@ -525,9 +525,9 @@ const Lego = (() => {
         }
       });
 
-      // Global Broadcast: Only notify components that depend on globals
+      // Global Broadcast: Only notify blocks that depend on globals
       if (state === Lego.globals) {
-        activeComponents.forEach(comp => {
+        activeBlocks.forEach(comp => {
           if (getPrivateData(comp).hasGlobalDependency) render(comp);
         });
       }
@@ -558,12 +558,12 @@ const Lego = (() => {
         }
       }
 
-      // TIER 1: Logic from Lego.define (SFC)
+      // TIER 1: Logic from Lego.block (Lego File)
       // TIER 2: Logic from the <template b-data="..."> attribute
       // TIER 3: Logic from the <my-comp b-data="..."> tag
-      const scriptLogic = sfcLogic.get(name) || {};
-      const templateLogic = parseJSObject(templateNode.getAttribute('b-data') || '{}');
-      const instanceLogic = parseJSObject(el.getAttribute('b-data') || '{}');
+      const scriptLogic = legoFileLogic.get(name) || {};
+      const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || templateNode.getAttribute('b-data') || '{}');
+      const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}');
 
       el._studs = reactive({
         ...scriptLogic,
@@ -593,7 +593,7 @@ const Lego = (() => {
       }
 
       bind(shadow, el);
-      activeComponents.add(el);
+      activeBlocks.add(el);
       render(el);
 
       [...shadow.children].forEach(snap);
@@ -619,7 +619,7 @@ const Lego = (() => {
       [...el.shadowRoot.children].forEach(unsnap);
     }
 
-    activeComponents.delete(el);
+    activeBlocks.delete(el);
     [...el.children].forEach(unsnap);
   };
 
@@ -701,7 +701,7 @@ const Lego = (() => {
             snap(n);
             // Auto-Discovery: Check if tag is unknown and loader is configured
             const tagName = n.tagName.toLowerCase();
-            if (tagName.includes('-') && !registry[tagName] && config.loader && !activeComponents.has(n)) {
+            if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
               const result = config.loader(tagName);
               if (result) {
                 // Handle Promise (user does custom fetch) vs String (we fetch)
@@ -710,7 +710,7 @@ const Lego = (() => {
                   : result;
 
                 Promise.resolve(promise)
-                  .then(sfc => publicAPI.defineSFC(sfc, tagName + '.lego'))
+                  .then(legoFile => publicAPI.defineLegoFile(legoFile, tagName + '.lego'))
                   .catch(e => console.error(`[Lego] Failed to load ${tagName}:`, e));
               }
             }
@@ -774,7 +774,7 @@ const Lego = (() => {
       },
       $go: (path, ...targets) => _go(path, ...targets)(document.body)
     }, document.body),
-    defineSFC: (content, filename = 'component.lego') => {
+    defineLegoFile: (content, filename = 'block.lego') => {
       let template = '';
       let script = '{}';
       let stylesAttr = '';
@@ -820,7 +820,7 @@ const Lego = (() => {
         remaining = remaining.slice(contentEnd + closeTag.length);
       }
 
-      const name = deriveComponentName(filename);
+      const name = deriveBlockName(filename);
       // We must eval the script to get the object. 
       // Safe-ish because it's coming from the "Server" (trusted source in this architecture)
       const logicObj = new Function(`return ${script}`)();
@@ -832,18 +832,18 @@ const Lego = (() => {
       registry[name] = document.createElement('template');
       registry[name].innerHTML = template;
       registry[name].setAttribute('b-stylesheets', stylesAttr);
-      sfcLogic.set(name, logicObj);
+      legoFileLogic.set(name, logicObj);
 
       // Upgrade existing elements
       document.querySelectorAll(name).forEach(el => !getPrivateData(el).snapped && snap(el));
     },
-    define: (tagName, templateHTML, logic = {}, styles = "") => {
+    block: (tagName, templateHTML, logic = {}, styles = "") => {
       const t = document.createElement('template');
       t.setAttribute('b-id', tagName);
       t.setAttribute('b-stylesheets', styles);
       t.innerHTML = templateHTML;
       registry[tagName] = t;
-      sfcLogic.set(tagName, logic);
+      legoFileLogic.set(tagName, logic);
 
       // Initialize shared state with try-catch safety
       try {
@@ -854,8 +854,11 @@ const Lego = (() => {
 
       document.querySelectorAll(tagName).forEach(snap);
     },
+    // Alias for backward compatibility
+    get define() { return this.block },
+
     // For specific test validation
-    getActiveComponentsCount: () => activeComponents.size,
+    getActiveBlocksCount: () => activeBlocks.size,
     getLegos: () => Object.keys(registry),
     config, // Expose config for customization
     route: (path, tagName, middleware = null) => {

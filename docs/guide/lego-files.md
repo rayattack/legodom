@@ -1,9 +1,9 @@
-# Single File Components (.lego)
+# Single File Blocks (.lego)
 
-Single File Components (SFCs) let you define components in dedicated `.lego` files when using Vite as your build tool.
+Single File Blocks (SFB) let you define blocks in dedicated `.lego` files when using Vite as your build tool.
 
 ::: tip 🚀 New to LegoDOM?
-Start with our **[Step-by-Step Tutorial](/tutorial/)** to build a complete multi-page app with SFCs!
+Start with our **[Step-by-Step Tutorial](/tutorial/)** to build a complete multi-page app with Lego Files!
 :::
 
 ## Where Does My Config Go?
@@ -16,10 +16,10 @@ The #1 question developers ask: **"I have a `.lego` file – now where do I put 
 // src/app.js – The control center of your app
 
 import { Lego } from 'lego-dom';
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-components'; // Plugin still uses this name for now
 
 // 1. Register all .lego files automatically
-registerComponents();
+registerBlocks();
 
 // 2. Define your routes
 Lego.route('/', 'home-page');           // home-page.lego
@@ -43,15 +43,15 @@ That's the complete pattern! 🎉
 
 ---
 
-## Why SFCs?
+## Why Lego Files?
 
-When your project grows, keeping components in separate files makes your codebase more organized and maintainable.
+When your project grows, keeping blocks in separate files makes your codebase more organized and maintainable.
 
 ### Benefits
 
-✅ **Better Organization** - One file per component  
+✅ **Better Organization** - One file per block  
 ✅ **Syntax Highlighting** - Proper editor support  
-✅ **Auto-discovery** - Vite plugin finds and registers components automatically  
+✅ **Auto-discovery** - Vite plugin finds and registers blocks automatically  
 ✅ **Hot Reload** - Changes reflect instantly during development  
 ✅ **Familiar Format** - Similar to Vue SFCs if you've used them
 
@@ -61,11 +61,11 @@ A `.lego` file contains three optional sections:
 
 ```html
 <template>
-  <!-- Your component markup -->
+  <!-- Your block markup -->
 </template>
 
 <script>
-// Your component logic
+// Your block logic
 export default {
   // reactive state and methods
 }
@@ -76,9 +76,9 @@ export default {
 </style>
 ```
 
-### Example Component
+### Example Block
 
-Here's a complete example (`user-card.lego`):
+Here's a complete example (`block-user-card.lego`):
 
 ```html
 <template>
@@ -168,8 +168,8 @@ import legoPlugin from 'lego-dom/vite-plugin';
 export default defineConfig({
   plugins: [
     legoPlugin({
-      componentsDir: './src/components',  // Where to look
-      include: ['**/*.lego']              // What to match
+      componentsDir: './src/blocks',  // Where to look
+      include: ['**/*.lego']          // What to match
     })
   ]
 });
@@ -180,10 +180,10 @@ export default defineConfig({
 ```
 my-app/
 ├── src/
-│   ├── components/
-│   │   ├── user-card.lego
-│   │   ├── post-list.lego
-│   │   └── comment-item.lego
+│   ├── blocks/
+│   │   ├── block-user-card.lego
+│   │   ├── block-post-list.lego
+│   │   └── block-comment-item.lego
 │   └── main.js
 ├── index.html
 ├── package.json
@@ -196,15 +196,15 @@ In your `src/main.js`:
 
 ```js
 import { Lego } from 'lego-dom/main.js';
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-components';
 
-// Auto-register all discovered components
-registerComponents();
+// Auto-register all discovered blocks
+registerBlocks();
 
-// Now all .lego components are available!
+// Now all .lego blocks are available!
 ```
 
-### Use Components
+### Use Blocks
 
 In your `index.html`:
 
@@ -216,8 +216,8 @@ In your `index.html`:
 </head>
 <body>
   <div id="app">
-    <user-card></user-card>
-    <post-list></post-list>
+    <block-user-card></block-user-card>
+    <block-post-list></block-post-list>
   </div>
   
   <script type="module" src="/src/main.js"></script>
@@ -225,23 +225,23 @@ In your `index.html`:
 </html>
 ```
 
-## Component Naming
+## Block Naming
 
-Component names are automatically derived from filenames:
+Block names are automatically derived from filenames:
 
-| Filename | Component Tag |
+| Filename | Block Tag |
 |----------|--------------|
-| `user-card.lego` | `<user-card>` |
-| `post-list.lego` | `<post-list>` |
-| `comment-item.lego` | `<comment-item>` |
+| `block-user-card.lego` | `<block-user-card>` |
+| `block-post-list.lego` | `<block-post-list>` |
+| `block-comment-item.lego` | `<block-comment-item>` |
 
 ::: warning Naming Rules
-Component names **must**:
+Block names **must**:
 - Be kebab-case (lowercase with hyphens)
 - Contain at least one hyphen
 - Match the pattern: `[a-z][a-z0-9]*(-[a-z0-9]+)+`
 
-✅ Good: `user-card`, `post-list`, `nav-menu`  
+✅ Good: `block-user-card`, `block-post-list`, `nav-menu`  
 ❌ Bad: `UserCard`, `postlist`, `card`
 :::
 
@@ -249,7 +249,7 @@ Component names **must**:
 
 ### Template Section
 
-Contains your component's HTML markup with Lego directives:
+Contains your block's HTML markup with Lego directives:
 
 ```html
 <template>
@@ -263,7 +263,7 @@ Contains your component's HTML markup with Lego directives:
 
 ### Script Section
 
-Exports the component's reactive state and methods:
+Exports the block's reactive state and methods:
 
 ```html
 <script>
@@ -280,7 +280,7 @@ export default {
   
   // Lifecycle hooks
   mounted() {
-    console.log('Component mounted!');
+    console.log('Block mounted!');
   }
 }
 </script>
@@ -288,7 +288,7 @@ export default {
 
 ### Style Section
 
-Scoped styles using Shadow DOM. Use `self` to target the component root:
+Scoped styles using Shadow DOM. Use `self` to target the block root:
 
 ```html
 <style>
@@ -308,13 +308,13 @@ Scoped styles using Shadow DOM. Use `self` to target the component root:
 </style>
 ```
 
-Styles are automatically scoped to your component—they won't affect other components or global styles.
+Styles are automatically scoped to your block—they won't affect other blocks or global styles.
 
 ## Dynamic Styles
 
-A powerful feature of LegoDOM SFCs is that **interpolation works inside `<style>` tags too!**
+A powerful feature of LegoDOM Single File Blocks is that **interpolation works inside `<style>` tags too!**
 
-You can use `[[ ]]` to bind CSS values directly to your component's state, props, or logic. Because styles are scoped (Shadow DOM), this is safe and won't leak.
+You can use `[[ ]]` to bind CSS values directly to your block's state, props, or logic. Because styles are scoped (Shadow DOM), this is safe and won't leak.
 
 ```html
 <template>
@@ -362,77 +362,69 @@ During development, changes to `.lego` files trigger a full page reload. Your ch
 npm run dev
 ```
 
-Edit your component, save, and see the result immediately.
+Edit your block, save, and see the result immediately.
 
 ## Passing Props
 
-Pass data to components via the `b-data` attribute:
+Pass data to blocks via the `b-logic` attribute:
 
 ```html
-<user-card b-data="{ 
+<user-card b-logic="{ 
   name: 'Jane Smith', 
   bio: 'Designer', 
   followers: 5678 
 }"></user-card>
 ```
 
-Or define defaults in the script section and override as needed.
+Or define defaults in the script section and override as needed. (Legacy `b-data` is also supported).
 
 ## Best Practices
 
-### 1. Keep Components Small
+### 1. Keep Blocks Small
 
-Each `.lego` file should represent a single, focused component.
+Each `.lego` file should represent a single, focused block.
 
-✅ Good: `user-avatar.lego`, `user-name.lego`, `user-bio.lego`  
+✅ Good: `block-user-avatar.lego`, `block-user-name.lego`  
 ❌ Bad: `entire-profile-page.lego`
 
 ### 2. Use Semantic Names
 
-Name components after what they represent, not how they look:
-
-✅ Good: `article-preview.lego`, `comment-list.lego`  
-❌ Bad: `blue-box.lego`, `flex-container.lego`
+Name blocks after what they represent, not how they look.
 
 ### 3. Organize by Feature
 
 ```
-components/
+blocks/
 ├── user/
-│   ├── user-card.lego
-│   ├── user-avatar.lego
-│   └── user-profile.lego
-├── posts/
-│   ├── post-item.lego
-│   └── post-list.lego
-└── shared/
-    ├── app-button.lego
-    └── app-modal.lego
+│   ├── block-user-card.lego
+│   └── block-user-profile.lego
+├── shared/
+│   └── block-app-button.lego
 ```
 
 ## Limitations
 
-- `.lego` files require Vite—they don't work with direct `<script>` tag inclusion
-- Each file creates exactly one component
-- Component name is derived from filename (cannot be customized)
+- `.lego` files require Vite
+- Each file creates exactly one block
+- Block name is derived from filename
 
-## Comparison: SFC vs Traditional
+## Comparison: Lego File vs Traditional
 
 ### Traditional (HTML Template)
 
 ```html
-<template b-id="my-component">
+<template b-id="my-block">
   <style>self { padding: 1rem; }</style>
   <h1>[[ title ]]</h1>
 </template>
 
-<my-component b-data="{ title: 'Hello' }"></my-component>
+<my-block b-logic="{ title: 'Hello' }"></my-block>
 ```
 
-### SFC (.lego file)
+### Lego File (.lego)
 
 ```html
-<!-- my-component.lego -->
+<!-- my-block.lego -->
 <template>
   <h1>[[ title ]]</h1>
 </template>
@@ -447,18 +439,3 @@ export default {
 }
 </script>
 ```
-
-```html
-<!-- index.html -->
-<my-component></my-component>
-```
-
-Both work perfectly! Choose based on your project needs:
-- **Small projects / prototypes** → HTML templates
-- **Medium/large projects** → SFCs with Vite
-
-## Next Steps
-
-- See [complete SFC examples](/examples/sfc-showcase)
-- Learn about the [Vite plugin API](/api/vite-plugin)
-- Check out the [routing guide](/guide/routing) for building apps

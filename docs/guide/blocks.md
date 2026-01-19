@@ -1,16 +1,14 @@
-# Components
+# 'B' is for Blocks
 
-Learn how to create and use components in Lego.
+Learn how to create and use blocks in LegoDOM.
 
-## What is a Component?
+## What is a Block?
 
-A component is a reusable, self-contained piece of UI with its own template, styles, and logic.
-
+A block is a reusable, self-contained piece of UI with its own template, styles, and logic. In other frameworks (and previous versions of LegoDOM), these are called "components". We call them Blocks because you use them to build your application.
 
 ::: warning Note That
-`style` tags inside NON SFC components are inside the `<template>` tag. And outside the tag in SFCs.
+`style` tags inside NON-SFB blocks are inside the `<template>` tag. And outside the tag in Lego Files.
 :::
-
 
 ```html
 <template b-id="user-badge">
@@ -35,14 +33,14 @@ A component is a reusable, self-contained piece of UI with its own template, sty
 </template>
 ```
 
-## Creating Components
+## Creating Blocks
 
 ### Method 1: HTML Templates
 
-Define components directly in your HTML with `<template b-id>`:
+Define blocks directly in your HTML with `<template b-id>`:
 
 ```html
-<template b-id="hello-world" b-data="{ name: 'Default User' }">
+<template b-id="hello-world" b-logic="{ name: 'Default User' }">
   <h1>Hello [[ name ]]!</h1>
 </template>
 
@@ -50,22 +48,22 @@ Define components directly in your HTML with `<template b-id>`:
 <hello-world></hello-world>
 
 <!-- Overrides the default with "Alice" -->
-<hello-world b-data="{ name: 'Alice' }"></hello-world>
+<hello-world b-logic="{ name: 'Alice' }"></hello-world>
 ```
 
 ### Method 2: JavaScript
 
-Use `Lego.define()` for programmatic component creation:
+Use `Lego.block()` for programmatic block creation:
 
 ```js
-Lego.define('hello-world', `
+Lego.block('hello-world', `
   <h1>Hello [[ name ]]!</h1>
 `, {
   name: 'Alice'
 });
 ```
 
-### Method 3: Single File Components (.lego)
+### Method 3: Single File Blocks (.lego)
 
 With Vite, use `.lego` files:
 
@@ -82,9 +80,9 @@ export default {
 </script>
 ```
 
-## Component State
+## Block State (Logic)
 
-State is defined in the component's logic object:
+State is defined in the block's logic object via the `b-logic` attribute:
 
 ```js
 {
@@ -113,56 +111,59 @@ Access state in templates using `[[ ]]`:
 
 ## Passing Data
 
-### Via b-data Attribute
+### Via b-logic Attribute
 
 ```html
-<user-card b-data="{ 
+<user-card b-logic="{ 
   name: 'Bob', 
   email: 'bob@example.com',
   role: 'admin' 
 }"></user-card>
 ```
 
+> **Note:** `b-data` is supported as a backward-compatible alias for `b-logic`.
+
 ### Data Merging (The Three Tiers)
 
-LegoDOM uses a sophisticated three-tier merging strategy to initialize component state. This allows you to define defaults at the component level, customize them in templates, and then override them for specific instances.
+LegoDOM uses a sophisticated three-tier merging strategy to initialize block state. This allows you to define defaults at the block level, customize them in templates, and then override them for specific instances.
 
 The priority is as follows (**last one wins**):
 
-1.  **Tier 1: Script Logic** - Data defined in `Lego.define()` or exported from a `.lego` SFC.
-2.  **Tier 2: Template Defaults** - Data defined on the `<template b-data="...">` attribute.
-3.  **Tier 3: Instance Overrides** - Data defined on the actual component tag `<my-comp b-data="...">`.
+1.  **Tier 1: Script Logic** - Data defined in `Lego.block()` or exported from a `.lego` file.
+2.  **Tier 2: Template Defaults** - Data defined on the `<template b-logic="...">` attribute.
+3.  **Tier 3: Instance Overrides** - Data defined on the actual block tag `<my-comp b-logic="...">`.
 
 ### Example of Merging
 
 ```html
 <!-- 1. Script Logic (Defined in JS) -->
 <script>
-  Lego.define('user-card', `...`, { role: 'guest', theme: 'light' });
+  // Lego.define is an alias for Lego.block
+  Lego.block('user-card', `...`, { role: 'guest', theme: 'light' });
 </script>
 
 <!-- 2. Template Defaults (Defined in HTML) -->
-<template b-id="user-card" b-data="{ role: 'member', name: 'Anonymous' }">
+<template b-id="user-card" b-logic="{ role: 'member', name: 'Anonymous' }">
   ...
 </template>
 
 <!-- 3. Instance Overrides -->
-<user-card b-data="{ name: 'Alice' }"></user-card>
+<user-card b-logic="{ name: 'Alice' }"></user-card>
 ```
 
-In the example above, the final state for the component will be:
+In the example above, the final state for the block will be:
 - `role`: `'member'` (Template override beats Script)
 - `theme`: `'light'` (Only defined in Script)
 - `name`: `'Alice'` (Instance override beats Template)
 
-## Component Communication
+## Block Communication
 
 ### Parent → Child (Props)
 
-Pass data via `b-data`:
+Pass data via `b-logic`:
 
 ```html
-<child-component b-data="{ title: parentData.title }"></child-component>
+<child-block b-logic="{ title: parentData.title }"></child-block>
 ```
 
 ### Child → Parent (Events)
@@ -170,13 +171,13 @@ Pass data via `b-data`:
 Use `$emit()` to dispatch custom events:
 
 ```html
-<!-- Child component -->
+<!-- Child block -->
 <button @click="$emit('save', { id: 123 })">Save</button>
 ```
 
 ```js
 // Parent listens
-document.querySelector('child-component')
+document.querySelector('child-block')
   .addEventListener('save', (e) => {
     console.log('Saved:', e.detail); // { id: 123 }
   });
@@ -184,10 +185,10 @@ document.querySelector('child-component')
 
 ### Accessing Ancestors
 
-Use `$ancestors()` to get a parent component:
+Use `$ancestors()` to get a parent block:
 
 ```html
-<!-- In nested component -->
+<!-- In nested block -->
 <p>App title: [[ $ancestors('app-root').state.title ]]</p>
 ```
 
@@ -195,9 +196,9 @@ Use `$ancestors()` to get a parent component:
 `$ancestors()` should be used for reading parent state, not mutating it.
 :::
 
-## Component Composition
+## Block Composition
 
-### Nesting Components
+### Nesting Blocks
 
 ```html
 <template b-id="app-layout">
@@ -234,13 +235,13 @@ Standard Web Components slots work:
 
 ## Shadow DOM
 
-All components use Shadow DOM for style encapsulation.
+All blocks use Shadow DOM for style encapsulation.
 
 ### Benefits
 
 ✅ **Scoped Styles** - CSS doesn't leak in or out  
 ✅ **No Naming Conflicts** - ID/class names are isolated  
-✅ **Composability** - Components work without side effects
+✅ **Composability** - Blocks work without side effects
 
 ### Styling the Host
 
@@ -261,12 +262,12 @@ Use `self` keyword (converts to `:host`):
 
 ## Lifecycle
 
-Components have three lifecycle hooks:
+Blocks have three lifecycle hooks:
 
 ```js
 {
   mounted() {
-    // Component added to DOM
+    // Block added to DOM
     this.fetchData();
   },
   
@@ -276,7 +277,7 @@ Components have three lifecycle hooks:
   },
   
   unmounted() {
-    // Component removed from DOM
+    // Block removed from DOM
     clearInterval(this.timer);
   }
 }
@@ -286,23 +287,23 @@ See [Lifecycle Hooks](/guide/lifecycle) for details.
 
 ## Best Practices
 
-### 1. Keep Components Small
+### 1. Keep Blocks Small
 
-Each component should have a single responsibility.
+Each block should have a single responsibility.
 
 ✅ Good: `user-avatar`, `user-name`, `user-bio`  
 ❌ Bad: `entire-user-profile-page`
 
 ### 2. Use Semantic Names
 
-Name components after what they represent:
+Name blocks after what they represent:
 
 ✅ Good: `product-card`, `search-bar`  
 ❌ Bad: `blue-box`, `flex-container`
 
 ### 3. Avoid Deep Nesting
 
-Keep component trees shallow (3-4 levels max):
+Keep block trees shallow (3-4 levels max):
 
 ```html
 app-root
@@ -343,72 +344,6 @@ Clear timers, remove listeners:
     clearInterval(this.timer);
   }
 }
-```
-
-## Common Patterns
-
-### Loading States
-
-```html
-<div b-show="loading">Loading...</div>
-<div b-show="!loading && data">
-  <h2>[[ data.title ]]</h2>
-  <p>[[ data.content ]]</p>
-</div>
-<div b-show="!loading && error">
-  Error: [[ error ]]
-</div>
-```
-
-### Form Components
-
-```js
-{
-  form: {
-    username: '',
-    email: '',
-    password: ''
-  },
-  errors: {},
-  
-  validate() {
-    this.errors = {};
-    if (!this.form.username) {
-      this.errors.username = 'Required';
-    }
-    if (!this.form.email.includes('@')) {
-      this.errors.email = 'Invalid email';
-    }
-    return Object.keys(this.errors).length === 0;
-  },
-  
-  submit() {
-    if (this.validate()) {
-      // Submit form
-    }
-  }
-}
-```
-
-### Computed Values
-
-Use methods for computed values:
-
-```js
-{
-  items: [
-    { name: 'Apple', price: 1.20 },
-    { name: 'Banana', price: 0.80 }
-  ],
-  
-  total() {
-    return this.items.reduce((sum, item) => sum + item.price, 0);
-  }
-}
-```
-
-```html
-<p>Total: $[[ total().toFixed(2) ]]</p>
 ```
 
 ## Next Steps

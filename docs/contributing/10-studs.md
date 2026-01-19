@@ -5,15 +5,15 @@ Let's see how the "Cake" of data we merged in Topic 9 is actually brought to lif
 
 ## The `reactive` State (`_studs`)
 
-Once `snap()` has merged the data from the SFC (Tier 1), the Template (Tier 2), and the Instance (Tier 3), it doesn't just save that object to the element. It transforms it.
+Once `snap()` has merged the data from the Block (Tier 1), the Template (Tier 2), and the Instance (Tier 3), it doesn't just save that object to the element. It transforms it.
 
 ```js
 //...rest of code
   const tpl = templateNode.content.cloneNode(true);
   const shadow = el.attachShadow({ mode: 'open' });
 
-  // TIER 1: Logic from Lego.define (SFC)
-  const scriptLogic = sfcLogic.get(name) || {};
+  // TIER 1: Logic from Lego.block (or Lego File)
+  const scriptLogic = legoFileLogic.get(name) || {};
 
   // TIER 2: Logic from the <template b-data="..."> attribute
   const templateLogic = parseJSObject(templateNode.getAttribute('b-data') || '{}');
@@ -57,7 +57,7 @@ el._studs = reactive({ ...mergedLogic }, el);
 
 ### 3. Contextual Binding (The `this` Keyword)
 
-After the `_studs` proxy is created, LegoDOM ensures that your methods work correctly. When you define a method in your SFC, you expect `this` to point to your data.
+After the `_studs` proxy is created, LegoDOM ensures that your methods work correctly. When you define a method in your Lego File, you expect `this` to point to your data.
 
 -   Inside `snap()`, lifecycle hooks are called like this: `el._studs.mounted.call(el._studs)`.
     

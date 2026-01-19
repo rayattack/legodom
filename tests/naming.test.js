@@ -31,7 +31,7 @@ describe('Component Naming Policy', () => {
 
   const define = (filename) => {
     const sfc = `<template><div>Test</div></template>`;
-    window.Lego.defineSFC(sfc, filename);
+    window.Lego.defineLegoFile(sfc, filename);
   };
 
   it('should support kebab-case (standard)', () => {
@@ -61,14 +61,14 @@ describe('Component Naming Policy', () => {
   });
 
   it('should throw error for single-word PascalCase (no hyphen result)', () => {
-    expect(() => define('Button.lego')).toThrow(/Invalid component definition/);
+    expect(() => define('Button.lego')).toThrow(/Invalid block definition/);
   });
 
   it('should throw error for single-word lowercase', () => {
-    expect(() => define('table.lego')).toThrow(/Invalid component definition/);
+    expect(() => define('table.lego')).toThrow(/Invalid block definition/);
   });
 
   it('should throw error for single-word brand name', () => {
-    expect(() => define('adidas.lego')).toThrow(/Invalid component definition/);
+    expect(() => define('adidas.lego')).toThrow(/Invalid block definition/);
   });
 });

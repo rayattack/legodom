@@ -12,11 +12,11 @@ Inside the `snap(el)` function, you will see a variable called `logic`. This isn
 1.  **Tier 1: The Global Definition (Lowest Priority)**
     
     ```js
-    const baseLogic = sfcLogic.get(name) || {};
+    const baseLogic = legoFileLogic.get(name) || {};
     
     ```
     
-    This is the JavaScript object you provided when you called `Lego.define()`. It contains your default values and methods. It’s the "fallback" data. SFCs and .lego files fall under this tier.
+    This is the JavaScript object you provided when you called `Lego.block()`. It contains your default values and methods. It’s the "fallback" data. Lego Files and .lego blocks fall under this tier.
     
 2.  **Tier 2: The Template Attributes (Middle Priority)**
 

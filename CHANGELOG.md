@@ -1,5 +1,37 @@
 # Changelog
 
+# Changelog
+
+## [2.0.1] - 2026-01-19
+
+### The "Blocks" Update Refactor 🧱
+
+Welcome to **LegoDOM v2**! This release represents a massive architectural shift to align the codebase and mental model with the "Lego" metaphor. We have moved away from Vue-centric terminology ("SFC", "Component", "Data") to Lego-centric terminology ("Lego File", "Block", "Logic").
+
+### Breaking Changes 🚨
+
+- **Terminological Refactor (Runtime & Docs):**
+  - **Components → Blocks:** The fundamental unit of UI is now a "Block".
+  - **SFC → Lego File:** Protocol-agnostic Single File Blocks.
+
+- **API Renames:**
+  - `Lego.define()` is now **`Lego.block()`**. (Legacy alias maintained)
+  - `Lego.defineSFC()` is now **`Lego.defineLegoFile()`**.
+  - Internal: `deriveComponentName` is now `deriveBlockName`.
+
+- **Attribute Renames:**
+  - `b-data` is now **`b-logic`**. (Legacy alias maintained)
+  - `b-styles` is now **`b-stylesheets`**.
+
+### Features
+
+- **Public State API:**
+  - `element.state` is now the official public API for accessing the reactive proxy.
+  - `element._studs` is considered internal/private.
+
+- **Lego Studio Audit:**
+  - `lego-studio` has been refactored to use "Block" terminology throughout the UI and codebase.
+
 ## [1.5.1] - 2026-01-19
 
 ### Breaking Changes 🚨

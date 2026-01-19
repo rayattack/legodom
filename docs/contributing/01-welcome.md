@@ -9,7 +9,7 @@ const Lego = (() => {
     init: () => { ... },
     init: () => { ... },
     define: (tagName, templateHTML, logic = {}) => { ... },
-    defineSFC: (content, filename) => { ... }, // Runtime SFC Parser
+    defineSFC: (content, filename) => { ... }, // Runtime SFB Parser
     // ...
   };
 })();
