@@ -45,7 +45,7 @@ Lego.init(document.body, {
     });
 
     if (!response.ok) return null;
-    return await response.text(); // Return the SFC content
+    return await response.text(); // Return the SFB content
   }
 });
 ```
@@ -84,12 +84,12 @@ The browser receives a component that **already has the data**. No second API ca
 
 ## Runtime Components
 
-If you fetch component code manually (e.g. via WebSockets or a custom pipeline), you can register it using `Lego.defineSFC`:
+If you fetch component code manually (e.g. via WebSockets or a custom pipeline), you can register it using `Lego.defineLegoFile`:
 
 ```javascript
 socket.on('component_update', (msg) => {
   // msg.code contains the <template>... string
-  Lego.defineSFC(msg.code, msg.name + '.lego');
+  Lego.defineLegoFile(msg.code, msg.name + '.lego');
 });
 ```
 ```
@@ -124,7 +124,7 @@ Cache-Control: public, max-age=3600, immutable
 ```
 
 ### 3. Preloading
-If you know a user is about to visit a page (e.g. hovering a link), you can preload the component SFC:
+If you know a user is about to visit a page (e.g. hovering a link), you can preload the block SFB:
 
 ```javascript
 const preload = (tagName) => {

@@ -1,4 +1,4 @@
-(function(i,o){typeof exports=="object"&&typeof module<"u"?module.exports=o(require("lego-dom")):typeof define=="function"&&define.amd?define(["lego-dom"],o):(i=typeof globalThis<"u"?globalThis:i||self,i.LegoStudio=o(i.Lego))})(this,function(i){"use strict";return i.Lego.define("lego-studio",`<style>self {
+(function(i,o){typeof exports=="object"&&typeof module<"u"?module.exports=o(require("lego-dom")):typeof define=="function"&&define.amd?define(["lego-dom"],o):(i=typeof globalThis<"u"?globalThis:i||self,i.LegoStudio=o(i.Lego))})(this,function(i){"use strict";return i.Lego.block("lego-studio",`<style>self {
     display: block;
     position: fixed;
     top: 0;
@@ -66,7 +66,7 @@
     box-sizing: border-box;
   }
   .search-input:focus { border-color: #2563eb; }
-  .component-list {
+  .block-list {
     list-style: none;
     padding: 0 1rem;
     margin: 0;
@@ -220,11 +220,11 @@
       <div class="search-box">
         <input 
           b-sync="search" 
-          placeholder="Filter components..." 
+          placeholder="Filter blocks..." 
           class="search-input"
-          @input="filterComponents()">
+          @input="filterBlocks()">
       </div>
-      <div class="component-list">
+      <div class="block-list">
         <div b-for="name in filtered" class="nav-wrapper">
           <button @click="select(name)" class="nav-item [[ active === name ? 'active' : '' ]]">
             <span class="icon">📦</span>
@@ -239,10 +239,10 @@
         <div class="breadcrumbs">
           <span class="crumb">App</span>
           <span class="separator">/</span>
-          <span class="crumb active">[[ active || 'Select a component' ]]</span>
+          <span class="crumb active">[[ active || 'Select a block' ]]</span>
         </div>
         <div class="actions">
-          <button @click="refresh()" title="Reload Component">🔄</button>
+          <button @click="refresh()" title="Reload Block">🔄</button>
         </div>
       </div>
       <div class="stage-container">
@@ -253,7 +253,7 @@
           </div>
           <div class="empty-state" b-show="!active">
             <div class="empty-icon">👈</div>
-            <p>Select a component to inspect</p>
+            <p>Select a block to inspect</p>
           </div>
         </div>
       </div>
@@ -281,4 +281,4 @@
         </div>
       </div>
     </aside>
-  </div>`,{components:[],filtered:[],search:"",active:null,activeInstance:null,isDirty:!1,error:null,async mounted(){this.components=i.Lego.getLegos().filter(e=>e!=="lego-studio"),this.filtered=[...this.components],this.$route.params&&this.$route.params.component&&this.select(this.$route.params.component,!1)},filterComponents(){const e=this.search.toLowerCase();this.filtered=this.components.filter(t=>t.toLowerCase().includes(e))},select(e,t=!0){this.active=e,t&&this.$go("/_/studio/"+e).get(),this.renderComponent()},renderComponent(){this.active&&setTimeout(()=>{const e=this.$element.shadowRoot.getElementById("mount-point");if(e){this.activeInstance&&i.Lego.unsnap(this.activeInstance),e.innerHTML="";try{const t=document.createElement(this.active);e.appendChild(t),i.Lego.snap(t),this.activeInstance=t}catch(t){this.error=`Failed to render component: ${t.message}`}this.syncInspector()}},10)},syncInspector(){var s;if(!((s=this.activeInstance)!=null&&s.state))return;const e=this.activeInstance.state,t=Object.keys(e).filter(n=>!n.startsWith("$")&&typeof e[n]!="function").reduce((n,r)=>({...n,[r]:e[r]}),{});this.$vars.editor&&(this.$vars.editor.textContent=JSON.stringify(t,null,2)),this.isDirty=!1},onEditorInput(){var e;this.isDirty=!0,this.error=null;try{const t=JSON.parse(this.$vars.editor.textContent);(e=this.activeInstance)!=null&&e.state&&(this.activeInstance.state=t),this.isDirty=!1}catch(t){this.error=t.message}},handleKeydown(e){e.key==="Tab"&&(e.preventDefault(),document.execCommand("insertText",!1,"  "))},refresh(){this.active&&this.renderComponent()}},""),"lego-studio"});
+  </div>`,{blocks:[],filtered:[],search:"",active:null,activeInstance:null,isDirty:!1,error:null,async mounted(){this.blocks=i.Lego.getLegos().filter(e=>e!=="lego-studio"),this.filtered=[...this.blocks],this.$route.params&&this.$route.params.block&&this.select(this.$route.params.block,!1)},filterBlocks(){const e=this.search.toLowerCase();this.filtered=this.blocks.filter(t=>t.toLowerCase().includes(e))},select(e,t=!0){this.active=e,t&&this.$go("/_/studio/"+e).get(),this.renderBlock()},renderBlock(){this.active&&setTimeout(()=>{const e=this.$element.shadowRoot.getElementById("mount-point");if(e){this.activeInstance&&i.Lego.unsnap(this.activeInstance),e.innerHTML="";try{const t=document.createElement(this.active);e.appendChild(t),i.Lego.snap(t),this.activeInstance=t}catch(t){this.error=`Failed to render block: ${t.message}`}this.syncInspector()}},10)},syncInspector(){var r;if(!((r=this.activeInstance)!=null&&r.state))return;const e=this.activeInstance.state,t=Object.keys(e).filter(s=>!s.startsWith("$")&&typeof e[s]!="function").reduce((s,n)=>({...s,[n]:e[n]}),{});this.$vars.editor&&(this.$vars.editor.textContent=JSON.stringify(t,null,2)),this.isDirty=!1},onEditorInput(){var e;this.isDirty=!0,this.error=null;try{const t=JSON.parse(this.$vars.editor.textContent);(e=this.activeInstance)!=null&&e.state&&(this.activeInstance.state=t),this.isDirty=!1}catch(t){this.error=t.message}},handleKeydown(e){e.key==="Tab"&&(e.preventDefault(),document.execCommand("insertText",!1,"  "))},refresh(){this.active&&this.renderBlock()}},""),"lego-studio"});

@@ -1,7 +1,7 @@
 # Lights, Camera, Action
 
 This is how LegoDOM makes your components interactive by connecting DOM events (clicks, keypresses, submits) directly to the methods you wrote in
-your **SFC** (Single File Component) autodiscovered **.lego** file, `<template />` tag or Lego.define call.
+your **Lego File** (Single File Block) autodiscovered **.lego** file, `<template />` tag or Lego.block call.
 
 ## Event Handling (The `@event` Syntax)
 

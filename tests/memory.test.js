@@ -33,7 +33,7 @@ describe('LegoDOM Memory Management', () => {
     await window.Lego.init(document.body);
   });
 
-  it('should cleanup activeComponents when elements are removed', async () => {
+  it('should cleanup activeBlocks when elements are removed', async () => {
     window.Lego.define('mem-comp', '<div>Hi</div>');
 
     // Mount
@@ -41,13 +41,13 @@ describe('LegoDOM Memory Management', () => {
     document.body.appendChild(el);
     await new Promise(r => setTimeout(r, 100)); // Wait for observer
 
-    expect(window.Lego.getActiveComponentsCount()).toBe(1);
+    expect(window.Lego.getActiveBlocksCount()).toBe(1);
 
     // Unmount
     el.remove();
     await new Promise(r => setTimeout(r, 100)); // Wait for observer
 
-    expect(window.Lego.getActiveComponentsCount()).toBe(0);
+    expect(window.Lego.getActiveBlocksCount()).toBe(0);
   });
 
   it('should cleanup nested components recursively', async () => {
@@ -58,11 +58,11 @@ describe('LegoDOM Memory Management', () => {
     document.body.appendChild(el);
     await new Promise(r => setTimeout(r, 100));
 
-    expect(window.Lego.getActiveComponentsCount()).toBe(2); // Parent + Child
+    expect(window.Lego.getActiveBlocksCount()).toBe(2); // Parent + Child
 
     el.remove();
     await new Promise(r => setTimeout(r, 100));
 
-    expect(window.Lego.getActiveComponentsCount()).toBe(0);
+    expect(window.Lego.getActiveBlocksCount()).toBe(0);
   });
 });

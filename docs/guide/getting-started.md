@@ -19,10 +19,10 @@ The fastest way to try Lego is via CDN:
   <title>My Lego App</title>
 </head>
 <body>
-  <my-component></my-component>
+  <my-block></my-block>
   
   <script src="https://unpkg.com/lego-dom/main.js"></script>
-  <template b-id="my-component" b-data="{ count: 0 }">
+  <template b-id="my-block" b-logic="{ count: 0 }">
     <h1>Hello Lego!</h1>
     <button @click="count++">Click me</button>
     <p>Count: [[ count ]]</p>
@@ -46,18 +46,19 @@ Then import it:
 ```js
 import { Lego } from 'lego-dom';
 
-Lego.define('my-component', `
+Lego.block('my-block', `
   <h1>Hello Lego!</h1>
   <button @click="count++">Click me</button>
   <p>Count: [[ count ]]</p>
 `, {
   count: 0,
+  // Note: Lego.define() is also available as an alias
 });
 ```
 
-### Option 3 (SFC): With Vite (Recommended for Larger Projects)
+### Option 3 (Lego Files): With Vite (Recommended for Larger Projects)
 
-For the best development experience with `.lego` Single File Components:
+For real-world apps, we recommend using the **Vite Plugin**. This allows you to write strict **Single File Blocks** (Lego Files) with the `.lego` extension.
 
 ```bash
 npm create vite@latest my-lego-app
@@ -82,10 +83,10 @@ Crucially, you must initialize the Lego background engine in your entry file (`s
 
 ```js
 import { Lego } from 'lego-dom';
-import registerComponents from 'virtual:lego-components';
+import registerBlocks from 'virtual:lego-components';
 
 // 1. Register SFCs
-registerComponents();
+registerBlocks();
 
 // 2. Start the Engine (Async)
 await Lego.init();
@@ -95,16 +96,16 @@ await Lego.init();
 
 ### 1. Templates
 
-Templates define what your component looks like. Use `[[ ]]` for dynamic content:
+Templates define what your block looks like. Use `[[ ]]` for dynamic content:
 
 ```html
 <h1>Hello [[ name ]]!</h1>
 <p>[[ calculateAge() ]] years old</p>
 ```
 
-### 2. State (Studs)
+### 2. State (Logic)
 
-Each component has reactive state called "studs":
+Each block has reactive state called "logic":
 
 ```js
 { 
@@ -133,6 +134,7 @@ Special attributes for common patterns:
 - `b-show` - Conditional rendering
 - `b-for` - List rendering
 - `b-sync` - Two-way binding
+- `b-logic` - State initialization
 
 For extensive information, see [Directives](/guide/directives).
 
@@ -146,14 +148,14 @@ For extensive information, see [Directives](/guide/directives).
 ## What You've Learned
 
 - ✅ How to install LegoDOM
-- ✅ The 3 (three) different ways that exist to create componentS
+- ✅ The 3 different ways to create blocks
 - ✅ The basics of templates, state, and events
 - ✅ A sneak peek into the world of directives
 - ✅ The use of the `Lego.init()` to kickstart LegoDOM.
 
 ## Next Steps
 
-- Learn about [Components](/guide/components) in depth
+- Learn about [Blocks](/guide/blocks) in depth
 - Explore [Reactivity](/guide/reactivity) and how it works
 - Check out [Templating](/guide/templating) features
 - See [Examples](/examples/) of real applications

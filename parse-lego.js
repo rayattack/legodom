@@ -1,5 +1,5 @@
 /**
- * Parser for .lego Single File Components
+ * Parser for .lego Single File Blocks (SFC)
  * Extracts template, script, and style sections from .lego files
  */
 
@@ -7,15 +7,15 @@
  * Parse a .lego file content into structured sections
  * @param {string} content - Raw .lego file content
  * @param {string} filename - Filename for error reporting
- * @returns {{template: string, script: string, style: string, stylesAttr: string, componentName: string}}
+ * @returns {{template: string, script: string, style: string, stylesAttr: string, blockName: string}}
  */
-export function parseLego(content, filename = 'component.lego') {
+export function parseLego(content, filename = 'block.lego') {
   const result = {
     template: '',
     script: '',
     style: '',
     stylesAttr: '',
-    componentName: deriveComponentName(filename)
+    blockName: deriveBlockName(filename)
   };
 
   let remaining = content;
@@ -75,23 +75,23 @@ export function parseLego(content, filename = 'component.lego') {
 }
 
 /**
- * Derive component name from filename
- * e.g., "sample-component.lego" -> "sample-component"
+ * Derive block name from filename
+ * e.g., "sample-block.lego" -> "sample-block"
  * @param {string} filename
  * @returns {string}
  */
-export function deriveComponentName(filename) {
+export function deriveBlockName(filename) {
   const basename = filename.split('/').pop();
   return basename.replace(/\.lego$/, '');
 }
 
 /**
- * Generate Lego.define() code from parsed .lego file
+ * Generate Lego.block() code from parsed .lego file
  * @param {object} parsed - Parsed .lego file object
  * @returns {string} - JavaScript code string
  */
-export function generateDefineCall(parsed) {
-  const { componentName, template, script, style, stylesAttr } = parsed;
+export function generateBlockCall(parsed) {
+  const { blockName, template, script, style, stylesAttr } = parsed;
 
   // Build template HTML
   let templateHTML = '';
@@ -115,8 +115,8 @@ export function generateDefineCall(parsed) {
     }
   }
 
-  // Generate the Lego.define call
-  return `Lego.define('${componentName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, '${stylesAttr}');`;
+  // Generate the Lego.block call
+  return `Lego.block('${blockName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, '${stylesAttr}');`;
 }
 
 /**
@@ -137,15 +137,15 @@ export function validateLego(parsed) {
   const errors = [];
 
   if (!parsed.template && !parsed.script && !parsed.style) {
-    errors.push('Component must have at least one section: <template>, <script>, or <style>');
+    errors.push('Block must have at least one section: <template>, <script>, or <style>');
   }
 
-  if (!parsed.componentName) {
-    errors.push('Unable to derive component name from filename');
+  if (!parsed.blockName) {
+    errors.push('Unable to derive block name from filename');
   }
 
-  if (parsed.componentName && !/^[a-z][a-z0-9]*(-[a-z0-9]+)+$/.test(parsed.componentName)) {
-    errors.push(`Component name "${parsed.componentName}" must be kebab-case with at least one hyphen (e.g., "my-component")`);
+  if (parsed.blockName && !/^[a-z][a-z0-9]*(-[a-z0-9]+)+$/.test(parsed.blockName)) {
+    errors.push(`Block name "${parsed.blockName}" must be kebab-case with at least one hyphen (e.g., "my-block")`);
   }
 
   return {

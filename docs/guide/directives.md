@@ -321,20 +321,22 @@ Client-side navigation (prevents page reload).
 `b-link` only works if you've set up routing with `Lego.route()`.
 :::
 
-## b-data
+## b-logic
 
-Initialize component state.
+Initialize block state (logic).
 
 ### Basic Usage
 
 ```html
-<my-component b-data="{ count: 0, name: 'Alice' }"></my-component>
+<my-block b-logic="{ count: 0, name: 'Alice' }"></my-block>
 ```
+
+> **Note:** `b-data` is supported as a legacy alias for `b-logic`.
 
 ### With Complex Data
 
 ```html
-<todo-list b-data="{
+<todo-list b-logic="{
   todos: [
     { text: 'Learn Lego', done: true },
     { text: 'Build app', done: false }
@@ -346,8 +348,8 @@ Initialize component state.
 ### Merging with Defaults
 
 ```js
-// Component definition
-Lego.define('user-card', `...`, {
+// Block definition
+Lego.block('user-card', `...`, {
   name: 'Guest',  // Default
   role: 'user'    // Default
 });
@@ -355,7 +357,7 @@ Lego.define('user-card', `...`, {
 
 ```html
 <!-- Only name is overridden -->
-<user-card b-data="{ name: 'Alice' }"></user-card>
+<user-card b-logic="{ name: 'Alice' }"></user-card>
 <!-- role remains 'user' -->
 ```
 
@@ -431,7 +433,7 @@ Move complex logic to methods.
   </div>
 </div>
 
-<!-- ✅ Break into components -->
+<!-- ✅ Break into blocks -->
 <category-list></category-list>
 ```
 
@@ -514,11 +516,12 @@ Paginate large lists:
 
 Some directives are specific to certain features and are documented in their respective guides:
 
-### Component Directives
+### Block Directives
 
-- **`b-id`**: Defines a component from a template.
-- **`b-stylesheets`**: Applies shared styles from tagged stylesheets in Lego.init to a component.
-- See [Components Guide](/guide/components)
+- **`b-id`**: Defines a block from a template.
+- **`b-stylesheets`**: Applies shared styles from tagged stylesheets in Lego.init to a block.
+- **`b-logic`**: Passes initial state/logic to a block.
+- See [Blocks Guide](/guide/blocks)
 
 ### Routing Directives
 

@@ -24,8 +24,8 @@ const snap = (el) => {
        shadow.adoptedStyleSheets = splitStyles.flatMap(k => styleRegistry.get(k) || []);
     }
 
-    // TIER 1: Logic from Lego.define (SFC)
-    const scriptLogic = sfcLogic.get(name) || {};
+    // TIER 1: Logic from Lego.block (or Lego File)
+    const scriptLogic = legoFileLogic.get(name) || {};
 
     // TIER 2: Logic from the <template b-data="..."> attribute
     const templateLogic = parseJSObject(templateNode.getAttribute('b-data') || '{}');

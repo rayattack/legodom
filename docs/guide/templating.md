@@ -113,7 +113,7 @@ Trim manually if needed:
 
 Inside `[[ ]]`, you have access to:
 
-### Component State (`this`)
+### Block State (`this`)
 
 ```html
 <p>[[ count ]]</p>  <!-- this.count -->
@@ -131,7 +131,7 @@ Inside `[[ ]]`, you have access to:
 
 - `global` - Access `Lego.globals`
 - `event` - In event handlers
-- `self` - Reference to component element (rare)
+- `self` - Reference to lego block element (rare)
 
 ```html
 <p>[[ global.user.name ]]</p>

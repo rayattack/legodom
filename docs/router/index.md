@@ -38,7 +38,7 @@ In a LinkedIn-sized project, a traditional router would need to know that the `C
 
 In Lego, you just change the **Target**. Because the components are agnostic, they don't care who their parent is. They just care about where the `b-target` tells them to go.
 
-### Defining with SFCs
+### Defining with Lego Files
 
 LegoDOM supports the use of Single File Components and this works seamlessly with the Router. You can define your Shell components via the `<template>` tag. This keeps our architectural "Shells" clean and readable.
 
@@ -61,9 +61,9 @@ LegoDOM supports the use of Single File Components and this works seamlessly wit
 
 Throughout this guide, we will refer to three primary concepts:
 
-1.  **The Shell**: The high-level SFC that provides the grid, navigation, and sidebar.
+1.  **The Shell**: The high-level Block that provides the grid, navigation, and sidebar.
     
-2.  **The Fragment**: A self-contained SFC (like a chat thread or a profile header) that is surgically injected into a shell.
+2.  **The Fragment**: A self-contained Block (like a chat thread or a profile header) that is surgically injected into a shell.
     
 3.  **The Target**: A CSS selector, Tag Name, or ID that acts as the "destination hole" for a fragment.
     

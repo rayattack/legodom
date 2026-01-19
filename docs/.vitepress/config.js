@@ -79,7 +79,7 @@ export default defineConfig({
           text: 'Core Concepts',
           items: [
             { text: 'The Lego Object', link: '/guide/the-lego-object' },
-            { text: 'Components', link: '/guide/components' },
+            { text: 'Blocks', link: '/guide/blocks' },
             { text: 'Templating', link: '/guide/templating' },
             { text: 'Reactivity', link: '/guide/reactivity' },
             { text: 'Directives', link: '/guide/directives' },
@@ -89,14 +89,13 @@ export default defineConfig({
         {
           text: 'Advanced',
           items: [
-            { text: 'Single File Components', link: '/guide/sfc' },
-            { text: 'Routing', link: '/guide/routing' },
+            { text: 'Lego Files (.lego)', link: '/guide/lego-files' },
+            { text: 'Directives', link: '/guide/directives' },
             { text: 'Lego Studio', link: '/guide/studio' },
             { text: 'CDN Usage', link: '/guide/cdn-usage' },
             { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
             { text: 'Large Apps', link: '/guide/directory-structure' },
             { text: 'Server Side Components', link: '/guide/server-side' },
-            { text: 'FAQ', link: '/guide/faq' }
           ]
         }
       ],
@@ -106,7 +105,7 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/api/' },
             { text: 'Lego.init()', link: '/api/init' },
-            { text: 'Lego.define()', link: '/api/define' },
+            { text: 'Lego.block()', link: '/api/block' },
             { text: 'Lego.route()', link: '/api/route' },
             { text: 'Lego.globals', link: '/api/globals' },
             { text: 'Lego.config', link: '/api/config' },
@@ -136,7 +135,7 @@ export default defineConfig({
             { text: 'Overview', link: '/examples/' },
             { text: 'Todo App', link: '/examples/todo-app' },
             { text: 'Routing Demo', link: '/examples/routing' },
-            { text: 'SFC Showcase', link: '/examples/sfc-showcase' },
+            { text: 'Lego Files Showcase', link: '/examples/lego-files-showcase' },
             { text: 'Form Validation', link: '/examples/form' }
           ]
         }

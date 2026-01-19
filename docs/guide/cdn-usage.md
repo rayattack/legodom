@@ -344,7 +344,7 @@ This is perfect for:
 - Large applications (10+ components)
 - Production apps requiring optimization
 - Projects needing TypeScript
-- Teams wanting SFC workflow
+- Teams wanting Lego File (SFB) workflow
 
 ## Next Steps
 

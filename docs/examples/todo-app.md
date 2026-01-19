@@ -220,7 +220,7 @@ A complete todo application demonstrating Lego features.
   </template>
 
   <script>
-    Lego.define('todo-app', 
+    Lego.block('todo-app', 
       document.querySelector('template[b-id="todo-app"]').innerHTML, 
       {
         newTodo: '',

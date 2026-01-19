@@ -12,7 +12,7 @@ LegoDOM uses three specialized collections to store the "DNA" of your applicatio
 
 ```js
 const registry = {};
-const sfcLogic = new Map();
+const legoFileLogic = new Map();
 const sharedStates = new Map();
 ```
 
@@ -27,11 +27,11 @@ const sharedStates = new Map();
 -   **Purpose:** This is the "Light DOM" source used to populate the "Shadow DOM" later during the "snapping" process.
     
 
-### 2. The SFC Logic Collection (`sfcLogic`)
+### 2. The Lego File Logic Collection (`legoFileLogic`)
 
-`const sfcLogic = new Map();` stores the JavaScript objects passed into `Lego.define()`.
+`const legoFileLogic = new Map();` stores the JavaScript objects passed into `Lego.define()`.
 
--   While `registry` holds the HTML/CSS, `sfcLogic` holds the functions like `mounted()`, `updated()`, or custom methods.
+-   While `registry` holds the HTML/CSS, `legoFileLogic` holds the functions like `mounted()`, `updated()`, or custom methods.
     
 -   **Why a Map?** Unlike a plain object, a `Map` is more performant for frequent lookups by string keys (tag names) - I think!!! or maybe I read wrong (call me out).
     
@@ -54,12 +54,12 @@ The `registry` doesn't just wait for you to type; it's fed by three distinct str
 **Paradigm 1: Explicitly**
 
 ```js
-const sfcLogic = new Map(); // Specifically for SFC script logic
+const legoFileLogic = new Map(); // Specifically for SFB script logic
 // ...
 define: (tagName, templateHTML, logic = {}) => {
   const t = document.createElement('template');
   // ... stores template in registry
-  sfcLogic.set(tagName, logic); // Stores the JS part separately
+  legoFileLogic.set(tagName, logic); // Stores the JS part separately
 }
 ```
 
@@ -86,7 +86,7 @@ async load(id) {
     
 2.  **The `Lego.define()` JS Method:** You call `Lego.define('my-comp', '<h1>Hi</h1>', { ... logic })` in a standard JavaScript file.
     
-3.  **The SFC Automatic Method (The "Vite Way"):** * The **Vite Plugin** (as seen in `vite-plugin.js`) acts as a build-time robot.
+3.  **The Lego File Automatic Method (The "Vite Way"):** * The **Vite Plugin** (as seen in `vite-plugin.js`) acts as a build-time robot.
     
     -   It uses `fast-glob` (`fg`) to scan your entire `src/components` directory for any file ending in `.lego`.
         
@@ -105,11 +105,11 @@ defineSFC: (content, filename) => {
   // ...
   const logicObj = new Function(`return ${script}`)();
   // ...
-  sfcLogic.set(name, logicObj);
+  legoFileLogic.set(name, logicObj);
 }
 ```
 
-This is the power behind the **Server Loader**. We can fetch a string from the server and "compile" it in the browser using `new Function()`. It populates `registry` and `sfcLogic` just like the build-time tools, but on the fly.
+This is the power behind the **Server Loader**. We can fetch a string from the server and "compile" it in the browser using `new Function()`. It populates `registry` and `legoFileLogic` just like the build-time tools, but on the fly.
 
 ### 4. Component Naming Conventions ("Explicit or Go Home")
 

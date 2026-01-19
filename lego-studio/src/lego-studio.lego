@@ -67,7 +67,7 @@
     box-sizing: border-box;
   }
   .search-input:focus { border-color: #2563eb; }
-  .component-list {
+  .block-list {
     list-style: none;
     padding: 0 1rem;
     margin: 0;
@@ -224,11 +224,11 @@
       <div class="search-box">
         <input 
           b-sync="search" 
-          placeholder="Filter components..." 
+          placeholder="Filter blocks..." 
           class="search-input"
-          @input="filterComponents()">
+          @input="filterBlocks()">
       </div>
-      <div class="component-list">
+      <div class="block-list">
         <div b-for="name in filtered" class="nav-wrapper">
           <button @click="select(name)" class="nav-item [[ active === name ? 'active' : '' ]]">
             <span class="icon">📦</span>
@@ -243,10 +243,10 @@
         <div class="breadcrumbs">
           <span class="crumb">App</span>
           <span class="separator">/</span>
-          <span class="crumb active">[[ active || 'Select a component' ]]</span>
+          <span class="crumb active">[[ active || 'Select a block' ]]</span>
         </div>
         <div class="actions">
-          <button @click="refresh()" title="Reload Component">🔄</button>
+          <button @click="refresh()" title="Reload Block">🔄</button>
         </div>
       </div>
       <div class="stage-container">
@@ -257,7 +257,7 @@
           </div>
           <div class="empty-state" b-show="!active">
             <div class="empty-icon">👈</div>
-            <p>Select a component to inspect</p>
+            <p>Select a block to inspect</p>
           </div>
         </div>
       </div>
@@ -290,7 +290,7 @@
 
 <script>
 export default {
-  components: [],
+  blocks: [],
   filtered: [],
   search: '',
   active: null,
@@ -299,18 +299,18 @@ export default {
   error: null,
 
   async mounted() {
-    this.components = Lego.getLegos().filter(n => n !== 'lego-studio');
-    this.filtered = [...this.components];
+    this.blocks = Lego.getLegos().filter(n => n !== 'lego-studio');
+    this.filtered = [...this.blocks];
 
     // Route Handling
-    if (this.$route.params && this.$route.params.component) {
-      this.select(this.$route.params.component, false);
+    if (this.$route.params && this.$route.params.block) {
+      this.select(this.$route.params.block, false);
     }
   },
 
-  filterComponents() {
+  filterBlocks() {
     const query = this.search.toLowerCase();
-    this.filtered = this.components.filter(name => 
+    this.filtered = this.blocks.filter(name => 
       name.toLowerCase().includes(query)
     );
   },
@@ -320,10 +320,10 @@ export default {
     if (updateRoute) {
       this.$go('/_/studio/' + name).get();
     }
-    this.renderComponent();
+    this.renderBlock();
   },
 
-  renderComponent() {
+  renderBlock() {
     if (!this.active) return;
     
     // Defer to next tick to allow DOM flush
@@ -342,7 +342,7 @@ export default {
         Lego.snap(el);
         this.activeInstance = el;
       } catch (e) {
-        this.error = `Failed to render component: ${e.message}`;
+        this.error = `Failed to render block: ${e.message}`;
       }
 
       // Initialize Inspector
@@ -385,7 +385,7 @@ export default {
 
   refresh() {
     if (this.active) {
-      this.renderComponent();
+      this.renderBlock();
     }
   }
 }

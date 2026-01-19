@@ -5,7 +5,7 @@ Welcome to the Lego API documentation.
 ## Core
 
 - [Lego.init()](/api/init) - initializing the app
-- [Lego.define()](/api/define) - Defining components
+- [Lego.block()](/api/block) - Defining blocks
 - [Lego.route()](/api/route) - Client-side routing
 - [Lego.globals](/api/globals) - Global state
 - [Lego.config](/api/config) - Configuration & Error Handling
