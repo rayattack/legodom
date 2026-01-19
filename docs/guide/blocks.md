@@ -158,8 +158,6 @@ In the example above, the final state for the block will be:
 
 ## Block Communication
 
-### Parent → Child (Props)
-
 ### Parent → Child (Scoped Props)
 
 Pass data via `b-logic` naturally. The evaluation context includes the **parent block's state**, effectively making `b-logic` behave like "scoped props".
