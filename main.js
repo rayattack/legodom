@@ -176,11 +176,10 @@ const Lego = (() => {
     return p;
   };
 
-  const parseJSObject = (raw) => {
+  const parseJSObject = (raw, scope = {}) => {
     try {
-      return (new Function(`return (${raw})`))();
+      return (new Function('scope', 'global', `with(global) { with(scope) { return (${raw}); } }`))(scope, Lego.globals);
     } catch (e) {
-      console.error(`[Lego] Failed to parse b-data:`, raw, e);
       return {};
     }
   };
@@ -204,10 +203,13 @@ const Lego = (() => {
   };
 
   const findAncestor = (el, tagName) => {
-    let parent = el.parentElement || el.getRootNode().host;
+    if (!el) return undefined;
+    let parent = el.parentElement || (el.getRootNode ? el.getRootNode().host : null);
     while (parent) {
-      if (parent.tagName && parent.tagName.toLowerCase() === tagName.toLowerCase()) {
-        return parent;
+      const pName = parent.tagName ? parent.tagName.toLowerCase() : '';
+      if (pName) {
+        if (tagName === '*' && registry[pName]) return parent;
+        if (pName === tagName.toLowerCase()) return parent;
       }
       parent = parent.parentElement || (parent.getRootNode && parent.getRootNode().host);
     }
@@ -561,9 +563,13 @@ const Lego = (() => {
       // TIER 1: Logic from Lego.block (Lego File)
       // TIER 2: Logic from the <template b-data="..."> attribute
       // TIER 3: Logic from the <my-comp b-data="..."> tag
+      // SCOPED PROPS: Use parent block state as scope for instance logic evaluation
+      const parentBlock = findAncestor(el, '*') || findAncestor(el.getRootNode().host, '*');
+      const parentScope = parentBlock && parentBlock.state ? parentBlock.state : {};
+
       const scriptLogic = legoFileLogic.get(name) || {};
       const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || templateNode.getAttribute('b-data') || '{}');
-      const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}');
+      const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}', parentScope);
 
       el._studs = reactive({
         ...scriptLogic,
@@ -571,6 +577,7 @@ const Lego = (() => {
         ...instanceLogic,
         $vars: {},
         $element: el,
+        get $parent() { return findAncestor(el, '*') },
         $emit: (name, detail) => {
           el.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
         },

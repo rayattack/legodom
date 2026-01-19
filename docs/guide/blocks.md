@@ -160,11 +160,37 @@ In the example above, the final state for the block will be:
 
 ### Parent → Child (Props)
 
-Pass data via `b-logic`:
+### Parent → Child (Scoped Props)
+
+Pass data via `b-logic` naturally. The evaluation context includes the **parent block's state**, effectively making `b-logic` behave like "scoped props".
 
 ```html
-<child-block b-logic="{ title: parentData.title }"></child-block>
+<!-- `user` comes from the parent's state! -->
+<child-block b-logic="{ user: user }"></child-block>
 ```
+
+Variables inside `b-logic` are resolved in this order:
+1.  **Parent Block State**: (e.g. `this.user`)
+2.  **Global Scope**: (e.g. `window.user`, `global.xxx`)
+
+### Accessing Parent (`$parent`)
+
+For tighter coupling, you can access the immediate block ancestor using `$parent`:
+
+**In Template:**
+```html
+<span>Parent is: [[ $parent.tagName ]]</span>
+```
+
+**In Script:**
+```javascript
+mounted() {
+  console.log(this.$parent); // Returns parent Block element (or undefined)
+}
+```
+
+> [!NOTE]
+> `$parent` automatically skips non-block elements (like `<div>` wrappers) to find the nearest *Lego Block* ancestor.
 
 ### Child → Parent (Events)
 

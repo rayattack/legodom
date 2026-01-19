@@ -2,6 +2,21 @@
 
 # Changelog
 
+## [2.0.2] - 2026-01-19
+
+### Features
+
+- **Scoped Props (`b-logic`):** `b-logic` attributes now inherit the parent block's scope! You can pass state naturally to children without global variables.
+  ```html
+  <!-- 'user' is resolved from the parent block's state -->
+  <user-avatar b-logic="{ user: user }"></user-avatar>
+  ```
+
+- **`$parent` Helper:** Added `this.$parent` (and template access) to easily find the nearest ancestor Block. It intelligently skips non-block elements (divs, spans) and handles Shadow DOM boundaries.
+  ```javascript
+  const parentBlock = this.$parent;
+  ```
+
 ## [2.0.1] - 2026-01-19
 
 ### The "Blocks" Update Refactor 🧱
