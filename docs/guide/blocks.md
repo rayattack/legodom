@@ -7,7 +7,7 @@ Learn how to create and use blocks in LegoDOM.
 A block is a reusable, self-contained piece of UI with its own template, styles, and logic. In other frameworks (and previous versions of LegoDOM), these are called "components". We call them Blocks because you use them to build your application.
 
 ::: warning Note That
-`style` tags inside NON-SFB blocks are inside the `<template>` tag. And outside the tag in Lego Files.
+`style` tags outside Lego Files are inside the `<template>` tag. And outside the tag i.e. on the same level as the `<template>` tag in Lego Files.
 :::
 
 ```html
