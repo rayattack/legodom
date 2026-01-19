@@ -319,7 +319,6 @@ const Lego = (() => {
         $element: context.self,
         $route: Lego.globals.$route,
         $go: (path, ...targets) => _go(path, ...targets)(context.self),
-        $db: dbFactory,
         $emit: (name, detail) => {
           context.self.dispatchEvent(new CustomEvent(name, {
             detail,
