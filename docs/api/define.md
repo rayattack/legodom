@@ -5,7 +5,7 @@ Defining components in JavaScript.
 ## Type Signature
 
 ```ts
-Lego.define(tagName: string, template: string, state?: object)
+Lego.define(tagName: string, template: string, state?: object, styles?: string)
 ```
 
 ## Arguments
@@ -13,6 +13,7 @@ Lego.define(tagName: string, template: string, state?: object)
 - **tagName**: The name of the custom element (must contain a hyphen).
 - **template**: The HTML string for the component. Can include `<style>`, markup, and bindings.
 - **state**: Initial state object and methods.
+- **styles**: Space-separated list of stylesheet keys (e.g. `'main theme'`) referring to stylesheets registered in `Lego.init`.
 
 ## Example
 

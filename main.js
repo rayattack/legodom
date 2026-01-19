@@ -806,7 +806,7 @@ const Lego = (() => {
 
         if (tagName === 'template') {
           template = innerContent.trim();
-          const bStylesMatch = attrs.match(/b-styles=["']([^"']+)["']/);
+          const bStylesMatch = attrs.match(/b-stylesheets=["']([^"']+)["']/);
           if (bStylesMatch) stylesAttr = bStylesMatch[1];
         } else if (tagName === 'script') {
           // Extract logic from script
@@ -831,7 +831,7 @@ const Lego = (() => {
 
       registry[name] = document.createElement('template');
       registry[name].innerHTML = template;
-      registry[name].setAttribute('b-styles', stylesAttr);
+      registry[name].setAttribute('b-stylesheets', stylesAttr);
       sfcLogic.set(name, logicObj);
 
       // Upgrade existing elements
@@ -840,7 +840,7 @@ const Lego = (() => {
     define: (tagName, templateHTML, logic = {}, styles = "") => {
       const t = document.createElement('template');
       t.setAttribute('b-id', tagName);
-      t.setAttribute('b-styles', styles);
+      t.setAttribute('b-stylesheets', styles);
       t.innerHTML = templateHTML;
       registry[tagName] = t;
       sfcLogic.set(tagName, logic);

@@ -78,6 +78,7 @@ export default defineConfig({
         {
           text: 'Core Concepts',
           items: [
+            { text: 'The Lego Object', link: '/guide/the-lego-object' },
             { text: 'Components', link: '/guide/components' },
             { text: 'Templating', link: '/guide/templating' },
             { text: 'Reactivity', link: '/guide/reactivity' },
@@ -94,6 +95,7 @@ export default defineConfig({
             { text: 'CDN Usage', link: '/guide/cdn-usage' },
             { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
             { text: 'Large Apps', link: '/guide/directory-structure' },
+            { text: 'Server Side Components', link: '/guide/server-side' },
             { text: 'FAQ', link: '/guide/faq' }
           ]
         }
@@ -103,6 +105,7 @@ export default defineConfig({
           text: 'API Reference',
           items: [
             { text: 'Overview', link: '/api/' },
+            { text: 'Lego.init()', link: '/api/init' },
             { text: 'Lego.define()', link: '/api/define' },
             { text: 'Lego.route()', link: '/api/route' },
             { text: 'Lego.globals', link: '/api/globals' },

@@ -5,13 +5,14 @@ Client-side routing.
 ## Type Signature
 
 ```ts
-Lego.route(path: string, componentOrHtml: string | HTMLElement)
+Lego.route(path: string, tagName: string, middleware?: Function)
 ```
 
 ## Arguments
 
 - **path**: The URL path pattern (e.g., `/users/:id`).
-- **componentOrHtml**: The tag name of the component to render, or raw HTML.
+- **tagName**: The tag name of the component to render in the router outlet.
+- **middleware**: Optional async function for guards (returns boolean).
 
 ## Example
 
@@ -20,18 +21,21 @@ Lego.route(path: string, componentOrHtml: string | HTMLElement)
 Lego.route('/', 'home-page');
 Lego.route('/about', 'about-page');
 
-// Route with params
-Lego.route('/user/:id', 'user-profile');
+// Route with params and middleware
+Lego.route('/user/:id', 'user-profile', async (params, global) => {
+  return global.auth.isLoggedIn;
+});
 ```
 
 ## Router Outlet
 
-You must have a `<router-outlet>` in your DOM where the routed content will appear.
+You must have a `<lego-router>` in your DOM where the routed content will appear.
 
 ```html
 <nav>
-  <a href="/">Home</a>
-  <a href="/about">About</a>
+  <a href="/" b-link>Home</a>
+  <a href="/about" b-link>About</a>
 </nav>
-<router-outlet></router-outlet>
+
+<lego-router></lego-router>
 ```

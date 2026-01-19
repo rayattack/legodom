@@ -1,29 +1,53 @@
 # Global Helpers
 
-Lego exposes a global `Lego` object when loaded via CDN, or as exports when using modules.
+LegoDOM exposes a few globals for managing state and routing across the application.
 
-## Lego.page
+## Lego.globals
 
-Access to the router's current state.
+A reactive global state object. Changes to this object will automatically update any component that uses it.
+
+### Usage
+
+Initialize it via `Lego.init()` which binds it to the document body (or root).
 
 ```js
-console.log(Lego.page.params); // URL parameters
-console.log(Lego.page.query);  // Query string parameters
+// main.js
+Lego.globals.user = { name: 'Alice', isLoggedIn: true };
+
+// In any component HTML
+// <span>[[ global.user.name ]]</span>
 ```
 
-## Lego.create()
+### Accessing in JavaScript
 
-Manually create a reactive object (stud) detached from a component.
+You can import `Lego` to access it anywhere:
 
 ```js
-const store = Lego.create({ count: 0 });
+import { Lego } from './main.js';
+
+function logout() {
+  Lego.globals.user.isLoggedIn = false; // Updates UI everywhere
+}
 ```
 
-## Event Bus
+## Lego.globals.$route
 
-Simple global event bus.
+Access the current route state.
 
 ```js
-Lego.on('user-login', (user) => { ... });
-Lego.emit('user-login', { name: 'Alice' });
+console.log(Lego.globals.$route.params); // URL parameters e.g. { id: "123" }
+console.log(Lego.globals.$route.query);  // Query string params e.g. { sort: "asc" }
+console.log(Lego.globals.$route.url);    // Full URL path + query
+```
+
+## Lego.globals.$go
+
+Programmatic navigation helper.
+
+```js
+// Navigate to /profile
+Lego.globals.$go('/profile').get();
+
+// Fetch to /api/save and push history state
+Lego.globals.$go('/api/save').post({ data: 123 });
 ```

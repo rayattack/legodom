@@ -1,40 +1,41 @@
 # Lifecycle Hooks
 
-Methods that are automatically called during a component's lifecycle.
+Components in LegoDOM have a simple lifecycle managed by the `snap` (mount) and `unsnap` (unmount) mechanism.
 
-## init()
+## mounted()
 
-Called when the component is initialized and state is reactive, but before rendering.
+Called immediately after the component is connected to the DOM and its template has been rendered. This is the place to fetch data or set up subscriptions.
 
 ```js
 {
-  init() {
+  mounted() {
+    console.log("Component mounted!", this.$element);
     this.fetchData();
   }
 }
 ```
 
-## render()
+## unmounted()
 
-Called after the DOM has been updated.
+Called when the component is removed from the DOM (unsnapped). Use this to clean up timers or event listeners that were not attached via `b-*` directives.
 
 ```js
 {
-  render() {
-    console.log('Component rendered');
+  unmounted() {
+    // Cleanup 
+    clearInterval(this.timer);
   }
 }
 ```
 
-## destroy()
+## updated()
 
-Called when the component is removed from the DOM.
+Called after the component's state changes and the DOM has been updated. LegoDOM batches updates, so this will only run once per render cycle even if multiple state properties change.
 
 ```js
 {
-  destroy() {
-    // Cleanup timers or listeners
-    clearInterval(this.timer);
+  updated() {
+    console.log("Component re-rendered");
   }
 }
 ```

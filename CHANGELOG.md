@@ -1,6 +1,27 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [1.5.1] - 2026-01-19
+
+### Breaking Changes 🚨
+
+- **Renamed `b-styles` to `b-stylesheets`:** The directive for injecting shared stylesheets into shadow roots has been renamed from `b-styles` to `b-stylesheets` to avoid confusion with the `style` attribute and better reflect its purpose (injecting Constructable Stylesheets).
+  ```html
+  <!-- Before -->
+  <template b-styles="base theme">
+  
+  <!-- After -->
+  <template b-stylesheets="base theme">
+  ```
+
+### Documentation
+
+- **New "Helper Utilities" Guide:** Added a dedicated page at `/docs/guide/helpers.md` documenting core instance methods like `$ancestors`, `$emit`, `$route`, `$go`, `$vars`, `$element`, and `$registry`.
+- **Performance Tips Updated:** Revised the "Performance Tips" section in the Directives guide to correctly compare `b-show` (toggle visibility) vs `b-if` (DOM insertion/removal) instead of the outdated `b-show` vs CSS comparison.
+
+## [1.5.0] - 2026-01-19
+
+> [!WARNING] DEPRECATED
+> This version has been deprecated due to an incomplete rename of `b-styles`. Please use `1.5.1`.
 
 ## [1.4.0] - 2026-01-16
 

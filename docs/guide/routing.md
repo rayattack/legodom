@@ -162,7 +162,7 @@ Commonly, you use `$go` inside your component logic:
       },
       openSettings() {
         // Open settings in the sidebar without losing the main page context
-        this.global.$go('/settings-panel', '#sidebar').get(false);
+        this.$go('/settings-panel', '#sidebar').get(false);
       }
     }
   }
