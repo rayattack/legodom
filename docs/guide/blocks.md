@@ -63,7 +63,7 @@ Lego.block('hello-world', `
 });
 ```
 
-### Method 3: Single File Blocks (.lego)
+### Method 3: Lego Files / Single File Blocks (.lego)
 
 With Vite, use `.lego` files:
 
