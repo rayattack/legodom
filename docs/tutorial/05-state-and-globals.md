@@ -264,7 +264,7 @@ You now know how to:
 
 ### Continue Learning
 
-- [Components Deep Dive](/guide/components) – Advanced component patterns
+- [Blocks Deep Dive](/guide/blocks) – Advanced block patterns
 - [Directives Reference](/guide/directives) – All `b-*` directives explained
 - [Routing Guide](/guide/routing) – Surgical swaps and advanced routing
 - [API Reference](/api/) – Complete API documentation

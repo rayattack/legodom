@@ -20,7 +20,7 @@ When you call `init`, LegoDOM does three critical things:
 
 ### Options
 
--   `styles`: A map of shared stylesheets (see [Styling](/guide/components#shared-styles)).
+-   `styles`: A map of shared stylesheets (see [Styling](/guide/blocks#styling-the-host)).
 -   `loader`: An async function to dynamically fetch and compile components that haven't been loaded yet.
 -   `studio`: Enables the visual development environment.
 

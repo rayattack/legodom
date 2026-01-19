@@ -521,5 +521,5 @@ Log lifecycle events to understand component behavior:
 ## Next Steps
 
 - See [lifecycle examples](/examples/)
-- Learn about [component patterns](/guide/components)
+- Learn about [block patterns](/guide/blocks)
 - Explore [state management](/guide/reactivity)

@@ -272,7 +272,7 @@ Studio itself is JavaScript, but it works with TypeScript projects. Component st
 
 - [Lego.init()](/api/config#init) - Initialization options
 - [Advanced API](/api/advanced) - `Lego.snap()`, `Lego.unsnap()`
-- [Component Development](/guide/components) - Building components
+- [Block Development](/guide/blocks) - Building blocks
 - [Lifecycle Hooks](/api/lifecycle) - Component lifecycle
 
 ---

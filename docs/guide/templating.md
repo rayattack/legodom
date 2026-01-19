@@ -387,4 +387,4 @@ If a calculation is expensive, cache it:
 
 - Learn about [Directives](/guide/directives)
 - See [templating examples](/examples/)
-- Explore [component patterns](/guide/components)
+- Explore [block patterns](/guide/blocks)

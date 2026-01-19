@@ -380,4 +380,4 @@ Try adding these features:
 
 - See [Routing Example](/examples/routing)
 - Learn about [Form Validation](/examples/form)
-- Explore [SFC Showcase](/examples/sfc-showcase)
+- Explore [Lego Files Showcase](/examples/lego-files-showcase)

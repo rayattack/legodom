@@ -118,5 +118,5 @@ The Vite plugin automatically discovers and registers it!
 
 ## Next Steps
 
-- Explore [Core Concepts](/guide/components)
+- Explore [Core Concepts](/guide/blocks)
 - Check out the [API Reference](/api/)

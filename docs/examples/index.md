@@ -73,7 +73,7 @@ Single-page application with:
 - Navigation
 - Route parameters
 
-### [SFC Showcase](/examples/sfc-showcase)
+### [Lego Files Showcase](/examples/lego-files-showcase)
 
 Using Single File Blocks:
 - User cards

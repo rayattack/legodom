@@ -43,7 +43,7 @@ Lego.defineLegoFile(content: string, filename?: string)
 
 ### Example
 
-
+```js
 // Registers <my-block> instantly
 Lego.defineLegoFile(sfc, 'my-block.lego');
 ```
