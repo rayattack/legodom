@@ -371,11 +371,15 @@ Applies shared CSS stylesheets to a block's Shadow DOM. Stylesheets are defined 
 ```js
 Lego.init(document.body, {
   styles: {
-    base: ['/css/reset.css', '/css/typography.css'],
-    forms: ['/css/forms.css']
+    base: ['/styles/reset.css', '/styles/typography.css'],
+    forms: ['/styles/forms.css']
   }
 });
 ```
+
+::: tip Using with Vite
+**Required:** Place CSS files in the `/public/` directory (e.g., `/public/styles/theme.css`). Vite serves files from `public/` as static assets, ensuring LegoDOM receives raw CSS instead of JavaScript modules.
+:::
 
 **Usage in templates:**
 
@@ -388,7 +392,9 @@ Lego.init(document.body, {
 **Usage in .lego files:**
 
 ```html
-<style src="base forms"></style>
+<template b-stylesheets="base forms">
+  <form>...</form>
+</template>
 ```
 
 Multiple keys can be space-separated. The stylesheets are loaded once and shared across all blocks using `adoptedStyleSheets`.

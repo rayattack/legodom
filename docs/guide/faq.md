@@ -180,6 +180,35 @@ LegoDOM automatically transforms this to `:host` for Shadow DOM.
 
 No! Styles are scoped via Shadow DOM. Your `.button` class won't affect buttons in other blocks.
 
+### How do I load external CSS with `b-stylesheets`?
+
+**Recommended: Use the `/public/` directory**
+
+Place your CSS files in the `public/` folder of your project:
+
+```
+/public/
+  /styles/
+    theme.css
+    base.css
+```
+
+Then reference them with absolute paths:
+
+```javascript
+Lego.init(document.body, {
+  styles: {
+    'main-theme': ['/styles/theme.css', '/styles/base.css']
+  }
+});
+```
+
+**Why `/public/`?** Vite serves files from `public/` as static assets without transformation, ensuring LegoDOM receives raw CSS instead of JavaScript modules.
+
+::: warning Important
+CSS files **must** be placed in `/public/` when using Vite. Placing them in `src/` will cause Vite to serve them as JavaScript modules, which will break stylesheet loading.
+:::
+
 ---
 
 ## Build & Development
