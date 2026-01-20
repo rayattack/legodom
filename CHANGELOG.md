@@ -1,6 +1,15 @@
 # Changelog
 
-# Changelog
+## [2.0.4-rc.2] - 2026-01-20
+
+### Features
+
+- **`b-key` Directive:** Optimized rendering for lists by providing stable identities for elements.
+
+### Fixes
+
+- **Lego Studio Scaffolding:** Fixed an issue where `.lego` files were expected to be in `src/block`, causing a blank screen upon scaffolding.
+
 ## [2.0.4-rc.1] - 2026-01-20
 
 ### Features
