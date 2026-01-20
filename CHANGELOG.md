@@ -1,6 +1,21 @@
 # Changelog
 
 # Changelog
+## [2.0.4-beta] - 2026-01-20
+
+### Fixes
+
+- **Auto-Discovery Logic:** Fixed a bug where elements present in the initial HTML were not detected by the `config.loader`. The discovery logic now scans the DOM during `Lego.init()` as well as on subsequent mutations.
+- **b-stylesheets Support:** Fully implemented `b-stylesheets` to allow blocks to adopt constructable stylesheets.
+- **SSR/Node Compatibility:** Added checks for `window`, `document`, and `Node` throughout the core to ensure LegoDOM can be imported and executed in Node.js/SSR environments without crashing.
+- **Global Export:** `Lego` is now correctly exported to `global` in Node.js environments.
+
+## [2.0.4-alpha] - 2026-01-20
+
+### Fixes
+
+- **SSR/Node Compatibility:** Added checks for `window`, `document`, and `Node` throughout the core to ensure LegoDOM can be imported and executed in Node.js/SSR environments without crashing.
+- **Global Export:** `Lego` is now correctly exported to `global` in Node.js environments.
 
 ## [2.0.3] - 2026-01-19
 

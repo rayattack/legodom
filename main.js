@@ -309,21 +309,25 @@ const Lego = (() => {
   };
 
   // Cross-tab Synchronization
-  window.addEventListener('storage', (e) => {
-    if (!e.key || !dbBindings.has(e.key)) return;
-    try {
-      const newValue = JSON.parse(e.newValue);
-      dbBindings.get(e.key).forEach(({ target, prop, el, batcher }) => {
-        target[prop] = newValue; // Update raw data
-        if (el && batcher) batcher.add(el); // Trigger re-render
-      });
-    } catch (e) { }
-  });
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+      if (!e.key || !dbBindings.has(e.key)) return;
+      try {
+        const newValue = JSON.parse(e.newValue);
+        dbBindings.get(e.key).forEach(({ target, prop, el, batcher }) => {
+          target[prop] = newValue; // Update raw data
+          if (el && batcher) batcher.add(el); // Trigger re-render
+        });
+      } catch (e) { }
+    });
+  }
 
   const dbMetadata = new WeakMap(); // target -> { prop: { key, debounce } }
 
+  const isNode = (val) => typeof Node !== 'undefined' && val instanceof Node;
+
   const reactive = (obj, el, batcher = globalBatcher) => {
-    if (obj === null || typeof obj !== 'object' || obj instanceof Node) return obj;
+    if (obj === null || typeof obj !== 'object' || isNode(obj)) return obj;
     if (proxyCache.has(obj)) return proxyCache.get(obj);
 
     // Hydrate $db descriptors
@@ -351,7 +355,7 @@ const Lego = (() => {
     const handler = {
       get: (t, k) => {
         const val = Reflect.get(t, k);
-        if (val !== null && typeof val === 'object' && !(val instanceof Node)) {
+        if (val !== null && typeof val === 'object' && !isNode(val)) {
           return reactive(val, el, batcher);
         }
         return val;
@@ -972,33 +976,38 @@ const Lego = (() => {
         registry[t.getAttribute('b-id')] = t;
       });
 
-      const observer = new MutationObserver(m => m.forEach(r => {
-        r.addedNodes.forEach(n => {
-          if (n.nodeType === Node.ELEMENT_NODE) {
-            snap(n);
-            // Auto-Discovery: Check if tag is unknown and loader is configured
-            const tagName = n.tagName.toLowerCase();
-            if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
-              const result = config.loader(tagName);
-              if (result) {
-                // Handle Promise (user does custom fetch) vs String (we fetch)
-                const promise = (typeof result === 'string')
-                  ? fetch(result).then(r => r.text())
-                  : result;
+      const checkAndLoad = (n) => {
+        if (n.nodeType !== Node.ELEMENT_NODE) return;
+        snap(n);
+        // Auto-Discovery: Check if tag is unknown and loader is configured
+        const tagName = n.tagName.toLowerCase();
+        if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
+          const result = config.loader(tagName);
+          if (result) {
+            const promise = (typeof result === 'string')
+              ? fetch(result).then(r => r.text())
+              : result;
 
-                Promise.resolve(promise)
-                  .then(legoFile => publicAPI.defineLegoFile(legoFile, tagName + '.lego'))
-                  .catch(e => console.error(`[Lego] Failed to load ${tagName}:`, e));
-              }
-            }
+            Promise.resolve(promise)
+              .then(legoFile => publicAPI.defineLegoFile(legoFile, tagName + '.lego'))
+              .catch(e => console.error(`[Lego] Failed to load ${tagName}:`, e));
           }
-        });
+        }
+      };
+
+      const observer = new MutationObserver(m => m.forEach(r => {
+        r.addedNodes.forEach(checkAndLoad);
         r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
       }));
       observer.observe(root, { childList: true, subtree: true });
 
+      // Initial Scan for everything
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      checkAndLoad(root);
+      while (walker.nextNode()) checkAndLoad(walker.currentNode);
+
       root._studs = Lego.globals;
-      snap(root);
+      // snap(root); // parsing moved to checkAndLoad
       bind(root, root);
       render(root);
 
@@ -1042,7 +1051,7 @@ const Lego = (() => {
     },
     globals: reactive({
       $route: {
-        url: window.location.pathname,
+        url: typeof window !== 'undefined' ? window.location.pathname : '/',
         route: '',
         params: {},
         query: {},
@@ -1051,7 +1060,7 @@ const Lego = (() => {
       },
       $go: (path, ...targets) => _go(path, ...targets)(document.body),
       $db: dbFactory
-    }, document.body),
+    }, typeof document !== 'undefined' ? document.body : null),
     defineLegoFile: (content, filename = 'block.lego') => {
       let template = '';
       let script = '{}';
@@ -1153,4 +1162,8 @@ const Lego = (() => {
 
 if (typeof window !== 'undefined') {
   window.Lego = Lego;
+} else if (typeof global !== 'undefined') {
+  global.Lego = Lego;
 }
+
+
