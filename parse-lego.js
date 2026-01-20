@@ -7,7 +7,7 @@
  * Parse a .lego file content into structured sections
  * @param {string} content - Raw .lego file content
  * @param {string} filename - Filename for error reporting
- * @returns {{template: string, script: string, style: string, stylesAttr: string, blockName: string}}
+ * @returns {{template: string, script: string, style: string, stylesAttr: string, cascadeAttr: string, errorAttr: string, blockName: string}}
  */
 export function parseLego(content, filename = 'block.lego') {
   const result = {
@@ -15,6 +15,8 @@ export function parseLego(content, filename = 'block.lego') {
     script: '',
     style: '',
     stylesAttr: '',
+    cascadeAttr: '',
+    errorAttr: '',
     blockName: deriveBlockName(filename)
   };
 
@@ -61,6 +63,16 @@ export function parseLego(content, filename = 'block.lego') {
       if (bStylesMatch) {
         result.stylesAttr = bStylesMatch[1];
       }
+      // Extract b-cascade attribute if present
+      const bCascadeMatch = attrs.match(/b-cascade=["']([^"']+)["']/);
+      if (bCascadeMatch) {
+        result.cascadeAttr = bCascadeMatch[1];
+      }
+      // Extract b-error attribute if present
+      const bErrorMatch = attrs.match(/b-error=["']([^"']+)["']/);
+      if (bErrorMatch) {
+        result.errorAttr = bErrorMatch[1];
+      }
     } else if (tagName === 'script') {
       result.script = innerContent.trim();
     } else if (tagName === 'style') {
@@ -76,13 +88,25 @@ export function parseLego(content, filename = 'block.lego') {
 
 /**
  * Derive block name from filename
- * e.g., "sample-block.lego" -> "sample-block"
+ * Handles: "sample-block.lego" -> "sample-block"
+ *          "SampleBlock.lego" -> "sample-block" (PascalCase)
+ *          "sample_block.lego" -> "sample-block" (snake_case)
  * @param {string} filename
  * @returns {string}
  */
 export function deriveBlockName(filename) {
-  const basename = filename.split('/').pop();
-  return basename.replace(/\.lego$/, '');
+  const basename = filename.split('/').pop().replace(/\.lego$/, '');
+  // 1. Convert snake_case to kebab-case
+  // 2. Convert PascalCase/camelCase to kebab-case
+  const name = basename
+    .replace(/_/g, '-')
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .toLowerCase();
+
+  if (!name.includes('-')) {
+    throw new Error(`[Lego] Invalid block definition: "${filename}". Block names must contain a hyphen (e.g. user-card.lego or UserCard.lego).`);
+  }
+  return name;
 }
 
 /**

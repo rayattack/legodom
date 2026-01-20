@@ -34,10 +34,10 @@ export default { mounted() { console.log('hi') } }
 
   it('should generate Lego.block call with 4th argument', () => {
     const sfcContent = `<template b-stylesheets="tailwind">Hi</template>`;
-    const parsed = parseLego(sfcContent, 'test.lego');
+    const parsed = parseLego(sfcContent, 'test-block.lego');
     const blockCall = generateBlockCall(parsed);
 
-    expect(blockCall).toContain("Lego.block('test'");
+    expect(blockCall).toContain("Lego.block('test-block'");
     expect(blockCall).toContain(", 'tailwind');");
   });
 
