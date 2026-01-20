@@ -115,7 +115,7 @@ export function deriveBlockName(filename) {
  * @returns {string} - JavaScript code string
  */
 export function generateBlockCall(parsed) {
-  const { blockName, template, script, style, stylesAttr } = parsed;
+  const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr } = parsed;
 
   // Build template HTML
   let templateHTML = '';
@@ -140,7 +140,7 @@ export function generateBlockCall(parsed) {
   }
 
   // Generate the Lego.block call
-  return `Lego.block('${blockName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, '${stylesAttr}');`;
+  return `Lego.block('${blockName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, '${stylesAttr}', '${cascadeAttr}', '${errorAttr}');`;
 }
 
 /**

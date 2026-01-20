@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.4-rc.3] - 2026-01-21
+
+### Fixes
+
+- **Vite Plugin `b-cascade`/`b-error`:** Fixed a bug where `b-cascade` and `b-error` attributes defined in `.lego` files were not passed to `Lego.block()`, causing stylesheet inheritance and error boundaries to fail.
+
 ## [2.0.4-rc.2] - 2026-01-20
 
 ### Features

@@ -32,13 +32,13 @@ export default { mounted() { console.log('hi') } }
     expect(parsed.style).toContain('color: red');
   });
 
-  it('should generate Lego.block call with 4th argument', () => {
+  it('should generate Lego.block call with cascade and error arguments', () => {
     const sfcContent = `<template b-stylesheets="tailwind">Hi</template>`;
     const parsed = parseLego(sfcContent, 'test-block.lego');
     const blockCall = generateBlockCall(parsed);
 
     expect(blockCall).toContain("Lego.block('test-block'");
-    expect(blockCall).toContain(", 'tailwind');");
+    expect(blockCall).toContain(", 'tailwind', '', '');");
   });
 
   it('should escape correctly in template', () => {

@@ -1290,10 +1290,12 @@ const Lego = (() => {
       // Upgrade existing elements
       document.querySelectorAll(name).forEach(el => !getPrivateData(el).snapped && snap(el));
     },
-    block: (tagName, templateHTML, logic = {}, styles = "") => {
+    block: (tagName, templateHTML, logic = {}, styles = "", cascade = "", error = "") => {
       const t = document.createElement('template');
       t.setAttribute('b-id', tagName);
       t.setAttribute('b-stylesheets', styles);
+      if (cascade) t.setAttribute('b-cascade', cascade);
+      if (error) t.setAttribute('b-error', error);
       t.innerHTML = templateHTML;
       registry[tagName] = t;
       legoFileLogic.set(tagName, logic);
