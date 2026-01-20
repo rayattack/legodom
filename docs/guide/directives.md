@@ -181,6 +181,86 @@ Use `$index` (implicit variable):
 </li>
 ```
 
+### Stable Rendering with b-key
+
+By default, `b-for` tracks objects by auto-detecting common ID fields (`id`, `_id`, `uuid`, `key`). For inline arrays or objects without these fields, use `b-key` to specify a unique identifier:
+
+```html
+<div b-for="menu in menus" b-key="name">
+  <span>[[ menu.icon ]]</span>
+  <span>[[ menu.name ]]</span>
+</div>
+```
+
+```js
+{
+  menus: [
+    { icon: 'home', name: 'Home' },
+    { icon: 'settings', name: 'Settings' }
+  ]
+}
+```
+
+**Why `b-key` matters:**
+- Prevents DOM thrashing when lists update
+- Maintains text selection and focus state
+- Improves performance by reusing existing DOM nodes
+
+#### Auto-Detection
+
+If you don't specify `b-key`, LegoDOM automatically looks for these fields (in order):
+1. `item.id`
+2. `item._id`
+3. `item.uuid`
+4. `item.key`
+
+```html
+<!-- No b-key needed if items have 'id' -->
+<div b-for="user in users">
+  [[ user.name ]]
+</div>
+```
+
+```js
+{
+  users: [
+    { id: 1, name: 'Alice' },  // ✅ 'id' is auto-detected
+    { id: 2, name: 'Bob' }
+  ]
+}
+```
+
+#### Nested Property Paths
+
+You can use dot notation for nested keys:
+
+```html
+<div b-for="item in items" b-key="user.id">
+  [[ item.user.name ]]
+</div>
+```
+
+```js
+{
+  items: [
+    { user: { id: 'u1', name: 'Alice' } },
+    { user: { id: 'u2', name: 'Bob' } }
+  ]
+}
+```
+
+#### When to Use b-key
+
+✅ **Use `b-key` when:**
+- Iterating over inline arrays: `b-for="item in [{ name: 'A' }, { name: 'B' }]"`
+- Objects lack `id`, `_id`, `uuid`, or `key` fields
+- You need a specific property as the unique identifier
+
+❌ **Don't use `b-key` when:**
+- Your objects already have an `id` field (it's auto-detected)
+- Iterating over primitives (strings, numbers) — index-based keys work fine
+
+
 ## b-sync
 
 Two-way data binding for form inputs.
