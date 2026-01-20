@@ -1,0 +1,43 @@
+{
+  "name": "create-legodom",
+  "version": "1.0.0",
+  "description": "Scaffolding tool for LegoDOM applications",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "create-legodom": "index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "legodom",
+    "scaffold",
+    "cli",
+    "create",
+    "web-components",
+    "vite",
+    "starter",
+    "template"
+  ],
+  "author": "Tersoo Ortserga",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rayattack/LegoDOM.git",
+    "directory": "create-legodom"
+  },
+  "bugs": {
+    "url": "https://github.com/rayattack/LegoDOM/issues"
+  },
+  "homepage": "https://github.com/rayattack/LegoDOM/tree/main/create-legodom#readme",
+  "engines": {
+    "node": ">=14.18.0"
+  },
+  "dependencies": {
+    "fs-extra": "^11.1.0",
+    "kolorist": "^1.8.0",
+    "minimist": "^1.2.8",
+    "prompts": "^2.4.2"
+  }
+}

@@ -1,0 +1,51 @@
+<template>
+  <div class="card">
+    <a href="https://github.com/rayattack/LegoDOM" target="_blank">
+      <img src="/lego.svg" class="logo" alt="Lego logo" />
+    </a>
+    <h1>LegoDOM</h1>
+    <div class="content">
+      <button @click="increment()">
+        count is [[ count ]]
+      </button>
+      <p>
+        Edit <code>src/my-app.lego</code> and save to test HMR
+      </p>
+    </div>
+    <p class="read-the-docs">
+      Click on the LegoDOM logo to learn more
+    </p>
+  </div>
+</template>
+
+<script>
+  export default {
+    state: {
+      count: 0
+    },
+    methods: {
+      increment() {
+        this.render({ count: this.state.count + 1 });
+      }
+    }
+  }
+</script>
+
+<style>
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.card {
+  text-align: center;
+  padding: 2em;
+}
+.read-the-docs {
+  color: #888;
+}
+</style>
