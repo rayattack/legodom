@@ -51,7 +51,7 @@ describe('LegoDOM Error Handling', () => {
     await new Promise(r => setTimeout(r, 100));
 
     expect(errorSpy).toHaveBeenCalled();
-    expect(errorSpy.mock.calls[0][1]).toBe('render-error');
+    expect(errorSpy.mock.calls[0][1]).toBe('render');
   });
 
   it('should catch errors in event handlers', async () => {

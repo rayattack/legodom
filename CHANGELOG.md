@@ -1,6 +1,57 @@
 # Changelog
 
 # Changelog
+## [2.0.4-rc.1] - 2026-01-20
+
+### Features
+
+- **Error Boundaries (`b-error`):** Gracefully handle block crashes with cascading error boundaries!
+  ```html
+  <template b-error="error-card">
+    <user-profile></user-profile>
+    <activity-feed></activity-feed>
+  </template>
+  ```
+  - **Cascading:** Errors bubble up to the nearest parent boundary (template or instance level).
+  - **Error Context:** Error blocks receive `$error` object with `message`, `stack`, and `component` properties.
+  - **Automatic Recovery:** Replace crashed blocks with custom fallback UI instead of blank screens.
+  - **Global Fallback:** Falls back to `config.onError` if no boundary is found.
+
+- **Cascading Stylesheets (`b-cascade`):** New attribute for selective stylesheet inheritance!
+  ```html
+  <body b-stylesheets="theme" b-cascade="theme">
+    <!-- All children inherit 'theme' automatically -->
+    <app-root></app-root>
+  </body>
+  ```
+  - **Inheritance:** Child blocks inherit stylesheets listed in `b-cascade` from their ancestors.
+  - **Explicit Override:** Adding `b-stylesheets` to a child merges with inherited styles (child-specific styles take precedence).
+  - **Debug API:** inspect inheritance with `Lego.debug.stylesheets($0)`.
+
+- **New CLI Tooling:** Released `create-legodom` for instant project scaffolding.
+  ```bash
+  npm create legodom@latest
+  ```
+
+### Performance
+
+- **Global State Subscription Tracking:** Optimized global state updates from O(N) to O(K) complexity.
+  - Previously scanned all active blocks to check for global dependencies.
+  - Now maintains a dedicated `globalSubscribers` Set for instant lookups.
+  - Significantly faster for apps with thousands of blocks.
+
+### Memory Management
+
+- **Fixed Circular Reference Leaks:** Enhanced `unsnap()` to clear all closure-captured references.
+  - Explicitly nulls `$emit`, and deletes `$parent`, `$route`, `$go` getters.
+  - Prevents memory leaks from closures capturing element references.
+  - Ensures complete garbage collection of removed blocks.
+
+### Documentation
+
+- **b-cascade Guide:** Added documentation for cascading stylesheets, best practices for global themes vs block styles.
+- **Directives:** Merged cascade docs into the main Directives guide.
+
 ## [2.0.4-beta] - 2026-01-20
 
 ### Fixes

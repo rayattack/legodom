@@ -2,6 +2,7 @@ const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
   const activeBlocks = new Set();
+  const globalSubscribers = new Set();
 
   const legoFileLogic = new Map();
   const sharedStates = new Map();
@@ -395,7 +396,7 @@ const Lego = (() => {
 
   const getPrivateData = (el) => {
     if (!privateData.has(el)) {
-      privateData.set(el, { snapped: false, bindings: null, bound: false, rendering: false, anchor: null, hasGlobalDependency: false });
+      privateData.set(el, { snapped: false, bindings: null, bound: false, rendering: false, anchor: null });
     }
     return privateData.get(el);
   };
@@ -425,7 +426,75 @@ const Lego = (() => {
     return undefined;
   };
 
-  const safeEval = (expr, context, throwError = false) => {
+  /**
+   * Find the nearest error boundary for a crashed element
+   * Checks instance attribute, template attribute, then bubbles up parent chain
+   */
+  const findErrorBoundary = (el) => {
+    let current = el;
+    while (current) {
+      // 1. Check instance-level attribute (override)
+      const instanceError = current.getAttribute && current.getAttribute('b-error');
+      if (instanceError) {
+        return { errorTag: instanceError, targetElement: current };
+      }
+
+      // 2. Check template-level attribute (default)
+      const tagName = current.tagName ? current.tagName.toLowerCase() : '';
+      const templateNode = registry[tagName];
+      if (templateNode) {
+        const templateError = templateNode.getAttribute('b-error');
+        if (templateError) {
+          return { errorTag: templateError, targetElement: current };
+        }
+      }
+
+      // 3. Bubble up to parent
+      current = current.parentElement || (current.getRootNode && current.getRootNode().host);
+    }
+    return null;
+  };
+
+  /**
+   * Render an error block in place of a crashed component
+   */
+  const renderErrorBlock = (errorTag, crashedEl, err) => {
+    try {
+      // Clear the crashed element's content
+      if (crashedEl.shadowRoot) {
+        crashedEl.shadowRoot.innerHTML = '';
+      } else {
+        crashedEl.innerHTML = '';
+      }
+
+      // Create the error block
+      const errorBlock = document.createElement(errorTag);
+
+      // Append to crashed element
+      const target = crashedEl.shadowRoot || crashedEl;
+      target.appendChild(errorBlock);
+
+      // Snap the error block first to initialize its state
+      snap(errorBlock);
+
+      // Inject error information into the error block's state (after snapping)
+      if (errorBlock._studs) {
+        errorBlock._studs.$error = {
+          message: err.message,
+          stack: err.stack,
+          component: crashedEl.tagName.toLowerCase()
+        };
+        // Trigger a render to update the error display
+        render(errorBlock);
+      }
+    } catch (renderErr) {
+      // If error rendering fails, fall back to console
+      console.error('[Lego] Error boundary failed to render:', renderErr);
+      console.error('[Lego] Original error:', err);
+    }
+  };
+
+  const safeEval = (expr, context, throwError = true) => {
     // 1. Security: Block dangerous patterns
     if (/\b(function|eval|import|class|module|deploy|constructor|__proto__)\b/.test(expr)) {
       console.warn(`[Lego] Security Warning: Blocked dangerous expression "${expr}"`);
@@ -508,7 +577,12 @@ const Lego = (() => {
                 }
                 safeEval(attr.value, { state: evalScope, global: Lego.globals, self: child, event }, true);
               } catch (err) {
-                config.onError(err, 'event-handler', child);
+                const boundary = findErrorBoundary(blockRoot);
+                if (boundary) {
+                  renderErrorBlock(boundary.errorTag, boundary.targetElement, err);
+                } else {
+                  config.onError(err, 'event-handler', child);
+                }
               }
             });
           }
@@ -579,7 +653,7 @@ const Lego = (() => {
       const checkGlobal = (str) => {
         if (/\bglobal\b/.test(str)) {
           const target = container.host || container;
-          getPrivateData(target).hasGlobalDependency = true;
+          globalSubscribers.add(target);
         }
       };
 
@@ -738,12 +812,15 @@ const Lego = (() => {
 
       // Global Broadcast: Only notify blocks that depend on globals
       if (state === Lego.globals) {
-        activeBlocks.forEach(comp => {
-          if (getPrivateData(comp).hasGlobalDependency) render(comp);
-        });
+        globalSubscribers.forEach(block => render(block));
       }
     } catch (err) {
-      config.onError(err, 'render', el);
+      const boundary = findErrorBoundary(el);
+      if (boundary) {
+        renderErrorBlock(boundary.errorTag, boundary.targetElement, err);
+      } else {
+        config.onError(err, 'render', el);
+      }
     } finally {
       if (config.metrics && config.metrics.onRenderEnd) config.metrics.onRenderEnd(el);
       data.rendering = false;
@@ -761,13 +838,48 @@ const Lego = (() => {
       const tpl = templateNode.content.cloneNode(true);
       const shadow = el.attachShadow({ mode: 'open' });
 
-      const styleKeys = (templateNode.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
-      if (styleKeys.length > 0) {
-        const sheetsToApply = styleKeys.flatMap(key => styleRegistry.get(key) || []);
+      // Stylesheet Application: Definition + Instance + Inheritance (Cascade)
+      const defStyles = (templateNode.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
+      const instStyles = (el.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
+
+      // Calculate inherited styles from ancestors with b-cascade
+      const inheritedStyles = [];
+      let parent = el.parentElement || (el.getRootNode ? el.getRootNode().host : null);
+      while (parent) {
+        // Check instance cascade
+        const instCascade = (parent.getAttribute('b-cascade') || "").split(/\s+/).filter(Boolean);
+        if (instCascade.length) inheritedStyles.push(...instCascade);
+
+        // Check definition cascade (if parent is a Lego block)
+        const pName = parent.tagName ? parent.tagName.toLowerCase() : '';
+        if (registry[pName]) {
+          const defCascade = (registry[pName].getAttribute('b-cascade') || "").split(/\s+/).filter(Boolean);
+          if (defCascade.length) inheritedStyles.push(...defCascade);
+        }
+
+        parent = parent.parentElement || (parent.getRootNode && parent.getRootNode().host);
+      }
+
+      // Merge: Explicit (Definition + Instance) > Inherited
+      const explicit = [...new Set([...defStyles, ...instStyles])];
+      const inherited = [...new Set(inheritedStyles)]; // Dedup inherited
+      const allStyleNames = [...new Set([...inherited, ...explicit])]; // Dedup all
+
+      if (allStyleNames.length > 0) {
+        const sheetsToApply = allStyleNames.flatMap(key => styleRegistry.get(key) || []);
         if (sheetsToApply.length > 0) {
           shadow.adoptedStyleSheets = [...sheetsToApply];
         }
       }
+
+      // Metadata for DevTools
+      el._studsMeta = {
+        stylesheets: {
+          explicit,
+          inherited,
+          applied: allStyleNames
+        }
+      };
 
       // TIER 1: Logic from Lego.block (Lego File)
       // TIER 2: Logic from the <template b-data="..."> attribute
@@ -815,7 +927,16 @@ const Lego = (() => {
       [...shadow.children].forEach(snap);
 
       if (typeof el._studs.mounted === 'function') {
-        try { el._studs.mounted.call(el._studs); } catch (e) { config.onError(e, 'mounted', el); }
+        try {
+          el._studs.mounted.call(el._studs);
+        } catch (e) {
+          const boundary = findErrorBoundary(el);
+          if (boundary) {
+            renderErrorBlock(boundary.errorTag, boundary.targetElement, e);
+          } else {
+            config.onError(e, 'mounted', el);
+          }
+        }
       }
     }
 
@@ -829,7 +950,16 @@ const Lego = (() => {
   const unsnap = (el) => {
     // 1. Call unmounted lifecycle hook first
     if (el._studs && typeof el._studs.unmounted === 'function') {
-      try { el._studs.unmounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in unmounted:`, e); }
+      try {
+        el._studs.unmounted.call(el._studs);
+      } catch (e) {
+        const boundary = findErrorBoundary(el);
+        if (boundary) {
+          renderErrorBlock(boundary.errorTag, boundary.targetElement, e);
+        } else {
+          console.error(`[Lego] Error in unmounted:`, e);
+        }
+      }
     }
 
     // 2. Recursively unsnap children in shadowRoot
@@ -839,6 +969,7 @@ const Lego = (() => {
 
     // 3. Remove from active blocks tracking
     activeBlocks.delete(el);
+    globalSubscribers.delete(el);
 
     // 4. Break circular references
     if (el._studs) {
@@ -852,6 +983,13 @@ const Lego = (() => {
         });
         el._studs.$vars = null;
       }
+
+      // Clear closure-captured references to prevent memory leaks
+      // These closures in getters/functions capture 'el' and must be cleared
+      if (el._studs.$emit) el._studs.$emit = null;
+      delete el._studs.$parent;  // Getter that captures el
+      delete el._studs.$route;   // Getter
+      delete el._studs.$go;       // Getter
 
       // Break the proxy -> element reference
       el._studs = null;
@@ -1065,6 +1203,8 @@ const Lego = (() => {
       let template = '';
       let script = '{}';
       let stylesAttr = '';
+      let cascadeAttr = '';
+      let errorAttr = '';
       let style = '';
 
       let remaining = content;
@@ -1095,6 +1235,10 @@ const Lego = (() => {
           template = innerContent.trim();
           const bStylesMatch = attrs.match(/b-stylesheets=["']([^"']+)["']/);
           if (bStylesMatch) stylesAttr = bStylesMatch[1];
+          const bCascadeMatch = attrs.match(/b-cascade=["']([^"']+)["']/);
+          if (bCascadeMatch) cascadeAttr = bCascadeMatch[1];
+          const bErrorMatch = attrs.match(/b-error=["']([^"']+)["']/);
+          if (bErrorMatch) errorAttr = bErrorMatch[1];
         } else if (tagName === 'script') {
           // Extract logic from script
           const logic = innerContent.trim();
@@ -1118,6 +1262,12 @@ const Lego = (() => {
       registry[name] = document.createElement('template');
       registry[name].innerHTML = template;
       registry[name].setAttribute('b-stylesheets', stylesAttr);
+      if (cascadeAttr) {
+        registry[name].setAttribute('b-cascade', cascadeAttr);
+      }
+      if (errorAttr) {
+        registry[name].setAttribute('b-error', errorAttr);
+      }
       legoFileLogic.set(name, logicObj);
 
       // Upgrade existing elements
@@ -1154,6 +1304,12 @@ const Lego = (() => {
         return '([^/]+)';
       });
       routes.push({ path, regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
+    },
+    debug: {
+      stylesheets: (el) => {
+        if (!el || !el._studsMeta) return null;
+        return el._studsMeta.stylesheets;
+      }
     }
   };
 

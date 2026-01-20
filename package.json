@@ -1,6 +1,6 @@
 {
   "name": "lego-dom",
-  "version": "2.0.4-beta",
+  "version": "2.0.4-rc.1",
   "license": "MIT",
   "description": "A feature-rich web components + SFC frontend framework",
   "main": "main.js",

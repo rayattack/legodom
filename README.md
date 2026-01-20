@@ -19,6 +19,21 @@ Lego embraces the web platform. It turns standard HTML `<template>` tags into re
 
 ---
 
+## Quick Start
+
+The fastest way to create a new LegoDOM project:
+
+```bash
+npm create legodom@latest my-app
+cd my-app
+npm install
+npm run dev
+```
+
+This scaffolds a complete project with Vite, the LegoDOM plugin, and a sample component!
+
+---
+
 ## Quick Start (No Build Required)
 
 ```html

@@ -399,6 +399,282 @@ Lego.init(document.body, {
 
 Multiple keys can be space-separated. The stylesheets are loaded once and shared across all blocks using `adoptedStyleSheets`.
 
+## b-error
+
+Defines an error boundary that gracefully handles crashes in your blocks. When a block throws an error during rendering, lifecycle hooks, or event handlers, the nearest `b-error` boundary will catch it and display a fallback block.
+
+### How It Works
+
+Error boundaries use a **cascading** strategy:
+
+1. **Template-Level (Default)**: Define on the block's template in the `.lego` file
+2. **Instance-Level (Override)**: Define on a specific instance in HTML
+3. **Parent Bubbling**: If a block has no `b-error`, the error bubbles up to the nearest parent boundary
+
+### Basic Usage
+
+**Define the Error Block:**
+
+```html
+<!-- error-card.lego -->
+<template>
+  <div class="error-card">
+    <h3>Something went wrong</h3>
+    <p>[[ $error.message ]]</p>
+    <button @click="location.reload()">Reload Page</button>
+  </div>
+</template>
+
+<style>
+  .error-card {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #c33;
+    border-radius: 8px;
+  }
+</style>
+```
+
+**Use in Template:**
+
+```html
+<!-- user-dashboard.lego -->
+<template b-error="error-card">
+  <user-profile></user-profile>
+  <user-stats></user-stats>
+  <activity-feed></activity-feed>
+</template>
+```
+
+**Result:** If any of the child blocks (`user-profile`, `user-stats`, or `activity-feed`) crashes, the entire `user-dashboard` will be replaced with `<error-card>`.
+
+### Cascading Error Boundaries
+
+Error boundaries bubble up the component tree:
+
+```html
+<!-- app-shell.lego -->
+<template b-error="global-error">
+  <header-bar></header-bar>
+  
+  <!-- Dashboard has its own boundary -->
+  <user-dashboard b-error="dashboard-error"></user-dashboard>
+  
+  <!-- Sidebar has no boundary, uses parent's -->
+  <sidebar-panel></sidebar-panel>
+</template>
+```
+
+**Behavior:**
+- If `<user-dashboard>` crashes → Shows `<dashboard-error>`
+- If `<sidebar-panel>` crashes → Shows `<global-error>` (bubbles to parent)
+- If `<header-bar>` crashes → Shows `<global-error>`
+
+### Instance-Level Overrides
+
+Override the default error boundary for specific instances:
+
+```html
+<template b-error="default-error">
+  <!-- Uses template default -->
+  <user-card></user-card>
+  
+  <!-- Override with custom error -->
+  <payment-form b-error="critical-error"></payment-form>
+</template>
+```
+
+### Accessing Error Information
+
+The error block receives a `$error` object in its state:
+
+```html
+<!-- debug-error.lego -->
+<template>
+  <div class="error-debug">
+    <h3>Error in [[ $error.component ]]</h3>
+    <p><strong>Message:</strong> [[ $error.message ]]</p>
+    <details>
+      <summary>Stack Trace</summary>
+      <pre>[[ $error.stack ]]</pre>
+    </details>
+  </div>
+</template>
+```
+
+**`$error` Properties:**
+- `message`: The error message
+- `stack`: The error stack trace
+- `component`: The tag name of the crashed block (e.g., `"user-card"`)
+
+### Best Practices
+
+✅ **Define Global Boundaries**
+
+```html
+<!-- app.html -->
+<body b-error="app-error">
+  <router-view></router-view>
+</body>
+```
+
+This ensures all crashes are caught, even if individual blocks don't define boundaries.
+
+✅ **Create Reusable Error Blocks**
+
+```html
+<!-- error-card.lego - Generic -->
+<template>
+  <div class="error">
+    <p>[[ $error.message ]]</p>
+    <button @click="$emit('retry')">Retry</button>
+  </div>
+</template>
+
+<!-- critical-error.lego - For Critical Features -->
+<template>
+  <div class="critical-error">
+    <h2>Critical Error</h2>
+    <p>Please contact support: support@example.com</p>
+    <p>Error ID: [[ $error.component ]]-[[ Date.now() ]]</p>
+  </div>
+</template>
+```
+
+✅ **Use Specific Boundaries for Critical Features**
+
+```html
+<checkout-flow b-error="payment-error">
+  <payment-form></payment-form>
+</checkout-flow>
+
+<user-settings b-error="settings-error">
+  <preferences-panel></preferences-panel>
+</user-settings>
+```
+
+❌ **Don't Over-Isolate**
+
+```html
+<!-- ❌ Too granular -->
+<card-list>
+  <user-card b-error="error-card"></user-card>
+  <user-card b-error="error-card"></user-card>
+  <user-card b-error="error-card"></user-card>
+</card-list>
+
+<!-- ✅ Better: One boundary for the list -->
+<card-list b-error="error-card">
+  <user-card></user-card>
+  <user-card></user-card>
+  <user-card></user-card>
+</card-list>
+```
+
+### When Boundaries Trigger
+
+Error boundaries catch errors in:
+
+- **Rendering**: Errors during template evaluation
+- **Lifecycle Hooks**: Errors in `mounted()` or `unmounted()`
+- **Event Handlers**: Errors in `@click`, `@input`, etc.
+
+### Fallback to Console
+
+If no error boundary is found, LegoDOM falls back to `config.onError`, which by default logs to the console:
+
+```javascript
+Lego.init(document.body, {
+  onError: (err, type, el) => {
+    console.error(`[Lego Error] [${type}]`, err, el);
+    // Optionally send to error tracking service
+    Sentry.captureException(err);
+  }
+});
+```
+
+## b-cascade
+
+The `b-cascade` attribute allows you to selectively propagate stylesheets to child blocks, enabling theme systems and design tokens to cascade through your component tree.
+
+### Inheritance Rules
+
+1. **Merge strategy**: Inherited styles are applied first, followed by explicit styles.
+2. **Explicit wins**: Explicit `b-stylesheets` take precedence over inherited ones in the cascade order.
+3. **Deduplication**: Duplicate stylesheets are automatically removed.
+
+### Basic Usage
+
+```html
+<parent-block b-stylesheets="theme-a theme-b" b-cascade="theme-a">
+  <child-block></child-block>
+</parent-block>
+```
+
+**Result:** `child-block` automatically inherits `theme-a` (but NOT `theme-b`).
+
+### Best Practices
+
+✅ **Use for Global Themes and Design Systems**
+
+Use `b-cascade` exclusively for styles that should be available app-wide:
+
+```html
+<body b-stylesheets="design-tokens typography" b-cascade="design-tokens typography">
+  <!-- All blocks inherit design tokens and typography -->
+  <my-header></my-header>
+  <my-content></my-content>
+  <my-footer></my-footer>
+</body>
+```
+
+**Good use cases:**
+- **Design tokens** (CSS custom properties: colors, spacing, breakpoints)
+- **Typography scales** (font families, sizes, weights)
+- **Reset/normalize stylesheets**
+- **Utility systems** (if using Tailwind/similar)
+- **Theme switches** (light/dark mode)
+
+❌ **Don't Use for Block-Specific Styles**
+
+If styles belong to a specific block, put them in that block's `<style>` tag instead:
+
+```html
+<!-- ❌ BAD: Cascading block-specific styles -->
+<user-profile b-stylesheets="card-styles user-button-styles" b-cascade="user-button-styles">
+  <user-avatar></user-avatar> <!-- Gets button styles it doesn't need! -->
+</user-profile>
+```
+
+```html
+<!-- ✅ GOOD: Block-specific styles in the block -->
+<!-- user-avatar.lego -->
+<template>
+  <img src="[[avatarUrl]]" alt="Avatar">
+</template>
+
+<style>
+  img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+  }
+</style>
+```
+
+**Why?** Cascading block-specific styles makes debugging necessary, since you won't know why a block is receiving styles it shouldn't have without `Lego.debug.stylesheets()`. 
+
+**Rule of thumb:** If you designed your design system well, you only need `b-cascade` for global theming. Everything else belongs in `<style>` tags.
+
+### Debugging
+
+You can inspect which stylesheets are applied (explicit vs inherited) using the debug helper:
+
+```javascript
+Lego.debug.stylesheets(document.querySelector('my-block'));
+// Returns: { explicit: [...], inherited: [...], applied: [...] }
+```
+
 ## Combining Directives
 
 ### b-show + b-for
