@@ -420,10 +420,21 @@ Error boundaries use a **cascading** strategy:
 <template>
   <div class="error-card">
     <h3>Something went wrong</h3>
+    <!-- Access in Template Space: direct variable -->
     <p>[[ $error.message ]]</p>
-    <button @click="location.reload()">Reload Page</button>
+    <button @click="retry()">Retry</button>
   </div>
 </template>
+
+<script>
+  export default {
+    retry() {
+      // Access in Script Space: use this.$error
+      console.log('Retrying error:', this.$error);
+      location.reload();
+    }
+  }
+</script>
 
 <style>
   .error-card {
@@ -434,6 +445,30 @@ Error boundaries use a **cascading** strategy:
   }
 </style>
 ```
+
+### Accessing Error Details
+
+The `$error` object (`{ message, stack, component }`) is injected into the error block's state and can be accessed in three ways:
+
+1.  **Template Space**: Use `[[ $error ]]` directly.
+    ```html
+    <p>Error: [[ $error.message ]]</p>
+    ```
+
+2.  **Script Space**: Use `this.$error`.
+    ```javascript
+    export default {
+      mounted() {
+        console.log('Crashed component:', this.$error.component);
+      }
+    }
+    ```
+
+3.  **External Space**: Use `element.state.$error`.
+    ```javascript
+    const errorCard = document.querySelector('error-card');
+    console.log(errorCard.state.$error.message);
+    ```
 
 **Use in Template:**
 
