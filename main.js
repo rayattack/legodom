@@ -5,7 +5,47 @@ const Lego = (() => {
 
   const legoFileLogic = new Map();
   const sharedStates = new Map();
-  const expressionCache = new Map(); // Cache for compiled expressions
+
+  // LRU Cache for compiled expressions (prevents unbounded memory growth)
+  class LRUCache {
+    constructor(limit = 1000) {
+      this.limit = limit;
+      this.cache = new Map();
+    }
+
+    get(key) {
+      if (!this.cache.has(key)) return undefined;
+
+      // Move to end (most recently used) by deleting and re-inserting
+      const value = this.cache.get(key);
+      this.cache.delete(key);
+      this.cache.set(key, value);
+      return value;
+    }
+
+    set(key, value) {
+      // If key exists, delete it first so we can re-insert at end
+      if (this.cache.has(key)) {
+        this.cache.delete(key);
+      } else if (this.cache.size >= this.limit) {
+        // Evict oldest (first item in Map)
+        const firstKey = this.cache.keys().next().value;
+        this.cache.delete(firstKey);
+      }
+
+      this.cache.set(key, value);
+    }
+
+    get size() {
+      return this.cache.size;
+    }
+
+    clear() {
+      this.cache.clear();
+    }
+  }
+
+  const expressionCache = new LRUCache(1000); // Max 1000 cached expressions
 
   const styleRegistry = new Map();
   let styleConfig = {};
@@ -101,6 +141,9 @@ const Lego = (() => {
     const blocksToUpdate = new Set();
     let isProcessing = false;
 
+    // FIX: Queue for updates arriving during processing (prevents drops)
+    const pendingQueue = new Set();
+
     // Optimization: Single timer for all updated hooks instead of one per block
     let updatedTimer = null;
     const pendingUpdated = new Set();
@@ -119,31 +162,55 @@ const Lego = (() => {
       }, 50); // Global debounce
     };
 
+    const processPendingQueue = () => {
+      if (pendingQueue.size > 0) {
+        // Move pending to main queue
+        pendingQueue.forEach(el => blocksToUpdate.add(el));
+        pendingQueue.clear();
+
+        // Trigger next batch if not already queued
+        if (!queued && blocksToUpdate.size > 0) {
+          queued = true;
+          requestAnimationFrame(processBatch);
+        }
+      }
+    };
+
+    const processBatch = () => {
+      isProcessing = true;
+      const batch = Array.from(blocksToUpdate);
+      blocksToUpdate.clear();
+      queued = false;
+
+      // Simple synchronous render loop (faster for small batches, no overhead)
+      batch.forEach(el => {
+        if (el.isConnected) render(el);
+      });
+
+      // Batch complete: Queue updated hooks efficiently
+      batch.forEach(el => pendingUpdated.add(el));
+      scheduleUpdatedHooks();
+      isProcessing = false;
+
+      // FIX: Process pending queue after batch completes
+      processPendingQueue();
+    };
+
     return {
       add: (el) => {
-        if (!el || isProcessing) return;
+        if (!el) return;
+
+        // FIX: Queue during processing instead of dropping
+        if (isProcessing) {
+          pendingQueue.add(el);
+          return;
+        }
+
         blocksToUpdate.add(el);
         if (queued) return;
         queued = true;
 
-        requestAnimationFrame(() => {
-          isProcessing = true;
-          const batch = Array.from(blocksToUpdate);
-          blocksToUpdate.clear();
-          queued = false;
-
-          // Simple synchronous render loop (faster for small batches, no overhead)
-          batch.forEach(el => {
-            // Re-check bindings in case they were removed? 
-            // Actually, render checks for connected, but good to be safe.
-            if (el.isConnected) render(el);
-          });
-
-          // Batch complete: Queue updated hooks efficiently
-          batch.forEach(el => pendingUpdated.add(el));
-          scheduleUpdatedHooks();
-          isProcessing = false;
-        });
+        requestAnimationFrame(processBatch);
       }
     };
   };
@@ -159,13 +226,80 @@ const Lego = (() => {
     dbBindings.get(key).add({ target, prop });
   };
 
+  // Storage quota management (FIFO eviction)
+  const storageKeys = new Map(); // key -> { timestamp, size }
+
+  const evictOldestKeys = (bytesNeeded) => {
+    const entries = Array.from(storageKeys.entries())
+      .filter(([key]) => key.startsWith('lego:')) // Only evict Lego keys
+      .sort((a, b) => a[1].timestamp - b[1].timestamp); // Oldest first
+
+    let freedBytes = 0;
+    const evicted = [];
+
+    for (const [key, meta] of entries) {
+      if (freedBytes >= bytesNeeded) break;
+
+      try {
+        localStorage.removeItem(key);
+        freedBytes += meta.size;
+        evicted.push(key);
+        storageKeys.delete(key);
+      } catch (e) {
+        console.error(`[Lego] Failed to evict ${key}:`, e);
+      }
+    }
+
+    return evicted;
+  };
+
   const scheduleSave = (key, value, debounce) => {
     if (dbTimers.has(key)) clearTimeout(dbTimers.get(key));
     const save = () => {
       try {
-        localStorage.setItem(key, JSON.stringify(value));
+        const serialized = JSON.stringify(value);
+        const sizeBytes = new Blob([serialized]).size;
+
+        // Attempt write
+        localStorage.setItem(key, serialized);
+
+        // Track for eviction (prefix with 'lego:' for identification)
+        const storageKey = key.startsWith('lego:') ? key : `lego:${key}`;
+        storageKeys.set(storageKey, {
+          timestamp: Date.now(),
+          size: sizeBytes
+        });
+
         dbTimers.delete(key);
-      } catch (e) { console.error(`[Lego] Storage Error (${key}):`, e); }
+      } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+          console.warn(`[Lego] Storage quota exceeded for key: ${key}`);
+
+          // Attempt eviction and retry
+          try {
+            const serialized = JSON.stringify(value);
+            const sizeBytes = new Blob([serialized]).size;
+            const evicted = evictOldestKeys(sizeBytes * 2); // Free 2x needed space
+
+            if (evicted.length > 0) {
+              console.log(`[Lego] Evicted ${evicted.length} old keys, retrying save`);
+              localStorage.setItem(key, serialized);
+
+              const storageKey = key.startsWith('lego:') ? key : `lego:${key}`;
+              storageKeys.set(storageKey, {
+                timestamp: Date.now(),
+                size: sizeBytes
+              });
+            } else {
+              config.onError(new Error(`Storage quota exceeded and no keys available for eviction`), 'quota', key);
+            }
+          } catch (retryErr) {
+            config.onError(new Error(`Critical: Could not save ${key} even after eviction`), 'quota-critical', key);
+          }
+        } else {
+          console.error(`[Lego] Storage Error (${key}):`, e);
+        }
+      }
     };
     if (debounce > 0) {
       dbTimers.set(key, setTimeout(save, debounce));
@@ -689,15 +823,69 @@ const Lego = (() => {
   };
 
   const unsnap = (el) => {
+    // 1. Call unmounted lifecycle hook first
     if (el._studs && typeof el._studs.unmounted === 'function') {
       try { el._studs.unmounted.call(el._studs); } catch (e) { console.error(`[Lego] Error in unmounted:`, e); }
     }
 
+    // 2. Recursively unsnap children in shadowRoot
     if (el.shadowRoot) {
       [...el.shadowRoot.children].forEach(unsnap);
     }
 
+    // 3. Remove from active blocks tracking
     activeBlocks.delete(el);
+
+    // 4. Break circular references
+    if (el._studs) {
+      // Clear element references in state object
+      el._studs.$element = null;
+
+      // Clear $vars references to DOM elements
+      if (el._studs.$vars) {
+        Object.keys(el._studs.$vars).forEach(key => {
+          el._studs.$vars[key] = null;
+        });
+        el._studs.$vars = null;
+      }
+
+      // Break the proxy -> element reference
+      el._studs = null;
+    }
+
+    if (el.hasOwnProperty('state')) delete el.state;
+    // 6. Clear private data (bindings, flags, etc.)
+    // This removes references to DOM nodes in bindings array
+    const data = privateData.get(el);
+    if (data) {
+      // Clear bindings that hold node references
+      if (data.bindings) {
+        data.bindings.forEach(binding => {
+          binding.node = null;
+          binding.anchor = null;
+        });
+        data.bindings = null;
+      }
+      data.anchor = null;
+      privateData.delete(el);
+    }
+
+    // 7. Clear from for-loop pools (prevents pooled nodes from keeping refs)
+    if (forPools.has(el)) {
+      const pool = forPools.get(el);
+      pool.forEach((node, key) => {
+        if (node && node._studs) {
+          node._studs = null;
+        }
+      });
+      pool.clear();
+      forPools.delete(el);
+    }
+
+    // 8. Note: proxyCache is a WeakMap so we can't delete from it,
+    // but breaking the circular refs above allows GC to clean it up
+
+    // 9. Recursively unsnap light DOM children
     [...el.children].forEach(unsnap);
   };
 
