@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.4-rc.4] - 2026-01-21
+
+### Features
+
+- **Vite Plugin DX:** Default `blocksDir` is now `./src` (was `./src/blocks`), allowing auto-discovery of `.lego` files anywhere in the source tree (as long as they follow the kebab-case hyphenation rule).
+
+
 ## [2.0.4-rc.3] - 2026-01-21
 
 ### Fixes

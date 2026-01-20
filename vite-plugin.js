@@ -19,7 +19,7 @@ const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID;
  */
 export default function legoPlugin(options = {}) {
   const {
-    blocksDir = './src/blocks',
+    blocksDir = './src',
     include = ['**/*.lego'],
     importPath = 'lego-dom'
   } = options;
