@@ -73,6 +73,7 @@ export default defineConfig({
             { text: 'What is LegoDOM?', link: '/guide/' },
             { text: 'Getting Started', link: '/guide/getting-started' },
             { text: 'Quick Start', link: '/guide/quick-start' },
+            { text: 'FAQ', link: '/guide/faq' },
           ]
         },
         {
