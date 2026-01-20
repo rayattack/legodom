@@ -357,9 +357,41 @@ Lego.block('user-card', `...`, {
 
 ```html
 <!-- Only name is overridden -->
+<!-- role remains 'user' -->
 <user-card b-logic="{ name: 'Alice' }"></user-card>
 <!-- role remains 'user' -->
 ```
+
+## b-stylesheets
+
+Applies shared CSS stylesheets to a block's Shadow DOM. Stylesheets are defined in `Lego.init()` and referenced by key.
+
+**Setup:**
+
+```js
+Lego.init(document.body, {
+  styles: {
+    base: ['/css/reset.css', '/css/typography.css'],
+    forms: ['/css/forms.css']
+  }
+});
+```
+
+**Usage in templates:**
+
+```html
+<template b-id="my-form" b-stylesheets="base forms">
+  <form>...</form>
+</template>
+```
+
+**Usage in .lego files:**
+
+```html
+<style src="base forms"></style>
+```
+
+Multiple keys can be space-separated. The stylesheets are loaded once and shared across all blocks using `adoptedStyleSheets`.
 
 ## Combining Directives
 
@@ -522,36 +554,7 @@ Some directives are specific to certain features and are documented in their res
 - **`b-logic`**: Passes initial state/logic to a block.
 - See [Blocks Guide](/guide/blocks)
 
-## b-stylesheets
 
-Applies shared CSS stylesheets to a block's Shadow DOM. Stylesheets are defined in `Lego.init()` and referenced by key.
-
-**Setup:**
-
-```js
-Lego.init(document.body, {
-  styles: {
-    base: ['/css/reset.css', '/css/typography.css'],
-    forms: ['/css/forms.css']
-  }
-});
-```
-
-**Usage in templates:**
-
-```html
-<template b-id="my-form" b-stylesheets="base forms">
-  <form>...</form>
-</template>
-```
-
-**Usage in .lego files:**
-
-```html
-<style src="base forms"></style>
-```
-
-Multiple keys can be space-separated. The stylesheets are loaded once and shared across all blocks using `adoptedStyleSheets`.
 
 ### Routing Directives
 
