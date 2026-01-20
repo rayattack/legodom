@@ -98,6 +98,7 @@ export default defineConfig({
             { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
             { text: 'Large Apps', link: '/guide/directory-structure' },
             { text: 'Server Side Blocks', link: '/guide/server-side' },
+            { text: 'Testing', link: '/guide/testing' },
           ]
         }
       ],
