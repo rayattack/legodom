@@ -4,62 +4,38 @@ Let's create a new LegoDOM project from scratch. By the end of this page, you'll
 
 ## Create a New Project
 
-Open your terminal and run:
+The fastest way to get started is with `create-legodom`:
 
 ```bash
-# Create a new Vite project
-npm create vite@latest my-lego-app -- --template vanilla
+# Create a new LegoDOM project
+npm create legodom@latest my-lego-app
 
 # Enter the project
 cd my-lego-app
-
-# Install LegoDOM
-npm install lego-dom
 
 # Install dependencies
 npm install
 ```
 
-## Configure Vite
+That's it! Your project is fully configured with:
+- ✅ Vite + LegoDOM plugin
+- ✅ Proper folder structure  
+- ✅ Sample component
+- ✅ All dependencies
 
-Create or replace `vite.config.js` in your project root:
 
-```javascript
-import { defineConfig } from 'vite';
-import legoPlugin from 'lego-dom/vite-plugin';
-
-export default defineConfig({
-  plugins: [
-    legoPlugin({
-      blocksDir: './src/blocks',  // Where your .lego files live
-      include: ['**/*.lego']              // File pattern to match
-    })
-  ]
-});
-```
-
-## Project Structure
-
-Create this folder structure:
-
-```
-my-lego-app/
-├── index.html          ← Your app's entry HTML
-├── src/
-│   ├── app.js          ← Your app's entry JavaScript ⭐
-│   └── blocks/     ← Your .lego files go here
-│       └── (empty for now)
-├── vite.config.js      ← Vite configuration
-└── package.json
-```
-
-::: warning The Magic File: `app.js`
 This is where **everything comes together**. Your routes, global state, and initialization all happen here. We'll build it in the next section.
 :::
 
-## Set Up Your Entry Point
+## Understanding the Setup
 
-Replace the contents of `src/app.js` (create it if it doesn't exist):
+::: tip Already Done!
+If you used `create-legodom`, the following setup is already complete in your project. You can skip to [running the app](#run-it) or read on to understand what's happening.
+:::
+
+### Entry Point: `src/main.js`
+
+This is where **everything comes together**—routes, block registration, and initialization:
 
 ```javascript
 // 1. Import the Lego core
@@ -76,17 +52,17 @@ registerBlocks();
 // Lego.route('/login', 'login-page');
 
 // 5. Initialize the engine
-await Lego.init();
+Lego.init();
 ```
 
-> **What's happening here?**
-> - Lines 1-3: Import LegoDOM and auto-register every `.lego` file in your `blocks/` folder
-> - Line 4: Routes map URLs to blocks (commented out until we create them)
-> - Line 5: `Lego.init()` starts the reactivity engine, routing, and DOM observation
+**What's happening here?**
+- Lines 1-3: Import LegoDOM and auto-register every `.lego` file
+- Line 4: Routes map URLs to blocks (we'll add these later)
+- Line 5: `Lego.init()` starts the reactivity engine and routing
 
-## Set Up Your HTML
+### HTML File: `index.html`
 
-Replace `index.html`:
+Your HTML is minimal (already set up by `create-legodom`):
 
 ```html
 <!DOCTYPE html>
@@ -94,22 +70,12 @@ Replace `index.html`:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Lego App</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #f5f5f5;
-      min-height: 100vh;
-    }
-  </style>
+  <title>LegoDOM App</title>
 </head>
 <body>
-  <!-- The router renders your page blocks here -->
-  <lego-router></lego-router>
-  
-  <!-- Load your app -->
-  <script type="module" src="/src/app.js"></script>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+  <my-app></my-app>
 </body>
 </html>
 ```
@@ -120,26 +86,33 @@ Replace `index.html`:
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser. You'll see a blank page—that's expected! We haven't created any blocks yet.
+Open `http://localhost:5173` in your browser. You'll see the sample LegoDOM welcome page with a counter!
+
+::: tip What You're Seeing
+The `my-app.lego` component was created by `create-legodom`. It demonstrates:
+- Template interpolation with `[[ ]]`
+- Event handling with `@click`
+- Reactive state updates
+:::
 
 ## What You've Done
 
-✅ Created a Vite project  
-✅ Installed LegoDOM  
-✅ Configured the Vite plugin  
-✅ Set up `app.js` with the Lego initialization pattern  
-✅ Added `<lego-router>` to your HTML  
+✅ Created a LegoDOM project with `create-legodom`  
+✅ Installed all dependencies  
+✅ Vite is configured with the LegoDOM plugin  
+✅ Saw a working example component  
+✅ Dev server is running with HMR  
 
 ## The Key Insight
 
 ::: tip Where Config Goes: The Golden Rule
-**Everything related to your app's setup goes in `app.js`:**
+**Everything related to your app's setup goes in `src/main.js` (or `src/app.js`):**
 - Block registration → `registerBlocks()`
 - Route definitions → `Lego.route(...)`
 - Global state → `Lego.globals.user = ...`
 - Initialization → `Lego.init()`
 
-Your `index.html` just needs `<lego-router>` and a script tag. That's it.
+Your `index.html` is minimal—just load the script and render blocks.
 :::
 
 ---

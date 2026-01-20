@@ -56,17 +56,35 @@ Lego.block('my-block', `
 });
 ```
 
-### Option 3 (Lego Files): With Vite (Recommended for Larger Projects)
+### Option 3 (Lego Files): Create LegoDOM App (Recommended)
 
-For real-world apps, we recommend using the **Vite Plugin**. This allows you to write strict **Single File Blocks** (Lego Files) with the `.lego` extension.
+For real-world apps, use **`create-legodom`** to scaffold a complete project with everything configured:
 
 ```bash
-npm create vite@latest my-lego-app
+npm create legodom@latest my-lego-app
+cd my-lego-app
+npm install
+npm run dev
+```
+
+This sets up:
+- ✅ Vite with the LegoDOM plugin pre-configured
+- ✅ Sample `.lego` component following best practices
+- ✅ Proper project structure and dependencies
+- ✅ Hot Module Replacement (HMR) ready
+
+<details>
+<summary>Manual Setup (Alternative)</summary>
+
+You can also set up manually with Vite:
+
+```bash
+npm create vite@latest my-lego-app -- --template vanilla
 cd my-lego-app
 npm install lego-dom
 ```
 
-Configure `vite.config.js`:
+Then configure `vite.config.js`:
 
 ```js
 import { defineConfig } from 'vite';
@@ -76,10 +94,15 @@ export default defineConfig({
   plugins: [legoPlugin()]
 });
 ```
+</details>
 
 ### The Runtime Engine
 
-Crucially, you must initialize the Lego background engine in your entry file (`src/main.js`):
+::: tip Auto-configured with create-legodom
+If you used `create-legodom`, this is already set up in `src/main.js`!
+:::
+
+You must initialize the Lego engine in your entry file (`src/main.js`):
 
 ```js
 import { Lego } from 'lego-dom';
@@ -88,8 +111,8 @@ import registerBlocks from 'virtual:lego-blocks';
 // 1. Register SFCs
 registerBlocks();
 
-// 2. Start the Engine (Async)
-await Lego.init();
+// 2. Start the Engine
+Lego.init();
 ```
 
 ## Understanding the Basics
