@@ -20,13 +20,9 @@
 
 <script>
   export default {
-    state: {
-      count: 0
-    },
-    methods: {
-      increment() {
-        this.render({ count: this.state.count + 1 });
-      }
+    count: 0,
+    increment() {
+      this.count++;
     }
   }
 </script>

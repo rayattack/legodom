@@ -682,6 +682,7 @@ const Lego = (() => {
               node,
               itemName: match[1],
               listName: match[2].trim(),
+              keyPath: node.getAttribute('b-key') || null,  // Capture b-key attribute
               template: node.cloneNode(true)  // Store the whole node as template
             });
             node.innerHTML = '';
@@ -783,12 +784,28 @@ const Lego = (() => {
           const pool = forPools.get(b.node);
           const currentKeys = new Set();
           list.forEach((item, i) => {
-            const key = (item && typeof item === 'object') ? (item.__id || (item.__id = Math.random())) : `${i}-${item}`;
+            // Smart key generation: b-key > common id fields > __id fallback
+            let key;
+            if (b.keyPath) {
+              // User specified b-key="propertyName"
+              key = resolve(b.keyPath, item);
+            } else if (item && typeof item === 'object') {
+              // Auto-detect common ID fields
+              key = item.id || item._id || item.uuid || item.key;
+              // Fallback to __id mutation (old behavior)
+              if (key === undefined) {
+                key = item.__id || (item.__id = Math.random());
+              }
+            } else {
+              // Primitive values: use index + value
+              key = `${i}-${item}`;
+            }
             currentKeys.add(key);
             let child = pool.get(key);
             if (!child) {
               child = b.template.cloneNode(true);
               child.removeAttribute('b-for');
+              child.removeAttribute('b-key');  // Remove b-key from cloned template
               pool.set(key, child);
               bind(child, el, { name: b.itemName, listName: b.listName, index: i });
             }
