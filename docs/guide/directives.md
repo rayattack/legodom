@@ -522,7 +522,7 @@ Some directives are specific to certain features and are documented in their res
 - **`b-logic`**: Passes initial state/logic to a block.
 - See [Blocks Guide](/guide/blocks)
 
-### b-stylesheets
+## b-stylesheets
 
 Applies shared CSS stylesheets to a block's Shadow DOM. Stylesheets are defined in `Lego.init()` and referenced by key.
 
