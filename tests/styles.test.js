@@ -79,6 +79,7 @@ describe('Lego Stylesheets Tests', () => {
       }
       if (url === 's1.css') return Promise.resolve({ text: () => Promise.resolve('.one { color: red; }') });
       if (url === 's2.css') return Promise.resolve({ text: () => Promise.resolve('.two { color: blue; }') });
+      if (url === 'red.css') return Promise.resolve({ text: () => Promise.resolve('h1 { color: red; }') });
 
       return Promise.reject(new Error('Not found'));
     });
@@ -152,6 +153,7 @@ describe('Lego Stylesheets Tests', () => {
   it('should apply h1 red style as requested', async () => {
     const cssRed = 'h1 { color: red; }';
 
+    // Set up fetch mock for this test
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url === 'red.css') return Promise.resolve({ text: () => Promise.resolve(cssRed) });
       return Promise.reject(new Error('Not found'));
