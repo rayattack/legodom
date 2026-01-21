@@ -1,5 +1,41 @@
 # Changelog
 
+## [2.0.4-rc.5] - 2026-01-21
+
+### Breaking Changes 🚨
+
+- **`b-for` Sibling Rendering:** The element with `b-for` is now **replaced** by its clones as siblings, instead of nesting clones inside itself. This fixes invalid HTML like `<p><p>...</p></p>` and ensures correct CSS behavior (hover, focus, etc.).
+  ```html
+  <!-- Template -->
+  <ul>
+    <li b-for="item in items">[[ item ]]</li>
+  </ul>
+  
+  <!-- Now renders as: -->
+  <ul>
+    <!--b-for: item in items-->
+    <li>Apple</li>
+    <li>Banana</li>
+  </ul>
+  ```
+
+### Features
+
+- **`$index` in `b-for`:** Access the current item's 0-based index in loops.
+  ```html
+  <li b-for="item in items">
+    #[[ $index + 1 ]]: [[ item.name ]]
+  </li>
+  ```
+
+### Developer Experience
+
+- **Error Logging:** Fixed 4 silent catch blocks that swallowed errors without any console output:
+  - `parseJSObject` now logs `b-data`/`b-logic` syntax errors.
+  - `b-key` warns when it resolves to `undefined`.
+  - localStorage hydration errors are now logged.
+  - Cross-tab sync errors are now logged.
+
 ## [2.0.4-rc.4] - 2026-01-21
 
 ### Features
