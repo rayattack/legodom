@@ -823,7 +823,7 @@ const Lego = (() => {
               pool.set(key, child);
               bind(child, el, { name: b.itemName, listName: b.listName, index: i });
             }
-            const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
+            const localScope = Object.assign(Object.create(state), { [b.itemName]: item, $index: i });
             updateNodeBindings(child, localScope);
 
             child.querySelectorAll('[b-sync]').forEach(input => {

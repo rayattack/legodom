@@ -168,6 +168,18 @@ The original `<li b-for>` is removed and replaced with a comment anchor. Each cl
 </ul>
 ```
 
+### Accessing Index
+
+Use `$index` to get the current item's position (0-based):
+
+```html
+<ul>
+  <li b-for="item in items">
+    #[[ $index + 1 ]]: [[ item.name ]]
+  </li>
+</ul>
+```
+
 ### Nested Loops
 
 ```html
