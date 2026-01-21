@@ -13,8 +13,8 @@ export default defineConfig({
     logo: '/logo.svg',
 
     nav: [
-      { text: 'Guide', link: '/guide/' },
       { text: 'Tutorial', link: '/tutorial/' },
+      { text: 'Guide', link: '/guide/' },
       { text: 'Contributing', link: '/contributing/' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
