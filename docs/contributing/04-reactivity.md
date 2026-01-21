@@ -64,7 +64,7 @@ When a block is "snapped" (created), its data is passed through this function.
 Imagine you have a block defined like this:
 
 ```js
-Lego.define('counter-app', '<h1>{{count}}</h1>', {
+Lego.block('counter-app', '<h1>{{count}}</h1>', {
   count: 0,
   increment() { this.count++; }
 });

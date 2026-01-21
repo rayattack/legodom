@@ -138,7 +138,7 @@ The priority is as follows (**last one wins**):
 ```html
 <!-- 1. Script Logic (Defined in JS) -->
 <script>
-  // Lego.define is an alias for Lego.block
+  // Lego.block is an alias for Lego.block
   Lego.block('user-card', `...`, { role: 'guest', theme: 'light' });
 </script>
 

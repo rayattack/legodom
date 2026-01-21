@@ -39,7 +39,7 @@ Lego.route('/messaging/:id', 'messaging-shell');
 Inside your `messaging-shell` block, use the `mounted()` hook to check for the presence of a parameter.
 
 ```js
-Lego.define('messaging-shell', `
+Lego.block('messaging-shell', `
   <div class="layout">
     <aside class="sidebar">
       <!-- List of threads -->

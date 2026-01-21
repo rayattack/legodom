@@ -1359,8 +1359,7 @@ const Lego = (() => {
 
       document.querySelectorAll(tagName).forEach(snap);
     },
-    // Alias for backward compatibility
-    get define() { return this.block },
+
 
     // For specific test validation
     getActiveBlocksCount: () => activeBlocks.size,

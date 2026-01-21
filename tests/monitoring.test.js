@@ -40,7 +40,7 @@ describe('LegoDOM Monitoring Plugin', () => {
   });
 
   it('should track render count and duration', async () => {
-    window.Lego.define('monitor-test', '<div>[[ msg ]]</div>');
+    window.Lego.block('monitor-test', '<div>[[ msg ]]</div>');
     const el = document.createElement('monitor-test');
     el.setAttribute('b-data', "{ msg: 'hello' }");
     document.body.appendChild(el);
@@ -59,7 +59,7 @@ describe('LegoDOM Monitoring Plugin', () => {
   });
 
   it('should track errors via the hooked onError handler', async () => {
-    window.Lego.define('monitor-error', '<div>[[ throwErr() ]]</div>', {
+    window.Lego.block('monitor-error', '<div>[[ throwErr() ]]</div>', {
       throwErr() { throw new Error('Monitor Fail'); }
     });
 

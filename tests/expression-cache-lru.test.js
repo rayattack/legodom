@@ -34,7 +34,7 @@ describe('Expression Cache LRU Fix', () => {
   });
 
   it('should cache compiled expressions for reuse', async () => {
-    window.Lego.define('cache-test', '<div>[[count]]</div>');
+    window.Lego.block('cache-test', '<div>[[count]]</div>');
 
     const el1 = document.createElement('cache-test');
     el1.setAttribute('b-data', '{ count: 1 }');
@@ -52,7 +52,7 @@ describe('Expression Cache LRU Fix', () => {
   });
 
   it('should limit cache size to prevent unbounded growth', async () => {
-    window.Lego.define('dynamic-test', '<div b-if="show">[[message]]</div>');
+    window.Lego.block('dynamic-test', '<div b-if="show">[[message]]</div>');
 
     // Generate 1200 unique expressions (exceeds 1000 limit)
     for (let i = 0; i < 1200; i++) {
@@ -69,7 +69,7 @@ describe('Expression Cache LRU Fix', () => {
   }, 10000); // 10 second timeout
 
   it('should evict least recently used expressions', async () => {
-    window.Lego.define('lru-test', '<span>[[value]]</span>');
+    window.Lego.block('lru-test', '<span>[[value]]</span>');
 
     const elA = document.createElement('lru-test');
     elA.setAttribute('b-data', '{ value: "A" }');
@@ -90,7 +90,7 @@ describe('Expression Cache LRU Fix', () => {
   });
 
   it('should handle cache hits and misses correctly', async () => {
-    window.Lego.define('hit-test', '<div>[[x + y]]</div>');
+    window.Lego.block('hit-test', '<div>[[x + y]]</div>');
 
     const el1 = document.createElement('hit-test');
     el1.setAttribute('b-data', '{ x: 1, y: 2 }');
@@ -106,7 +106,7 @@ describe('Expression Cache LRU Fix', () => {
   });
 
   it('should not crash when cache is full', async () => {
-    window.Lego.define('fill-test', '<div>[[val]]</div>');
+    window.Lego.block('fill-test', '<div>[[val]]</div>');
 
     const elements = [];
     for (let i = 0; i < 100; i++) {

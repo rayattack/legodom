@@ -58,7 +58,7 @@ In HTML `<style>` goes inside `<template></template>` tags but in Lego Files the
 ```js
 import { Lego } from 'lego-dom';
 
-Lego.define('click-counter', `
+Lego.block('click-counter', `
   <style>
     self {
       display: block;

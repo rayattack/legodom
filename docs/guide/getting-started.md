@@ -52,7 +52,7 @@ Lego.block('my-block', `
   <p>Count: [[ count ]]</p>
 `, {
   count: 0,
-  // Note: Lego.define() is also available as an alias
+  // Note: Lego.block() is also available as an alias
 });
 ```
 

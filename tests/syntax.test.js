@@ -35,7 +35,7 @@ describe('LegoDOM Configurable Syntax', () => {
   });
 
   it('should render [[ ]] by default', async () => {
-    window.Lego.define('default-syntax', '<div>[[ msg ]]</div>');
+    window.Lego.block('default-syntax', '<div>[[ msg ]]</div>');
     const el = document.createElement('default-syntax');
     el.setAttribute('b-data', "{ msg: 'Hello' }");
     document.body.appendChild(el);
@@ -46,7 +46,7 @@ describe('LegoDOM Configurable Syntax', () => {
   it('should render {{ }} when syntax is mustache', async () => {
     window.Lego.config.syntax = 'mustache';
 
-    window.Lego.define('mustache-syntax', '<div>{{ msg }}</div>');
+    window.Lego.block('mustache-syntax', '<div>{{ msg }}</div>');
     const el = document.createElement('mustache-syntax');
     el.setAttribute('b-data', "{ msg: 'Mustache World' }");
     document.body.appendChild(el);
@@ -57,7 +57,7 @@ describe('LegoDOM Configurable Syntax', () => {
   it('should ignore {{ }} when syntax is brackets', async () => {
     // Default is brackets
     // {{ msg }} should be treated as literal text
-    window.Lego.define('mixed-syntax', '<div>{{ msg }} - [[ msg ]]</div>');
+    window.Lego.block('mixed-syntax', '<div>{{ msg }} - [[ msg ]]</div>');
     const el = document.createElement('mixed-syntax');
     el.setAttribute('b-data', "{ msg: 'Active' }");
     document.body.appendChild(el);

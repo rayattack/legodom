@@ -39,7 +39,7 @@ describe('LegoDOM Error Handling', () => {
     window.Lego.config.onError = errorSpy;
 
     // Define a block that throws an error when accessing a property used in template
-    window.Lego.define('error-comp', '<div>[[ throwErr() ]]</div>', {
+    window.Lego.block('error-comp', '<div>[[ throwErr() ]]</div>', {
       throwErr() {
         throw new Error('Render Failure');
       }
@@ -58,7 +58,7 @@ describe('LegoDOM Error Handling', () => {
     const errorSpy = vi.fn();
     window.Lego.config.onError = errorSpy;
 
-    window.Lego.define('btn-error', '<button @click="crash()">Crash</button>', {
+    window.Lego.block('btn-error', '<button @click="crash()">Crash</button>', {
       crash() { throw new Error('Boom'); }
     });
 

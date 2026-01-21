@@ -29,7 +29,7 @@ const sharedStates = new Map();
 
 ### 2. The Lego File Logic Collection (`legoFileLogic`)
 
-`const legoFileLogic = new Map();` stores the JavaScript objects passed into `Lego.define()`.
+`const legoFileLogic = new Map();` stores the JavaScript objects passed into `Lego.block()`.
 
 -   While `registry` holds the HTML/CSS, `legoFileLogic` holds the functions like `mounted()`, `updated()`, or custom methods.
     
@@ -56,7 +56,7 @@ The `registry` doesn't just wait for you to type; it's fed by three distinct str
 ```js
 const legoFileLogic = new Map(); // Specifically for SFB script logic
 // ...
-define: (tagName, templateHTML, logic = {}) => {
+block: (tagName, templateHTML, logic = {}) => {
   const t = document.createElement('template');
   // ... stores template in registry
   legoFileLogic.set(tagName, logic); // Stores the JS part separately
@@ -74,8 +74,8 @@ async buildStart() {
 // ...
 async load(id) {
   if (id.endsWith('.lego')) {
-    const defineCall = generateDefineCall(parsed); // Converts .lego file to Lego.define()
-    return `import { Lego } from 'lego-dom/main.js';\n${defineCall}`;
+    const blockCall = generateBlockCall(parsed); // Converts .lego file to Lego.block()
+    return `import { Lego } from 'lego-dom/main.js';\n${blockCall}`;
   }
 }
 
@@ -84,7 +84,7 @@ async load(id) {
 **The Three Ways to Register:**
 1.  **The HTML Manual Method:** You put `<template b-id="my-comp">` directly in your `*.html` files. During `Lego.init()`, LegoDOM scrapes these and populates the registry. This is great for "no-build" prototypes.
     
-2.  **The `Lego.define()` JS Method:** You call `Lego.define('my-comp', '<h1>Hi</h1>', { ... logic })` in a standard JavaScript file.
+2.  **The `Lego.block()` JS Method:** You call `Lego.block('my-comp', '<h1>Hi</h1>', { ... logic })` in a standard JavaScript file.
     
 3.  **The Lego File Automatic Method (The "Vite Way"):** * The **Vite Plugin** (as seen in `vite-plugin.js`) acts as a build-time robot.
     
@@ -92,14 +92,14 @@ async load(id) {
         
     -   It parses the `<template>` and `<script>` inside that `.lego` file.
         
-    -   It **injects** a `Lego.define()` call into your JavaScript bundle automatically.
+    -   It **injects** a `Lego.block()` call into your JavaScript bundle automatically.
         
     -   **Result:** You just create a file named `user-card.lego`, and suddenly `<user-card>` is a valid HTML tag in your app.
 
 **Paradigm 3: Runtime Block Definition (New in v2.0)**
 
 ```js
-defineSFC: (content, filename) => {
+defineLegoFile: (content, filename) => {
   // Regex parsing of <template>, <script>, <style>
   const templateMatch = content.match(/<template([\s\S]*?)>([\s\S]*?)<\/template>/);
   // ...

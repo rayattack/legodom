@@ -37,7 +37,7 @@ Lego.block('user-card', template, logic, styles);
 -   **Logic**: The state and methods object.
 -   **Styles**: Space-separated keys of shared stylesheets to apply.
 
-> **Note**: `Lego.define()` is also available as an alias for backward compatibility.
+> **Note**: `Lego.block()` is also available as an alias for backward compatibility.
 
 ## Global State: `Lego.globals`
 

@@ -36,7 +36,7 @@ describe('Batcher Race Condition Fix', () => {
   it('should not drop updates arriving during render', async () => {
     let renderCount = 0;
 
-    window.Lego.define('race-test', '<div>[[count]]</div>', {
+    window.Lego.block('race-test', '<div>[[count]]</div>', {
       count: 0,
       updated() {
         renderCount++;
@@ -64,7 +64,7 @@ describe('Batcher Race Condition Fix', () => {
   });
 
   it('should handle rapid consecutive updates', async () => {
-    window.Lego.define('rapid-test', '<div>[[value]]</div>', {
+    window.Lego.block('rapid-test', '<div>[[value]]</div>', {
       value: 0
     });
 
@@ -85,7 +85,7 @@ describe('Batcher Race Condition Fix', () => {
   });
 
   it('should preserve final state after rapid updates', async () => {
-    window.Lego.define('order-test', '<div>[[step]]</div>', {
+    window.Lego.block('order-test', '<div>[[step]]</div>', {
       step: 0
     });
 
@@ -106,7 +106,7 @@ describe('Batcher Race Condition Fix', () => {
   });
 
   it('should queue updates from multiple blocks', async () => {
-    window.Lego.define('multi-test', '<span>[[id]]:[[value]]</span>', {
+    window.Lego.block('multi-test', '<span>[[id]]:[[value]]</span>', {
       id: 0,
       value: 0
     });

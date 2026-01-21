@@ -50,11 +50,11 @@ describe('Lego JS Node Environment Tests', () => {
 
   it('should initialize the Lego global object', () => {
     expect(window.Lego).toBeDefined();
-    expect(typeof window.Lego.define).toBe('function');
+    expect(typeof window.Lego.block).toBe('function');
   });
 
   it('should reactively update text content', async () => {
-    window.Lego.define('test-comp', '<span>[[msg]]</span>');
+    window.Lego.block('test-comp', '<span>[[msg]]</span>');
     const el = document.createElement('test-comp');
     el.setAttribute('b-data', "{ msg: 'hello' }");
     document.body.appendChild(el);
@@ -74,7 +74,7 @@ describe('Lego JS Node Environment Tests', () => {
   });
 
   it('should prevent XSS via auto-escaping', async () => {
-    window.Lego.define('xss-comp', '<div>[[code]]</div>');
+    window.Lego.block('xss-comp', '<div>[[code]]</div>');
     const el = document.createElement('xss-comp');
     el.setAttribute('b-data', "{ code: '<script>alert(1)</script>' }");
     document.body.appendChild(el);
@@ -87,7 +87,7 @@ describe('Lego JS Node Environment Tests', () => {
   });
 
   it('should handle @events using the universal binder', async () => {
-    window.Lego.define('event-comp', '<button @click="handleClick">Click Me</button>');
+    window.Lego.block('event-comp', '<button @click="handleClick">Click Me</button>');
 
     const el = document.createElement('event-comp');
     el.setAttribute('b-data', `{ handleClick: () => { window.clicked = true; } }`);

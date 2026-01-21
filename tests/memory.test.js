@@ -34,7 +34,7 @@ describe('LegoDOM Memory Management', () => {
   });
 
   it('should cleanup activeBlocks when elements are removed', async () => {
-    window.Lego.define('mem-comp', '<div>Hi</div>');
+    window.Lego.block('mem-comp', '<div>Hi</div>');
 
     // Mount
     const el = document.createElement('mem-comp');
@@ -51,8 +51,8 @@ describe('LegoDOM Memory Management', () => {
   });
 
   it('should cleanup nested blocks recursively', async () => {
-    window.Lego.define('parent-comp', '<child-comp></child-comp>');
-    window.Lego.define('child-comp', '<span>Child</span>');
+    window.Lego.block('parent-comp', '<child-comp></child-comp>');
+    window.Lego.block('child-comp', '<span>Child</span>');
 
     const el = document.createElement('parent-comp');
     document.body.appendChild(el);

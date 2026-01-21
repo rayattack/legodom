@@ -8,7 +8,7 @@ Defining blocks in JavaScript.
 Lego.block(tagName: string, template: string, logic?: object, styles?: string)
 ```
 
-> **Note:** `Lego.define()` is available as an alias for backward compatibility.
+> **Note:** `Lego.block()` is available as an alias for backward compatibility.
 
 ## Arguments
 

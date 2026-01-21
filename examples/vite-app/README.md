@@ -33,7 +33,7 @@ examples/vite-app/
 ## How It Works
 
 1. The Vite plugin scans `src/blocks/` for `.lego` files
-2. Each `.lego` file is parsed and transformed into a `Lego.define()` call
+2. Each `.lego` file is parsed and transformed into a `Lego.block()` call
 3. The virtual module `virtual:lego-blocks` imports all discovered blocks
 4. Components are automatically registered and available in your HTML
 

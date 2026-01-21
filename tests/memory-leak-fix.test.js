@@ -34,7 +34,7 @@ describe('Memory Leak Fix - Circular References', () => {
   });
 
   it('should break circular references when element is removed', async () => {
-    window.Lego.define('leak-test', '<div>[[msg]]</div>');
+    window.Lego.block('leak-test', '<div>[[msg]]</div>');
 
     const el = document.createElement('leak-test');
     el.setAttribute('b-data', '{ msg: "test" }');
@@ -56,7 +56,7 @@ describe('Memory Leak Fix - Circular References', () => {
   });
 
   it('should clear $vars references to prevent memory leaks', async () => {
-    window.Lego.define('vars-test', '<input b-var="myInput" />');
+    window.Lego.block('vars-test', '<input b-var="myInput" />');
 
     const el = document.createElement('vars-test');
     document.body.appendChild(el);
@@ -73,7 +73,7 @@ describe('Memory Leak Fix - Circular References', () => {
   });
 
   it('should clear bindings array to free node references', async () => {
-    window.Lego.define('binding-test', '<div b-if="show">Content</div>');
+    window.Lego.block('binding-test', '<div b-if="show">Content</div>');
 
     const el = document.createElement('binding-test');
     el.setAttribute('b-data', '{ show: true }');
@@ -89,7 +89,7 @@ describe('Memory Leak Fix - Circular References', () => {
   });
 
   it('should clear for-loop pools to prevent pooled node leaks', async () => {
-    window.Lego.define('pool-test', '<div b-for="item in items">[[item]]</div>');
+    window.Lego.block('pool-test', '<div b-for="item in items">[[item]]</div>');
 
     const el = document.createElement('pool-test');
     el.setAttribute('b-data', '{ items: [1, 2, 3, 4, 5] }');
@@ -109,8 +109,8 @@ describe('Memory Leak Fix - Circular References', () => {
   });
 
   it('should handle nested blocks cleanup recursively', async () => {
-    window.Lego.define('parent-leak', '<child-leak></child-leak>');
-    window.Lego.define('child-leak', '<span>Child</span>');
+    window.Lego.block('parent-leak', '<child-leak></child-leak>');
+    window.Lego.block('child-leak', '<span>Child</span>');
 
     const el = document.createElement('parent-leak');
     document.body.appendChild(el);
@@ -128,7 +128,7 @@ describe('Memory Leak Fix - Circular References', () => {
   });
 
   it('should not crash if unmounted hook throws error', async () => {
-    window.Lego.define('error-unmount', '<div>Test</div>', {
+    window.Lego.block('error-unmount', '<div>Test</div>', {
       unmounted() {
         throw new Error('Unmount error');
       }
@@ -150,7 +150,7 @@ describe('Memory Leak Fix - Circular References', () => {
   });
 
   it('should clean up multiple elements in sequence without memory buildup', async () => {
-    window.Lego.define('bulk-test', '<div>[[index]]</div>');
+    window.Lego.block('bulk-test', '<div>[[index]]</div>');
 
     // Create and destroy 100 elements
     for (let i = 0; i < 100; i++) {

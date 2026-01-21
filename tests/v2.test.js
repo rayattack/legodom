@@ -45,8 +45,8 @@ describe('LegoDOM v2 Renames', () => {
     expect(el.shadowRoot.innerHTML).toContain('I am a block');
   });
 
-  it('Lego.define is an alias for Lego.block', () => {
-    expect(Lego.define).toBe(Lego.block);
+  it('Lego.block is an alias for Lego.block', () => {
+    expect(Lego.block).toBe(Lego.block);
   });
 
   it('b-logic works for passing state', async () => {

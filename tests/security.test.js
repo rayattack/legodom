@@ -37,7 +37,7 @@ describe('LegoDOM Security', () => {
 
   it('should block dangerous expressions in safeEval', async () => {
     // This test expects the framework to BLOCK access to Function constructor
-    window.Lego.define('pwn-comp', '<div>[[ (function(){ window.pwned = true; })() ]]</div>');
+    window.Lego.block('pwn-comp', '<div>[[ (function(){ window.pwned = true; })() ]]</div>');
     const el = document.createElement('pwn-comp');
     document.body.appendChild(el);
 
@@ -49,7 +49,7 @@ describe('LegoDOM Security', () => {
 
   it('should block access to global sensitive objects', async () => {
     // Try to access global 'process' or 'window' explicitly if possible
-    window.Lego.define('env-comp', '<div>[[ window.location.href ]]</div>');
+    window.Lego.block('env-comp', '<div>[[ window.location.href ]]</div>');
     const el = document.createElement('env-comp');
     document.body.appendChild(el);
 
