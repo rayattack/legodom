@@ -1100,12 +1100,17 @@ const Lego = (() => {
       if (!allowed) return;
     }
 
-    Lego.globals.$route.url = path + search;
-    Lego.globals.$route.route = match.path;
-    Lego.globals.$route.params = params;
-    Lego.globals.$route.query = query;
-    Lego.globals.$route.method = history.state?.method || 'GET';
-    Lego.globals.$route.body = history.state?.body || null;
+    // Only update globals if not already initialized (during navigation, not init)
+    const shouldUpdateGlobals = Lego.globals.$route.url !== path + search;
+
+    if (shouldUpdateGlobals) {
+      Lego.globals.$route.url = path + search;
+      Lego.globals.$route.route = match.path;
+      Lego.globals.$route.params = params;
+      Lego.globals.$route.query = query;
+      Lego.globals.$route.method = history.state?.method || 'GET';
+      Lego.globals.$route.body = history.state?.body || null;
+    }
 
     resolvedElements.forEach(el => {
       if (el) {
@@ -1152,6 +1157,25 @@ const Lego = (() => {
         styleRegistry.set(key, sheets.filter(s => s !== null));
       });
       await Promise.all(loadPromises);
+
+      // Initialize route BEFORE scanning DOM to prevent double render
+      if (routes.length > 0) {
+        const path = window.location.pathname;
+        const search = window.location.search;
+        const match = routes.find(r => r.regex.test(path));
+        if (match) {
+          const values = path.match(match.regex).slice(1);
+          const params = Object.fromEntries(match.paramNames.map((n, i) => [n, values[i]]));
+          const query = Object.fromEntries(new URLSearchParams(search));
+
+          Lego.globals.$route.url = path + search;
+          Lego.globals.$route.route = match.path;
+          Lego.globals.$route.params = params;
+          Lego.globals.$route.query = query;
+          Lego.globals.$route.method = 'GET';
+          Lego.globals.$route.body = null;
+        }
+      }
 
       document.querySelectorAll('template[b-id]').forEach(t => {
         registry[t.getAttribute('b-id')] = t;

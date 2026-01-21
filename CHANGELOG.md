@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.4-rc.6] - 2026-01-21
+
+### Performance
+
+- **Init Optimization:** Fixed double render on initialization. Route is now initialized before DOM scan, preventing reactive updates from triggering a second render pass.
+  - **Before:** Elements rendered twice (once during `snap()`, once when `_matchRoute()` updated `Lego.globals.$route`).
+  - **After:** Elements render once with correct route data already available.
+  - **Impact:** Faster initial load, cleaner error logs (no duplicate errors).
+
 ## [2.0.4-rc.5] - 2026-01-21
 
 ### Breaking Changes 🚨
