@@ -62,8 +62,8 @@ describe('b-key Directive Tests', () => {
     document.body.appendChild(el);
     await new Promise(r => setTimeout(r, 100));
 
-    const container = el.shadowRoot.querySelector('[b-for]');
-    const children = Array.from(container.children);
+    // b-for clones are now siblings in the shadowRoot, not children of a container
+    const children = Array.from(el.shadowRoot.querySelectorAll('div'));
     expect(children.length).toBe(3);
     expect(children[0].textContent.trim()).toBe('Alice');
     expect(children[1].textContent.trim()).toBe('Bob');
@@ -81,7 +81,7 @@ describe('b-key Directive Tests', () => {
 
     await new Promise(r => setTimeout(r, 100));
 
-    const newChildren = Array.from(container.children);
+    const newChildren = Array.from(el.shadowRoot.querySelectorAll('div'));
     expect(newChildren[0]).toBe(aliceNode);
     expect(newChildren[1]).toBe(bobNode);
     expect(newChildren[2]).toBe(charlieNode);
@@ -103,8 +103,9 @@ describe('b-key Directive Tests', () => {
     document.body.appendChild(el);
     await new Promise(r => setTimeout(r, 100));
 
-    const container = el.shadowRoot.querySelector('[b-for]');
-    const firstChild = container.children[0];
+    // b-for clones are now siblings in the shadowRoot
+    const children = Array.from(el.shadowRoot.querySelectorAll('div'));
+    const firstChild = children[0];
 
     el.state.menus = [
       { icon: 'home', name: 'Home (Updated)' },
@@ -113,8 +114,9 @@ describe('b-key Directive Tests', () => {
 
     await new Promise(r => setTimeout(r, 100));
 
-    expect(container.children[0]).toBe(firstChild);
-    expect(container.children[0].textContent.trim()).toBe('home');
+    const newChildren = Array.from(el.shadowRoot.querySelectorAll('div'));
+    expect(newChildren[0]).toBe(firstChild);
+    expect(newChildren[0].textContent.trim()).toBe('home');
   });
 
   it('b-for: auto-detects common id fields without b-key', async () => {
@@ -133,8 +135,9 @@ describe('b-key Directive Tests', () => {
     document.body.appendChild(el);
     await new Promise(r => setTimeout(r, 100));
 
-    const container = el.shadowRoot.querySelector('[b-for]');
-    const firstChild = container.children[0];
+    // b-for clones are now siblings in the shadowRoot
+    const children = Array.from(el.shadowRoot.querySelectorAll('div'));
+    const firstChild = children[0];
 
     el.state.items = [
       { id: 1, name: 'Item 1 Updated' },
@@ -143,8 +146,9 @@ describe('b-key Directive Tests', () => {
 
     await new Promise(r => setTimeout(r, 100));
 
-    expect(container.children[0]).toBe(firstChild);
-    expect(container.children[0].textContent.trim()).toBe('Item 1 Updated');
+    const newChildren = Array.from(el.shadowRoot.querySelectorAll('div'));
+    expect(newChildren[0]).toBe(firstChild);
+    expect(newChildren[0].textContent.trim()).toBe('Item 1 Updated');
   });
 
   it('b-for: handles _id, uuid, key fields', async () => {
@@ -162,11 +166,12 @@ describe('b-key Directive Tests', () => {
     document.body.appendChild(el);
     await new Promise(r => setTimeout(r, 100));
 
-    const container = el.shadowRoot.querySelector('[b-for]');
-    expect(container.children.length).toBe(3);
-    expect(container.children[0].textContent.trim()).toBe('First');
-    expect(container.children[1].textContent.trim()).toBe('Second');
-    expect(container.children[2].textContent.trim()).toBe('Third');
+    // b-for clones are now siblings in the shadowRoot
+    const children = Array.from(el.shadowRoot.querySelectorAll('div'));
+    expect(children.length).toBe(3);
+    expect(children[0].textContent.trim()).toBe('First');
+    expect(children[1].textContent.trim()).toBe('Second');
+    expect(children[2].textContent.trim()).toBe('Third');
   });
 
   it('b-key: b-key attribute is removed from cloned template', async () => {
@@ -182,8 +187,8 @@ describe('b-key Directive Tests', () => {
     document.body.appendChild(el);
     await new Promise(r => setTimeout(r, 100));
 
-    const container = el.shadowRoot.querySelector('[b-for]');
-    const child = container.children[0];
+    // b-for clones are now siblings in the shadowRoot
+    const child = el.shadowRoot.querySelector('div');
 
     expect(child.hasAttribute('b-key')).toBe(false);
     expect(child.hasAttribute('b-for')).toBe(false);
@@ -205,8 +210,9 @@ describe('b-key Directive Tests', () => {
     document.body.appendChild(el);
     await new Promise(r => setTimeout(r, 100));
 
-    const container = el.shadowRoot.querySelector('[b-for]');
-    const firstChild = container.children[0];
+    // b-for clones are now siblings in the shadowRoot
+    const children = Array.from(el.shadowRoot.querySelectorAll('div'));
+    const firstChild = children[0];
 
     el.state.items = [
       { user: { id: 'u1', name: 'Alice Updated' } },
@@ -215,7 +221,8 @@ describe('b-key Directive Tests', () => {
 
     await new Promise(r => setTimeout(r, 100));
 
-    expect(container.children[0]).toBe(firstChild);
-    expect(container.children[0].textContent.trim()).toBe('Alice Updated');
+    const newChildren = Array.from(el.shadowRoot.querySelectorAll('div'));
+    expect(newChildren[0]).toBe(firstChild);
+    expect(newChildren[0].textContent.trim()).toBe('Alice Updated');
   });
 });

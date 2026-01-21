@@ -96,9 +96,9 @@ describe('Memory Leak Fix - Circular References', () => {
     document.body.appendChild(el);
     await new Promise(r => setTimeout(r, 100));
 
-    // Verify pool exists - the container div plus content
-    const container = el.shadowRoot.querySelector('[b-for]');
-    expect(container.children.length).toBe(5);
+    // Verify pool exists - cloned divs are now siblings in shadowRoot
+    const children = el.shadowRoot.querySelectorAll('div');
+    expect(children.length).toBe(5);
 
     // Remove and verify pool cleanup
     el.remove();

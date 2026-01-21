@@ -129,6 +129,27 @@ export default {
 
 List rendering.
 
+### How It Works
+
+The element with `b-for` becomes the **template**. It is **replaced** by its cloned siblings:
+
+```html
+<!-- Template -->
+<ul>
+  <li b-for="item in items">[[ item ]]</li>
+</ul>
+
+<!-- Renders as: -->
+<ul>
+  <!--b-for: item in items-->
+  <li>Apple</li>
+  <li>Banana</li>
+  <li>Cherry</li>
+</ul>
+```
+
+The original `<li b-for>` is removed and replaced with a comment anchor. Each clone is inserted as a sibling.
+
 ### Basic Syntax
 
 ```html
@@ -143,18 +164,6 @@ List rendering.
 <ul>
   <li b-for="todo in todos">
     [[ todo.text ]] - [[ todo.done ? 'Done' : 'Pending' ]]
-  </li>
-</ul>
-```
-
-### Accessing Index
-
-Use `$index` (implicit variable):
-
-```html
-<ul>
-  <li b-for="item in items">
-    #[[ $index + 1 ]]: [[ item.name ]]
   </li>
 </ul>
 ```

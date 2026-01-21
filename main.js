@@ -319,7 +319,9 @@ const Lego = (() => {
           target[prop] = newValue; // Update raw data
           if (el && batcher) batcher.add(el); // Trigger re-render
         });
-      } catch (e) { }
+      } catch (e) {
+        console.warn(`[Lego] Cross-tab sync error:`, e);
+      }
     });
   }
 
@@ -339,7 +341,9 @@ const Lego = (() => {
         try {
           const item = localStorage.getItem(desc.key);
           if (item !== null) val = JSON.parse(item);
-        } catch (e) { }
+        } catch (e) {
+          console.warn(`[Lego] Failed to parse localStorage value for key "${desc.key}":`, e);
+        }
 
         obj[k] = val; // Replace descriptor with value
 
@@ -387,9 +391,11 @@ const Lego = (() => {
   };
 
   const parseJSObject = (raw, scope = {}) => {
+    if (!raw || raw.trim() === '{}') return {};
     try {
       return (new Function('scope', 'global', `with(global) { with(scope) { return (${raw}); } }`))(scope, Lego.globals);
     } catch (e) {
+      console.error(`[Lego] Error parsing b-data/b-logic: "${raw.length > 80 ? raw.slice(0, 80) + '...' : raw}"`, e);
       return {};
     }
   };
@@ -677,15 +683,18 @@ const Lego = (() => {
           const match = node.getAttribute('b-for').match(/^\s*(\w+)\s+in\s+([\s\S]+?)\s*$/);
           if (match) {
             checkGlobal(match[2]);
+            // Create anchor comment to mark where clones will be inserted
+            const anchor = document.createComment(`b-for: ${match[1]} in ${match[2].trim()}`);
+            node.parentNode.insertBefore(anchor, node);
+            node.remove(); // Remove original element from DOM
             bindings.push({
               type: 'b-for',
-              node,
+              anchor,  // Use anchor instead of node
               itemName: match[1],
               listName: match[2].trim(),
-              keyPath: node.getAttribute('b-key') || null,  // Capture b-key attribute
+              keyPath: node.getAttribute('b-key') || null,
               template: node.cloneNode(true)  // Store the whole node as template
             });
-            node.innerHTML = '';
           }
         }
         if (node.hasAttribute('b-text')) bindings.push({ type: 'b-text', node, path: node.getAttribute('b-text') });
@@ -780,15 +789,20 @@ const Lego = (() => {
         }
         if (b.type === 'b-for') {
           const list = safeEval(b.listName, { state, global: Lego.globals, self: el }) || [];
-          if (!forPools.has(b.node)) forPools.set(b.node, new Map());
-          const pool = forPools.get(b.node);
+          if (!forPools.has(b.anchor)) forPools.set(b.anchor, new Map());
+          const pool = forPools.get(b.anchor);
           const currentKeys = new Set();
+          const renderedChildren = [];  // Track order of rendered children
+
           list.forEach((item, i) => {
             // Smart key generation: b-key > common id fields > __id fallback
             let key;
             if (b.keyPath) {
               // User specified b-key="propertyName"
               key = resolve(b.keyPath, item);
+              if (key === undefined) {
+                console.warn(`[Lego] b-key="${b.keyPath}" resolved to undefined for item at index ${i}. Check for typos.`);
+              }
             } else if (item && typeof item === 'object') {
               // Auto-detect common ID fields
               key = item.id || item._id || item.uuid || item.key;
@@ -805,7 +819,7 @@ const Lego = (() => {
             if (!child) {
               child = b.template.cloneNode(true);
               child.removeAttribute('b-for');
-              child.removeAttribute('b-key');  // Remove b-key from cloned template
+              child.removeAttribute('b-key');
               pool.set(key, child);
               bind(child, el, { name: b.itemName, listName: b.listName, index: i });
             }
@@ -819,8 +833,20 @@ const Lego = (() => {
                 syncModelValue(input, resolve(path.split('.').slice(1).join('.'), list[i]));
               }
             });
-            if (b.node.children[i] !== child) b.node.insertBefore(child, b.node.children[i] || null);
+            renderedChildren.push(child);
           });
+
+          // Insert/reorder children as siblings after the anchor
+          let insertPoint = b.anchor.nextSibling;
+          renderedChildren.forEach(child => {
+            if (child !== insertPoint) {
+              b.anchor.parentNode.insertBefore(child, insertPoint);
+            } else {
+              insertPoint = insertPoint.nextSibling;
+            }
+          });
+
+          // Remove stale nodes
           for (const [key, node] of pool.entries()) {
             if (!currentKeys.has(key)) { node.remove(); pool.delete(key); }
           }
