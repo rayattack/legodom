@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /guide/getting-started
+      link: /tutorial/index
     - theme: alt
       text: View on GitHub
       link: https://github.com/rayattack/LegoDOM
