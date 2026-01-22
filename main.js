@@ -1,6 +1,7 @@
 const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
+  const itemIdMap = new WeakMap(); // Track item IDs without mutating reactive objects
   const activeBlocks = new Set();
   const globalSubscribers = new Set();
 
@@ -57,6 +58,14 @@ const Lego = (() => {
     },
     metrics: {},   // Performance hooks
     syntax: 'brackets' // 'brackets' ([[ ]]) or 'mustache' ({{ }})
+  };
+
+  const mergeDescriptors = (source, target) => {
+    if (!source || !target) return;
+    Object.getOwnPropertyNames(source).forEach(key => {
+      const desc = Object.getOwnPropertyDescriptor(source, key);
+      Object.defineProperty(target, key, desc);
+    });
   };
 
   const getDelimiters = () => {
@@ -335,6 +344,9 @@ const Lego = (() => {
 
     // Hydrate $db descriptors
     for (const k in obj) {
+      const propDesc = Object.getOwnPropertyDescriptor(obj, k);
+      if (propDesc && propDesc.get) continue; // Skip getters to avoid execution
+
       const desc = obj[k];
       if (desc && desc.__type === 'lego-db') {
         let val = desc._default;
@@ -365,15 +377,22 @@ const Lego = (() => {
         }
         return val;
       },
-      set: (t, k, v) => {
-        const old = t[k];
-        const r = Reflect.set(t, k, v);
-        if (old !== v) {
-          batcher.add(el);
-          // Check for DB binding
-          const meta = dbMetadata.get(t);
-          if (meta && meta[k]) {
-            scheduleSave(meta[k].key, v, meta[k].debounce);
+      set: (t, k, v, receiver) => {
+        // FIX: Pass receiver to Reflect.set to ensure we set property on the correct object 
+        // (e.g. localScope inheriting from state) instead of forcing it onto state.
+        const r = Reflect.set(t, k, v, receiver);
+
+        // Only trigger reactivity if the update was effectively on THIS proxy
+        // If receiver is a child object (like localScope in b-for), we don't want to trigger parent updates
+        if (receiver === proxyCache.get(t)) {
+          const old = t[k];
+          if (old !== v) {
+            batcher.add(el);
+            // Check for DB binding
+            const meta = dbMetadata.get(t);
+            if (meta && meta[k]) {
+              scheduleSave(meta[k].key, v, meta[k].debounce);
+            }
           }
         }
         return r;
@@ -516,9 +535,10 @@ const Lego = (() => {
       let func = expressionCache.get(expr);
       if (!func) {
         // Removed inner try-catch to allow error propagation to the caller
+        // Scope order: helpers first (for $route, $go, etc.), then state
         func = new Function('global', 'self', 'event', 'helpers', `
-          with(helpers) {
-            with(this) { 
+          with(this) {
+            with(helpers) { 
               return ${expr}
             }
           }
@@ -643,7 +663,10 @@ const Lego = (() => {
     const bindings = [];
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
     let node;
+    const pendingOperations = []; // Queue DOM modifications to avoid breaking TreeWalker
+
     while (node = walker.nextNode()) {
+      const current = node; // Capture for closure
       const isInsideBoundary = (n) => {
         let curr = n.parentNode;
         while (curr && curr !== container) {
@@ -685,8 +708,15 @@ const Lego = (() => {
             checkGlobal(match[2]);
             // Create anchor comment to mark where clones will be inserted
             const anchor = document.createComment(`b-for: ${match[1]} in ${match[2].trim()}`);
-            node.parentNode.insertBefore(anchor, node);
-            node.remove(); // Remove original element from DOM
+
+            // DEFER DOM MODIFICATION
+            pendingOperations.push(() => {
+              if (current.parentNode) {
+                current.parentNode.insertBefore(anchor, current);
+                current.remove();
+              }
+            });
+
             bindings.push({
               type: 'b-for',
               anchor,  // Use anchor instead of node
@@ -719,6 +749,10 @@ const Lego = (() => {
         }
       }
     }
+
+    // Execute deferred DOM modifications
+    pendingOperations.forEach(op => op());
+
     return bindings;
   };
 
@@ -806,9 +840,12 @@ const Lego = (() => {
             } else if (item && typeof item === 'object') {
               // Auto-detect common ID fields
               key = item.id || item._id || item.uuid || item.key;
-              // Fallback to __id mutation (old behavior)
+              // Fallback to WeakMap-based ID (no mutation, no reactivity trigger)
               if (key === undefined) {
-                key = item.__id || (item.__id = Math.random());
+                if (!itemIdMap.has(item)) {
+                  itemIdMap.set(item, Math.random());
+                }
+                key = itemIdMap.get(item);
               }
             } else {
               // Primitive values: use index + value
@@ -935,10 +972,7 @@ const Lego = (() => {
       const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || templateNode.getAttribute('b-data') || '{}');
       const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}', parentScope);
 
-      el._studs = reactive({
-        ...scriptLogic,
-        ...templateLogic,
-        ...instanceLogic,
+      const baseState = {
         $vars: {},
         $element: el,
         get $parent() { return findAncestor(el, '*') },
@@ -947,7 +981,13 @@ const Lego = (() => {
         },
         get $route() { return Lego.globals.$route },
         get $go() { return Lego.globals.$go }
-      }, el);
+      };
+
+      mergeDescriptors(scriptLogic, baseState);
+      mergeDescriptors(templateLogic, baseState);
+      mergeDescriptors(instanceLogic, baseState);
+
+      el._studs = reactive(baseState, el);
 
       Object.defineProperty(el, 'state', {
         get() { return this._studs },
@@ -967,7 +1007,10 @@ const Lego = (() => {
       activeBlocks.add(el);
       render(el);
 
-      [...shadow.children].forEach(snap);
+      // Deeply initialize all nested components
+      shadow.querySelectorAll('*').forEach(child => {
+        if (registry[child.tagName.toLowerCase()]) snap(child);
+      });
 
       if (typeof el._studs.mounted === 'function') {
         try {
@@ -1351,8 +1394,11 @@ const Lego = (() => {
       legoFileLogic.set(tagName, logic);
 
       // Initialize shared state with try-catch safety
+      // Initialize shared state with try-catch safety
       try {
-        sharedStates.set(tagName.toLowerCase(), reactive({ ...logic }, document.body));
+        const sharedState = {};
+        mergeDescriptors(logic, sharedState);
+        sharedStates.set(tagName.toLowerCase(), reactive(sharedState, document.body));
       } catch (e) {
         config.onError(e, 'define', tagName);
       }
@@ -1389,5 +1435,3 @@ if (typeof window !== 'undefined') {
 } else if (typeof global !== 'undefined') {
   global.Lego = Lego;
 }
-
-
