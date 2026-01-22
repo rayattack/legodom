@@ -57,11 +57,11 @@ const Lego = (() => {
       console.error(`[Lego Error] [${type}]`, err, el);
     },
     metrics: {},   // Performance hooks
-    debug: true,   // Force debug true
+    debug: true,
     syntax: 'brackets' // 'brackets' ([[ ]]) or 'mustache' ({{ }})
   };
 
-  console.log('[LegoDOM] main.js loaded (Debug Mode)');
+  if (config.debug) console.log('[LegoDOM] main.js loaded (Debug Mode)');
 
   const mergeDescriptors = (source, target) => {
     if (!source || !target) return;
@@ -395,7 +395,7 @@ const Lego = (() => {
         const isSelf = receiver === proxyCache.get(t);
         if (config.debug) {
           const meta = dbMetadata.get(t);
-          console.log('[Lego Trace] Receiver check:', k, isSelf, 'Meta:', meta ? JSON.stringify(meta[k]) : 'None');
+          if (config.debug) console.log('[Lego Trace] Receiver check:', k, isSelf, 'Meta:', meta ? JSON.stringify(meta[k]) : 'None');
         }
         if (isSelf) {
           // Use previously captured 'old' value because 't[k]' is already updated by Reflect.set
@@ -605,8 +605,54 @@ const Lego = (() => {
         for (let i = 0; i < attrs.length; i++) {
           const attr = attrs[i];
           if (attr.name.startsWith('@')) {
-            const eventName = attr.name.slice(1);
+            const parts = attr.name.slice(1).split('.');
+            const eventName = parts[0];
+            const modifiers = parts.slice(1);
+
             child.addEventListener(eventName, (event) => {
+              // Action Modifiers
+              if (modifiers.includes('prevent')) event.preventDefault();
+              if (modifiers.includes('stop')) event.stopPropagation();
+              if (modifiers.includes('self') && event.target !== event.currentTarget) return;
+
+              // Keyboard Modifiers
+              if (typeof KeyboardEvent !== 'undefined' && event instanceof KeyboardEvent) {
+                // System Keys (AND logic)
+                if (modifiers.includes('ctrl') && !event.ctrlKey) return;
+                if (modifiers.includes('alt') && !event.altKey) return;
+                if (modifiers.includes('shift') && !event.shiftKey) return;
+                if (modifiers.includes('meta') && !event.metaKey) return;
+
+                // Key Matchers (OR logic for non-system/action modifiers)
+                const keyModifiers = modifiers.filter(m =>
+                  !['prevent', 'stop', 'self', 'ctrl', 'alt', 'shift', 'meta', 'capture', 'once', 'passive'].includes(m)
+                );
+
+                if (keyModifiers.length > 0) {
+                  const pressed = event.key.toLowerCase();
+                  const isMatch = keyModifiers.some(mod => {
+                    // Aliases
+                    if (mod === 'enter') return pressed === 'enter';
+                    if (mod === 'esc' || mod === 'escape') return pressed === 'escape';
+                    if (mod === 'space') return pressed === ' ';
+                    if (mod === 'tab') return pressed === 'tab';
+                    if (mod === 'delete') return pressed === 'delete';
+                    if (mod === 'backspace') return pressed === 'backspace';
+                    if (mod === 'up') return pressed === 'arrowup';
+                    if (mod === 'down') return pressed === 'arrowdown';
+                    if (mod === 'left') return pressed === 'arrowleft';
+                    if (mod === 'right') return pressed === 'arrowright';
+
+                    // Categories
+                    if (mod === 'alpha') return /^[a-z]$/.test(pressed);
+                    if (mod === 'numbers') return /^[0-9]$/.test(pressed);
+
+                    // Direct match (case-insensitive)
+                    return mod === pressed;
+                  });
+                  if (!isMatch) return;
+                }
+              }
               try {
                 let evalScope = state;
                 if (loopCtx) {
@@ -614,7 +660,7 @@ const Lego = (() => {
                   const item = list[loopCtx.index];
                   evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
                 }
-                safeEval(attr.value, { state: evalScope, global: Lego.globals, self: child, event }, true);
+                safeEval(attr.value, { state: evalScope, global: Lego.globals, self: child, event, $event: event }, true);
               } catch (err) {
                 const boundary = findErrorBoundary(blockRoot);
                 if (boundary) {
@@ -1137,6 +1183,7 @@ const Lego = (() => {
     const path = window.location.pathname;
     const search = window.location.search;
     const match = routes.find(r => r.regex.test(path));
+    console.log('Matching route', path, match);
     if (!match) return;
 
     // Resolve targets: Functional selectors > List of queries > History State > Default lego-router
@@ -1147,6 +1194,7 @@ const Lego = (() => {
       const defaultOutlet = document.querySelector('lego-router');
       if (defaultOutlet) resolvedElements = [defaultOutlet];
     }
+    console.log('Matching route', window.location.pathName)
 
     if (resolvedElements.length === 0) return;
 
@@ -1198,6 +1246,7 @@ const Lego = (() => {
       if (!root || typeof root.nodeType !== 'number') root = document.body;
       styleConfig = options.styles || {};
       config.loader = options.loader; // Register loader hook
+      if (options.debug !== true) config.debug = options.debug;
 
       // Pre-load all defined style sets into Constructable Stylesheets
       const loadPromises = Object.entries(styleConfig).map(async ([key, urls]) => {

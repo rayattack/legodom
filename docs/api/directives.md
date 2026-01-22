@@ -71,11 +71,4 @@ this.mounted = function() {
 }
 ```
 
-## @event
 
-Event listeners.
-
-```html
-<button @click="save()">Save</button>
-<input @input="validate($event)">
-```

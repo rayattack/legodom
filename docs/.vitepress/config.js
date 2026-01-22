@@ -84,6 +84,7 @@ export default defineConfig({
             { text: 'Templating', link: '/guide/templating' },
             { text: 'Reactivity', link: '/guide/reactivity' },
             { text: 'Directives', link: '/guide/directives' },
+            { text: 'Events', link: '/guide/events' },
             { text: 'Persistence ($db)', link: '/guide/persistence' },
             { text: 'Helper Utilities', link: '/guide/helpers' }
           ]
