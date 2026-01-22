@@ -57,8 +57,11 @@ const Lego = (() => {
       console.error(`[Lego Error] [${type}]`, err, el);
     },
     metrics: {},   // Performance hooks
+    debug: true,   // Force debug true
     syntax: 'brackets' // 'brackets' ([[ ]]) or 'mustache' ({{ }})
   };
+
+  console.log('[LegoDOM] main.js loaded (Debug Mode)');
 
   const mergeDescriptors = (source, target) => {
     if (!source || !target) return;
@@ -264,6 +267,7 @@ const Lego = (() => {
   };
 
   const scheduleSave = (key, value, debounce) => {
+    if (config.debug) console.log('[Lego Trace] scheduleSave', key, value, debounce);
     if (dbTimers.has(key)) clearTimeout(dbTimers.get(key));
     const save = () => {
       try {
@@ -348,6 +352,7 @@ const Lego = (() => {
       if (propDesc && propDesc.get) continue; // Skip getters to avoid execution
 
       const desc = obj[k];
+      if (config.debug && desc && desc.__type === 'lego-db') console.log('[Lego Trace] Reactive DB Init:', k, desc);
       if (desc && desc.__type === 'lego-db') {
         let val = desc._default;
         try {
@@ -362,6 +367,7 @@ const Lego = (() => {
         // Register metadata
         if (!dbMetadata.has(obj)) dbMetadata.set(obj, {});
         dbMetadata.get(obj)[k] = { key: desc.key, debounce: desc._debounce };
+        if (config.debug) console.log('[Lego Trace] DB Metadata Set:', k, dbMetadata.get(obj)[k]);
 
         // Register for cross-tab updates
         if (!dbBindings.has(desc.key)) dbBindings.set(desc.key, new Set());
@@ -380,12 +386,19 @@ const Lego = (() => {
       set: (t, k, v, receiver) => {
         // FIX: Pass receiver to Reflect.set to ensure we set property on the correct object 
         // (e.g. localScope inheriting from state) instead of forcing it onto state.
+        const old = t[k];
+        if (config.debug && old !== v) console.log('[Lego Trace] Reactive SET:', k, 'Old:', old, 'New:', v, 'Target:', t);
         const r = Reflect.set(t, k, v, receiver);
 
         // Only trigger reactivity if the update was effectively on THIS proxy
         // If receiver is a child object (like localScope in b-for), we don't want to trigger parent updates
-        if (receiver === proxyCache.get(t)) {
-          const old = t[k];
+        const isSelf = receiver === proxyCache.get(t);
+        if (config.debug) {
+          const meta = dbMetadata.get(t);
+          console.log('[Lego Trace] Receiver check:', k, isSelf, 'Meta:', meta ? JSON.stringify(meta[k]) : 'None');
+        }
+        if (isSelf) {
+          // Use previously captured 'old' value because 't[k]' is already updated by Reflect.set
           if (old !== v) {
             batcher.add(el);
             // Check for DB binding
@@ -743,6 +756,7 @@ const Lego = (() => {
         });
       } else if (node.nodeType === Node.TEXT_NODE) {
         const [start] = getDelimiters();
+        if (config.debug) console.log('[Lego Debug] Scanning text:', node.textContent.trim().slice(0, 50), 'Start:', start, 'Includes:', node.textContent.includes(start));
         if (node.textContent.includes(start)) {
           checkGlobal(node.textContent);
           bindings.push({ type: 'text', node, template: node.textContent });
@@ -783,6 +797,7 @@ const Lego = (() => {
   };
 
   const render = (el) => {
+    if (config.debug) console.log('[Lego Trace] render() called for:', el.tagName);
     const state = el._studs;
     if (!state) return;
     const data = getPrivateData(el);
@@ -908,6 +923,7 @@ const Lego = (() => {
   };
 
   const snap = (el) => {
+    if (config.debug) console.log('[Lego Trace] snap() called for:', el.tagName);
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
     const data = getPrivateData(el);
     const name = el.tagName.toLowerCase();
@@ -1363,7 +1379,12 @@ const Lego = (() => {
 
       const name = deriveBlockName(filename);
       // Inject $db helper into the scope
-      const logicObj = new Function(`return ${script}`)();
+      let logicObj = {};
+      try {
+        logicObj = new Function('Lego', '$db', `return ${script}`)(Lego, Lego.globals.$db);
+      } catch (e) {
+        config.onError(e, 'script', name);
+      }
 
       if (style) {
         template = `<style>${style}</style>` + template;
