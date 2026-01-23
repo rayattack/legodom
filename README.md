@@ -8,6 +8,27 @@ Lego embraces the web platform. It turns standard HTML `<template>` tags into re
 
 ---
 
+## Supports Modern Toolchains
+
+Lego includes a **Vite plugin** for developers who prefer **Single File Components (.lego)**:
+
+```html
+<!-- user-card.lego -->
+<template>
+  <h1>{{ name }}</h1>
+</template>
+
+<style>
+  self { display: block; padding: 20px; }
+</style>
+
+<script>
+  export default { name: 'John Doe' }
+</script>
+```
+
+---
+
 ## Why Lego?
 
 - ⚡ **Extremely Fast** – No virtual DOM. No reconciliation. Direct DOM updates.
@@ -46,7 +67,7 @@ This scaffolds a complete project with Vite, the LegoDOM plugin, and a sample co
     <style>
       h1 { color: #ffca28; font-family: sans-serif; }
     </style>
-    <h1>Hello, {{ name }}!</h1>
+    <h1>Hello, [[ name ]]</h1>
     <button @click="toggle()">Toggle Name</button>
   </template>
 
@@ -65,26 +86,6 @@ This scaffolds a complete project with Vite, the LegoDOM plugin, and a sample co
 
 ---
 
-## Also Supports Modern Toolchains
-
-Lego includes a **Vite plugin** for developers who prefer **Single File Components (.lego)**:
-
-```html
-<!-- user-card.lego -->
-<template>
-  <h1>{{ name }}</h1>
-</template>
-
-<style>
-  self { display: block; padding: 20px; }
-</style>
-
-<script>
-  export default { name: 'John Doe' }
-</script>
-```
-
----
 
 ## 🔗 Links
 
