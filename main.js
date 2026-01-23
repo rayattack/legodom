@@ -57,7 +57,7 @@ const Lego = (() => {
       console.error(`[Lego Error] [${type}]`, err, el);
     },
     metrics: {},   // Performance hooks
-    debug: true,
+    debug: false,
     syntax: 'brackets' // 'brackets' ([[ ]]) or 'mustache' ({{ }})
   };
 
@@ -296,7 +296,7 @@ const Lego = (() => {
             const evicted = evictOldestKeys(sizeBytes * 2); // Free 2x needed space
 
             if (evicted.length > 0) {
-              console.log(`[Lego] Evicted ${evicted.length} old keys, retrying save`);
+              if (config.debug) console.log(`[Lego] Evicted ${evicted.length} old keys, retrying save`);
               localStorage.setItem(key, serialized);
 
               const storageKey = key.startsWith('lego:') ? key : `lego:${key}`;
@@ -1009,8 +1009,8 @@ const Lego = (() => {
 
       if (allStyleNames.length > 0) {
         const sheetsToApply = allStyleNames.flatMap(key => styleRegistry.get(key) || []);
-        if (config.debug) {
-          console.log('[Lego Debug] Applying styles to', el.tagName, '- Names:', allStyleNames, '- Sheets:', sheetsToApply.length);
+        if (sheetsToApply.length > 0) {
+          if (config.debug) console.log('[Lego Debug] Applying styles to', el.tagName, '- Names:', allStyleNames, '- Sheets:', sheetsToApply.length);
         }
         if (sheetsToApply.length > 0) {
           shadow.adoptedStyleSheets = [...sheetsToApply];
@@ -1078,8 +1078,8 @@ const Lego = (() => {
       nestedComponents.forEach(child => {
         const childTag = child.tagName.toLowerCase();
         const isRegistered = !!registry[childTag];
-        if (config.debug && childTag.includes('-')) {
-          console.log('[Lego Debug] Checking', childTag, '- Registered:', isRegistered);
+        if (isRegistered) {
+          if (config.debug) console.log('[Lego Debug] Checking', childTag, '- Registered:', isRegistered);
         }
         if (isRegistered) snap(child);
       });
@@ -1196,7 +1196,7 @@ const Lego = (() => {
     const path = window.location.pathname;
     const search = window.location.search;
     const match = routes.find(r => r.regex.test(path));
-    console.log('Matching route', path, match);
+    if (config.debug) console.log('[Lego Trace] Matching route', path, match);
     if (!match) return;
 
     // Resolve targets: Functional selectors > List of queries > History State > Default lego-router
@@ -1207,7 +1207,7 @@ const Lego = (() => {
       const defaultOutlet = document.querySelector('lego-router');
       if (defaultOutlet) resolvedElements = [defaultOutlet];
     }
-    console.log('Matching route', window.location.pathName)
+    if (config.debug) console.log('[Lego Trace] Matching route', window.location.pathname)
 
     if (resolvedElements.length === 0) return;
 
@@ -1259,7 +1259,7 @@ const Lego = (() => {
       if (!root || typeof root.nodeType !== 'number') root = document.body;
       styleConfig = options.styles || {};
       config.loader = options.loader; // Register loader hook
-      if (options.debug !== true) config.debug = options.debug;
+      config.debug = options.debug === true; // Set debug mode explicitly
 
       // Pre-load all defined style sets into Constructable Stylesheets
       const loadPromises = Object.entries(styleConfig).map(async ([key, urls]) => {
