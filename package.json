@@ -3,12 +3,21 @@
   "version": "2.1.1-alpha",
   "license": "MIT",
   "description": "A feature-rich web components + SFC frontend framework",
-  "main": "main.js",
+  "main": "dist/main.js",
+  "module": "dist/lego.mjs",
   "type": "module",
+  "files": [
+    "dist",
+    "src",
+    "vite-plugin.js",
+    "parse-lego.js"
+  ],
   "exports": {
-    ".": "./lego.js",
-    "./main.js": "./main.js",
-    "./lego.js": "./lego.js",
+    ".": {
+      "import": "./dist/lego.mjs",
+      "require": "./dist/main.js",
+      "default": "./dist/main.js"
+    },
     "./vite-plugin": "./vite-plugin.js",
     "./parse-lego": "./parse-lego.js"
   },
