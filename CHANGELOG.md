@@ -1,34 +1,23 @@
 # Changelog
 
-## [2.0.4-rc.6] - 2026-01-21
+## [2.1.1] - 2026-01-23
+Welcome to **LegoDOM v2**! This release represents a massive architectural shift to align the codebase and mental model with the "Lego" metaphor. We have moved away from Vue-centric terminology ("SFC", "Component", "Data") to Lego-centric terminology ("Lego File", "Block", "Logic").
 
-### Performance
-
-- **Init Optimization:** Fixed double render on initialization. Route is now initialized before DOM scan, preventing reactive updates from triggering a second render pass.
-  - **Before:** Elements rendered twice (once during `snap()`, once when `_matchRoute()` updated `Lego.globals.$route`).
-  - **After:** Elements render once with correct route data already available.
-  - **Impact:** Faster initial load, cleaner error logs (no duplicate errors).
-
-## [2.0.4-rc.5] - 2026-01-21
-
-### Breaking Changes 🚨
-
-- **`b-for` Sibling Rendering:** The element with `b-for` is now **replaced** by its clones as siblings, instead of nesting clones inside itself. This fixes invalid HTML like `<p><p>...</p></p>` and ensures correct CSS behavior (hover, focus, etc.).
-  ```html
-  <!-- Template -->
-  <ul>
-    <li b-for="item in items">[[ item ]]</li>
-  </ul>
-  
-  <!-- Now renders as: -->
-  <ul>
-    <!--b-for: item in items-->
-    <li>Apple</li>
-    <li>Banana</li>
-  </ul>
-  ```
 
 ### Features
+
+- **Reactive Persistence (`$db`):** New helper for persisting state to `localStorage` with automatic hydration, debouncing, and cross-tab synchronization.
+  ```html
+  <user-prefs b-logic="{
+    theme: $db('app.theme').default('light'),
+    volume: $db('app.vol').default(50).debounce(300)
+  }"></user-prefs>
+  ```
+  - **Auto-Load:** Values are automatically hydrated from `localStorage` on block creation.
+  - **Auto-Save:** Changes are automatically persisted (with optional debounce).
+  - **Cross-Tab Sync:** Updates in one tab automatically reflect in other tabs.
+
+- **Vite Plugin DX:** Default `blocksDir` is now `./src` (was `./src/blocks`), allowing auto-discovery of `.lego` files anywhere in the source tree (as long as they follow the kebab-case hyphenation rule).
 
 - **`$index` in `b-for`:** Access the current item's 0-based index in loops.
   ```html
@@ -37,40 +26,7 @@
   </li>
   ```
 
-### Developer Experience
-
-- **Error Logging:** Fixed 4 silent catch blocks that swallowed errors without any console output:
-  - `parseJSObject` now logs `b-data`/`b-logic` syntax errors.
-  - `b-key` warns when it resolves to `undefined`.
-  - localStorage hydration errors are now logged.
-  - Cross-tab sync errors are now logged.
-
-## [2.0.4-rc.4] - 2026-01-21
-
-### Features
-
-- **Vite Plugin DX:** Default `blocksDir` is now `./src` (was `./src/blocks`), allowing auto-discovery of `.lego` files anywhere in the source tree (as long as they follow the kebab-case hyphenation rule).
-
-
-## [2.0.4-rc.3] - 2026-01-21
-
-### Fixes
-
-- **Vite Plugin `b-cascade`/`b-error`:** Fixed a bug where `b-cascade` and `b-error` attributes defined in `.lego` files were not passed to `Lego.block()`, causing stylesheet inheritance and error boundaries to fail.
-
-## [2.0.4-rc.2] - 2026-01-20
-
-### Features
-
 - **`b-key` Directive:** Optimized rendering for lists by providing stable identities for elements.
-
-### Fixes
-
-- **Lego Studio Scaffolding:** Fixed an issue where `.lego` files were expected to be in `src/block`, causing a blank screen upon scaffolding.
-
-## [2.0.4-rc.1] - 2026-01-20
-
-### Features
 
 - **Error Boundaries (`b-error`):** Gracefully handle block crashes with cascading error boundaries!
   ```html
@@ -100,64 +56,6 @@
   npm create legodom@latest
   ```
 
-### Performance
-
-- **Global State Subscription Tracking:** Optimized global state updates from O(N) to O(K) complexity.
-  - Previously scanned all active blocks to check for global dependencies.
-  - Now maintains a dedicated `globalSubscribers` Set for instant lookups.
-  - Significantly faster for apps with thousands of blocks.
-
-### Memory Management
-
-- **Fixed Circular Reference Leaks:** Enhanced `unsnap()` to clear all closure-captured references.
-  - Explicitly nulls `$emit`, and deletes `$parent`, `$route`, `$go` getters.
-  - Prevents memory leaks from closures capturing element references.
-  - Ensures complete garbage collection of removed blocks.
-
-### Documentation
-
-- **b-cascade Guide:** Added documentation for cascading stylesheets, best practices for global themes vs block styles.
-- **Directives:** Merged cascade docs into the main Directives guide.
-
-## [2.0.4-beta] - 2026-01-20
-
-### Fixes
-
-- **Auto-Discovery Logic:** Fixed a bug where elements present in the initial HTML were not detected by the `config.loader`. The discovery logic now scans the DOM during `Lego.init()` as well as on subsequent mutations.
-- **b-stylesheets Support:** Fully implemented `b-stylesheets` to allow blocks to adopt constructable stylesheets.
-- **SSR/Node Compatibility:** Added checks for `window`, `document`, and `Node` throughout the core to ensure LegoDOM can be imported and executed in Node.js/SSR environments without crashing.
-- **Global Export:** `Lego` is now correctly exported to `global` in Node.js environments.
-
-## [2.0.4-alpha] - 2026-01-20
-
-### Fixes
-
-- **SSR/Node Compatibility:** Added checks for `window`, `document`, and `Node` throughout the core to ensure LegoDOM can be imported and executed in Node.js/SSR environments without crashing.
-- **Global Export:** `Lego` is now correctly exported to `global` in Node.js environments.
-
-## [2.0.3] - 2026-01-19
-
-### Features
-
-- **Reactive Persistence (`$db`):** New helper for persisting state to `localStorage` with automatic hydration, debouncing, and cross-tab synchronization.
-  ```html
-  <user-prefs b-logic="{
-    theme: $db('app.theme').default('light'),
-    volume: $db('app.vol').default(50).debounce(300)
-  }"></user-prefs>
-  ```
-  - **Auto-Load:** Values are automatically hydrated from `localStorage` on block creation.
-  - **Auto-Save:** Changes are automatically persisted (with optional debounce).
-  - **Cross-Tab Sync:** Updates in one tab automatically reflect in other tabs.
-
-### Documentation
-
-- Added `docs/guide/persistence.md` covering the `$db` API, namespacing best practices, and performance warnings.
-
-## [2.0.2] - 2026-01-19
-
-### Features
-
 - **Scoped Props (`b-logic`):** `b-logic` attributes now inherit the parent block's scope! You can pass state naturally to children without global variables.
   ```html
   <!-- 'user' is resolved from the parent block's state -->
@@ -167,15 +65,60 @@
 - **`$parent` Helper:** Added `this.$parent` (and template access) to easily find the nearest ancestor Block. It intelligently skips non-block elements (divs, spans) and handles Shadow DOM boundaries.
   ```javascript
   const parentBlock = this.$parent;
+
+- **Public State API:**
+  - `element.state` is now the official public API for accessing the reactive proxy.
+  - `element._studs` is considered internal/private.
+
+- **Lego Studio Audit:**
+  - `lego-studio` has been refactored to use "Block" terminology throughout the UI and codebase.
+
+
+### Fixes
+
+- **Init Optimization:** Fixed double render on initialization. Route is now initialized before DOM scan, preventing reactive updates from triggering a second render pass.
+  - **Before:** Elements rendered twice (once during `snap()`, once when `_matchRoute()` updated `Lego.globals.$route`).
+  - **After:** Elements render once with correct route data already available.
+  - **Impact:** Faster initial load, cleaner error logs (no duplicate errors).
+
+- **Vite Plugin `b-cascade`/`b-error`:** Fixed a bug where `b-cascade` and `b-error` attributes defined in `.lego` files were not passed to `Lego.block()`, causing stylesheet inheritance and error boundaries to fail.
+
+- **Lego Studio Scaffolding:** Fixed an issue where `.lego` files were expected to be in `src/block`, causing a blank screen upon scaffolding.
+
+- **Global State Subscription Tracking:** Optimized global state updates from O(N) to O(K) complexity.
+  - Previously scanned all active blocks to check for global dependencies.
+  - Now maintains a dedicated `globalSubscribers` Set for instant lookups.
+  - Significantly faster for apps with thousands of blocks.
+
+- **Fixed Circular Reference Leaks:** Enhanced `unsnap()` to clear all closure-captured references.
+  - Explicitly nulls `$emit`, and deletes `$parent`, `$route`, `$go` getters.
+  - Prevents memory leaks from closures capturing element references.
+  - Ensures complete garbage collection of removed blocks.
+
+- **Auto-Discovery Logic:** Fixed a bug where elements present in the initial HTML were not detected by the `config.loader`. The discovery logic now scans the DOM during `Lego.init()` as well as on subsequent mutations.
+- **b-stylesheets Support:** Fully implemented `b-stylesheets` to allow blocks to adopt constructable stylesheets.
+- **SSR/Node Compatibility:** Added checks for `window`, `document`, and `Node` throughout the core to ensure LegoDOM can be imported and executed in Node.js/SSR environments without crashing.
+- **Global Export:** `Lego` is now correctly exported to `global` in Node.js environments.
+
+- **SSR/Node Compatibility:** Added checks for `window`, `document`, and `Node` throughout the core to ensure LegoDOM can be imported and executed in Node.js/SSR environments without crashing.
+- **Global Export:** `Lego` is now correctly exported to `global` in Node.js environments.
+
+### Breaking Changes 
+
+- **`b-for` Sibling Rendering:** The element with `b-for` is now **replaced** by its clones as siblings, instead of nesting clones inside itself. This fixes invalid HTML like `<p><p>...</p></p>` and ensures correct CSS behavior (hover, focus, etc.).
+  ```html
+  <!-- Template -->
+  <ul>
+    <li b-for="item in items">[[ item ]]</li>
+  </ul>
+  
+  <!-- Now renders as: -->
+  <ul>
+    <!--b-for: item in items-->
+    <li>Apple</li>
+    <li>Banana</li>
+  </ul>
   ```
-
-## [2.0.1] - 2026-01-19
-
-### The "Blocks" Update Refactor 🧱
-
-Welcome to **LegoDOM v2**! This release represents a massive architectural shift to align the codebase and mental model with the "Lego" metaphor. We have moved away from Vue-centric terminology ("SFC", "Component", "Data") to Lego-centric terminology ("Lego File", "Block", "Logic").
-
-### Breaking Changes 🚨
 
 - **Terminological Refactor (Runtime & Docs):**
   - **Components → Blocks:** The fundamental unit of UI is now a "Block".
@@ -190,18 +133,24 @@ Welcome to **LegoDOM v2**! This release represents a massive architectural shift
   - `b-data` is now **`b-logic`**. (Legacy alias maintained)
   - `b-styles` is now **`b-stylesheets`**.
 
-### Features
 
-- **Public State API:**
-  - `element.state` is now the official public API for accessing the reactive proxy.
-  - `element._studs` is considered internal/private.
+### Developer Experience
 
-- **Lego Studio Audit:**
-  - `lego-studio` has been refactored to use "Block" terminology throughout the UI and codebase.
+- **Error Logging:** Fixed 4 silent catch blocks that swallowed errors without any console output:
+  - `parseJSObject` now logs `b-data`/`b-logic` syntax errors.
+  - `b-key` warns when it resolves to `undefined`.
+  - localStorage hydration errors are now logged.
+  - Cross-tab sync errors are now logged.
+
+- **b-cascade Guide:** Added documentation for cascading stylesheets, best practices for global themes vs block styles.
+- **Directives:** Merged cascade docs into the main Directives guide.
+
+- Added `docs/guide/persistence.md` covering the `$db` API, namespacing best practices, and performance warnings.
+
 
 ## [1.5.1] - 2026-01-19
 
-### Breaking Changes 🚨
+### Breaking Changes
 
 - **Renamed `b-styles` to `b-stylesheets`:** The directive for injecting shared stylesheets into shadow roots has been renamed from `b-styles` to `b-stylesheets` to avoid confusion with the `style` attribute and better reflect its purpose (injecting Constructable Stylesheets).
   ```html
