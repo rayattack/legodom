@@ -73,9 +73,11 @@ export const reactive = (obj, el, batcher = null) => {
     
     -   This is the main trigger. When you do `state.count = 5`, the Proxy compares the `old` value with the `new` value.
     -   If they are different, it:
+
         a. Calls `handleDbUpdate()` to sync with `localStorage` if this is a `$db` property
+
         b. Calls `batcher.add(el)` to queue a render
-        
+
 3.  **The `deleteProperty` trap**: 
     
     -   Even if you delete a key (e.g., `delete state.tempData`), the Proxy intercepts this and tells the batcher to re-render the UI.
@@ -102,7 +104,7 @@ This allows you to write:
 
 ```js
 {
-  todos: Lego.db('my-todos').default([])
+  todos: $db('my-todos').default([])
 }
 ```
 

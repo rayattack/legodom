@@ -38,7 +38,7 @@ src/
 
 ## Why Modular ES6?
 
-The IIFE pattern served us well initially, but as the codebase grew past 1500 lines, maintainability became an issue. The modular structure offers:
+The IIFE pattern served well initially, but as the codebase grew past 1500 lines, maintainability became an issue. The modular structure offers:
 
 1.  **Separation of Concerns**: Each module has a single, well-defined responsibility.
 2.  **Testability**: Individual modules can be tested in isolation.
