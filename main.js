@@ -1070,9 +1070,19 @@ const Lego = (() => {
       render(el);
 
       // Deeply initialize all nested components
-      shadow.querySelectorAll('*').forEach(child => {
-        if (registry[child.tagName.toLowerCase()]) snap(child);
+      const nestedComponents = shadow.querySelectorAll('*');
+      if (config.debug) console.log('[Lego Debug] Nested scan in', el.tagName, '- Found elements:', nestedComponents.length);
+      nestedComponents.forEach(child => {
+        const childTag = child.tagName.toLowerCase();
+        const isRegistered = !!registry[childTag];
+        if (config.debug && childTag.includes('-')) {
+          console.log('[Lego Debug] Checking', childTag, '- Registered:', isRegistered);
+        }
+        if (isRegistered) snap(child);
       });
+
+      // Track this shadow root for later component registration
+      if (!el._legoShadow) el._legoShadow = shadow;
 
       if (typeof el._studs.mounted === 'function') {
         try {
@@ -1474,6 +1484,18 @@ const Lego = (() => {
       }
 
       document.querySelectorAll(tagName).forEach(snap);
+
+      // Also scan inside all shadow roots for late-registered components
+      activeBlocks.forEach(block => {
+        if (block._legoShadow) {
+          block._legoShadow.querySelectorAll(tagName).forEach(instance => {
+            if (!getPrivateData(instance).snapped) {
+              if (config.debug) console.log('[Lego Debug] Lazy-initializing', tagName, 'in', block.tagName);
+              snap(instance);
+            }
+          });
+        }
+      });
     },
 
 

@@ -82,6 +82,7 @@ export default defineConfig({
             { text: 'The Lego Object', link: '/guide/the-lego-object' },
             { text: 'Blocks', link: '/guide/blocks' },
             { text: 'Templating', link: '/guide/templating' },
+            { text: 'Layouts & Composition', link: '/guide/layouts' },
             { text: 'Reactivity', link: '/guide/reactivity' },
             { text: 'Directives', link: '/guide/directives' },
             { text: 'Events', link: '/guide/events' },
