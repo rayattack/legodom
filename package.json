@@ -22,7 +22,8 @@
   "author": "Tersoo Ortserga",
   "scripts": {
     "test": "vitest run",
-    "build": "esbuild main.js --minify --outfile=main.min.js",
+    "build": "node build.js",
+    "clean": "rm -rf dist",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
