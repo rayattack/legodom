@@ -134,6 +134,7 @@ export default function legoPlugin(options = {}) {
 
         return `
 import { Lego } from '${importPath}';
+const $db = Lego.db;
 
 ${blockCall}
 

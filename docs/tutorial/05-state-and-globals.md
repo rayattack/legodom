@@ -247,9 +247,12 @@ mounted() {
 | Share data app-wide | `Lego.globals.myData = ...` |
 | Read global in template | `[[ global.myData ]]` |
 | Read global in JS | `Lego.globals.myData` |
-| Get route params | `this.$route.params.id` |
-| Get query string | `this.$route.query.tab` |
-| Notify parent block | `this.$emit('event-name', data)` |
+| Get route params in template | `[[ $route.params.id ]]` |
+| Get route params in JS | `this.$route.params.id` |
+| Get query string in template | `[[ $route.query.tab ]]` |
+| Get query string in JS | `this.$route.query.tab` |
+| Notify parent block in template | `@click="() => $emit('event-name', data)"` |
+| Notify parent block in JS | `this.$emit('event-name', data)` |
 | Navigate with state | Set globals before `$go()` |
 
 ## What's Next?

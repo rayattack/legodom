@@ -336,68 +336,7 @@ Two-way data binding for form inputs.
 </li>
 ```
 
-## @event
 
-Event handlers.
-
-### Common Events
-
-```html
-<!-- Click -->
-<button @click="handleClick()">Click Me</button>
-
-<!-- Input -->
-<input @input="handleInput()">
-
-<!-- Change -->
-<select @change="handleChange()">...</select>
-
-<!-- Submit -->
-<form @submit="handleSubmit(event)">...</form>
-
-<!-- Focus/Blur -->
-<input @focus="onFocus()" @blur="onBlur()">
-
-<!-- Mouse Events -->
-<div @mouseenter="onHover()" @mouseleave="onLeave()">Hover me</div>
-
-<!-- Keyboard -->
-<input @keyup="onKeyUp(event)" @keydown="onKeyDown(event)">
-```
-
-### Event Object
-
-Access the native event object:
-
-```html
-<button @click="handleClick(event)">Click</button>
-```
-
-```js
-{
-  handleClick(event) {
-    console.log('Target:', event.target);
-    console.log('Type:', event.type);
-    event.preventDefault();
-    event.stopPropagation();
-  }
-}
-```
-
-### Inline Expressions
-
-```html
-<button @click="count++">Increment</button>
-<button @click="items.push('new item')">Add Item</button>
-<button @click="$emit('save', { id: 123 })">Save</button>
-```
-
-### Key Events
-
-```html
-<input @keyup="event.key === 'Enter' && submit()">
-<input @keydown="event.key === 'Escape' && cancel()">
-```
 
 ## b-link
 

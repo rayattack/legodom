@@ -7,3 +7,7 @@ examples/
 tests/
 .github/
 .legodom
+create-legodom/
+www/
+cdn.html
+unpublish_versions.sh

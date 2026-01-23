@@ -1,6 +1,33 @@
-# Your First LegoDOM App
+# LegoDOM is Simple to Learn
+
+```html
+<style>
+  self {}
+  button { background-color: #000; color: #fff; padding: 5px 10px; }
+</style>
+
+<template b-stylesheets="bulma">
+  <input type="text" b-sync="name">
+  <button @click="greet">[[ count > 0 ? `Greeted ${count} times` : 'Greet' ]]</button>
+  <h1>Hello [[ name ]]! You are on the [[ $route.url ]] page.</h1>
+</template>
+
+<script>
+  export default {
+    count: 0,
+    name: $db('username').default('World'),
+    greet() {
+      alert('Hello ' + this.name + '!');
+
+      //let's send it up the lego chain
+      this.$emit('greet', this.name);
+    }
+  }
+</script>
+```
 
 Welcome! In the next 15 minutes, you'll build a complete multi-page application with beautiful blocks, smooth navigation, and a login flow. No prior framework experience needed.
+
 
 ## What You'll Build
 

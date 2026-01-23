@@ -1,6 +1,7 @@
 const Lego = (() => {
   const registry = {}, proxyCache = new WeakMap(), privateData = new WeakMap();
   const forPools = new WeakMap();
+  const itemIdMap = new WeakMap(); // Track item IDs without mutating reactive objects
   const activeBlocks = new Set();
   const globalSubscribers = new Set();
 
@@ -56,7 +57,18 @@ const Lego = (() => {
       console.error(`[Lego Error] [${type}]`, err, el);
     },
     metrics: {},   // Performance hooks
+    debug: true,
     syntax: 'brackets' // 'brackets' ([[ ]]) or 'mustache' ({{ }})
+  };
+
+  if (config.debug) console.log('[LegoDOM] main.js loaded (Debug Mode)');
+
+  const mergeDescriptors = (source, target) => {
+    if (!source || !target) return;
+    Object.getOwnPropertyNames(source).forEach(key => {
+      const desc = Object.getOwnPropertyDescriptor(source, key);
+      Object.defineProperty(target, key, desc);
+    });
   };
 
   const getDelimiters = () => {
@@ -255,6 +267,7 @@ const Lego = (() => {
   };
 
   const scheduleSave = (key, value, debounce) => {
+    if (config.debug) console.log('[Lego Trace] scheduleSave', key, value, debounce);
     if (dbTimers.has(key)) clearTimeout(dbTimers.get(key));
     const save = () => {
       try {
@@ -335,7 +348,11 @@ const Lego = (() => {
 
     // Hydrate $db descriptors
     for (const k in obj) {
+      const propDesc = Object.getOwnPropertyDescriptor(obj, k);
+      if (propDesc && propDesc.get) continue; // Skip getters to avoid execution
+
       const desc = obj[k];
+      if (config.debug && desc && desc.__type === 'lego-db') console.log('[Lego Trace] Reactive DB Init:', k, desc);
       if (desc && desc.__type === 'lego-db') {
         let val = desc._default;
         try {
@@ -350,6 +367,7 @@ const Lego = (() => {
         // Register metadata
         if (!dbMetadata.has(obj)) dbMetadata.set(obj, {});
         dbMetadata.get(obj)[k] = { key: desc.key, debounce: desc._debounce };
+        if (config.debug) console.log('[Lego Trace] DB Metadata Set:', k, dbMetadata.get(obj)[k]);
 
         // Register for cross-tab updates
         if (!dbBindings.has(desc.key)) dbBindings.set(desc.key, new Set());
@@ -365,15 +383,29 @@ const Lego = (() => {
         }
         return val;
       },
-      set: (t, k, v) => {
+      set: (t, k, v, receiver) => {
+        // FIX: Pass receiver to Reflect.set to ensure we set property on the correct object 
+        // (e.g. localScope inheriting from state) instead of forcing it onto state.
         const old = t[k];
-        const r = Reflect.set(t, k, v);
-        if (old !== v) {
-          batcher.add(el);
-          // Check for DB binding
+        if (config.debug && old !== v) console.log('[Lego Trace] Reactive SET:', k, 'Old:', old, 'New:', v, 'Target:', t);
+        const r = Reflect.set(t, k, v, receiver);
+
+        // Only trigger reactivity if the update was effectively on THIS proxy
+        // If receiver is a child object (like localScope in b-for), we don't want to trigger parent updates
+        const isSelf = receiver === proxyCache.get(t);
+        if (config.debug) {
           const meta = dbMetadata.get(t);
-          if (meta && meta[k]) {
-            scheduleSave(meta[k].key, v, meta[k].debounce);
+          if (config.debug) console.log('[Lego Trace] Receiver check:', k, isSelf, 'Meta:', meta ? JSON.stringify(meta[k]) : 'None');
+        }
+        if (isSelf) {
+          // Use previously captured 'old' value because 't[k]' is already updated by Reflect.set
+          if (old !== v) {
+            batcher.add(el);
+            // Check for DB binding
+            const meta = dbMetadata.get(t);
+            if (meta && meta[k]) {
+              scheduleSave(meta[k].key, v, meta[k].debounce);
+            }
           }
         }
         return r;
@@ -516,9 +548,10 @@ const Lego = (() => {
       let func = expressionCache.get(expr);
       if (!func) {
         // Removed inner try-catch to allow error propagation to the caller
+        // Scope order: helpers first (for $route, $go, etc.), then state
         func = new Function('global', 'self', 'event', 'helpers', `
-          with(helpers) {
-            with(this) { 
+          with(this) {
+            with(helpers) { 
               return ${expr}
             }
           }
@@ -572,8 +605,54 @@ const Lego = (() => {
         for (let i = 0; i < attrs.length; i++) {
           const attr = attrs[i];
           if (attr.name.startsWith('@')) {
-            const eventName = attr.name.slice(1);
+            const parts = attr.name.slice(1).split('.');
+            const eventName = parts[0];
+            const modifiers = parts.slice(1);
+
             child.addEventListener(eventName, (event) => {
+              // Action Modifiers
+              if (modifiers.includes('prevent')) event.preventDefault();
+              if (modifiers.includes('stop')) event.stopPropagation();
+              if (modifiers.includes('self') && event.target !== event.currentTarget) return;
+
+              // Keyboard Modifiers
+              if (typeof KeyboardEvent !== 'undefined' && event instanceof KeyboardEvent) {
+                // System Keys (AND logic)
+                if (modifiers.includes('ctrl') && !event.ctrlKey) return;
+                if (modifiers.includes('alt') && !event.altKey) return;
+                if (modifiers.includes('shift') && !event.shiftKey) return;
+                if (modifiers.includes('meta') && !event.metaKey) return;
+
+                // Key Matchers (OR logic for non-system/action modifiers)
+                const keyModifiers = modifiers.filter(m =>
+                  !['prevent', 'stop', 'self', 'ctrl', 'alt', 'shift', 'meta', 'capture', 'once', 'passive'].includes(m)
+                );
+
+                if (keyModifiers.length > 0) {
+                  const pressed = event.key.toLowerCase();
+                  const isMatch = keyModifiers.some(mod => {
+                    // Aliases
+                    if (mod === 'enter') return pressed === 'enter';
+                    if (mod === 'esc' || mod === 'escape') return pressed === 'escape';
+                    if (mod === 'space') return pressed === ' ';
+                    if (mod === 'tab') return pressed === 'tab';
+                    if (mod === 'delete') return pressed === 'delete';
+                    if (mod === 'backspace') return pressed === 'backspace';
+                    if (mod === 'up') return pressed === 'arrowup';
+                    if (mod === 'down') return pressed === 'arrowdown';
+                    if (mod === 'left') return pressed === 'arrowleft';
+                    if (mod === 'right') return pressed === 'arrowright';
+
+                    // Categories
+                    if (mod === 'alpha') return /^[a-z]$/.test(pressed);
+                    if (mod === 'numbers') return /^[0-9]$/.test(pressed);
+
+                    // Direct match (case-insensitive)
+                    return mod === pressed;
+                  });
+                  if (!isMatch) return;
+                }
+              }
               try {
                 let evalScope = state;
                 if (loopCtx) {
@@ -581,7 +660,7 @@ const Lego = (() => {
                   const item = list[loopCtx.index];
                   evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
                 }
-                safeEval(attr.value, { state: evalScope, global: Lego.globals, self: child, event }, true);
+                safeEval(attr.value, { state: evalScope, global: Lego.globals, self: child, event, $event: event }, true);
               } catch (err) {
                 const boundary = findErrorBoundary(blockRoot);
                 if (boundary) {
@@ -643,7 +722,10 @@ const Lego = (() => {
     const bindings = [];
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
     let node;
+    const pendingOperations = []; // Queue DOM modifications to avoid breaking TreeWalker
+
     while (node = walker.nextNode()) {
+      const current = node; // Capture for closure
       const isInsideBoundary = (n) => {
         let curr = n.parentNode;
         while (curr && curr !== container) {
@@ -685,8 +767,15 @@ const Lego = (() => {
             checkGlobal(match[2]);
             // Create anchor comment to mark where clones will be inserted
             const anchor = document.createComment(`b-for: ${match[1]} in ${match[2].trim()}`);
-            node.parentNode.insertBefore(anchor, node);
-            node.remove(); // Remove original element from DOM
+
+            // DEFER DOM MODIFICATION
+            pendingOperations.push(() => {
+              if (current.parentNode) {
+                current.parentNode.insertBefore(anchor, current);
+                current.remove();
+              }
+            });
+
             bindings.push({
               type: 'b-for',
               anchor,  // Use anchor instead of node
@@ -713,12 +802,17 @@ const Lego = (() => {
         });
       } else if (node.nodeType === Node.TEXT_NODE) {
         const [start] = getDelimiters();
+        if (config.debug) console.log('[Lego Debug] Scanning text:', node.textContent.trim().slice(0, 50), 'Start:', start, 'Includes:', node.textContent.includes(start));
         if (node.textContent.includes(start)) {
           checkGlobal(node.textContent);
           bindings.push({ type: 'text', node, template: node.textContent });
         }
       }
     }
+
+    // Execute deferred DOM modifications
+    pendingOperations.forEach(op => op());
+
     return bindings;
   };
 
@@ -749,6 +843,7 @@ const Lego = (() => {
   };
 
   const render = (el) => {
+    if (config.debug) console.log('[Lego Trace] render() called for:', el.tagName);
     const state = el._studs;
     if (!state) return;
     const data = getPrivateData(el);
@@ -806,9 +901,12 @@ const Lego = (() => {
             } else if (item && typeof item === 'object') {
               // Auto-detect common ID fields
               key = item.id || item._id || item.uuid || item.key;
-              // Fallback to __id mutation (old behavior)
+              // Fallback to WeakMap-based ID (no mutation, no reactivity trigger)
               if (key === undefined) {
-                key = item.__id || (item.__id = Math.random());
+                if (!itemIdMap.has(item)) {
+                  itemIdMap.set(item, Math.random());
+                }
+                key = itemIdMap.get(item);
               }
             } else {
               // Primitive values: use index + value
@@ -871,6 +969,7 @@ const Lego = (() => {
   };
 
   const snap = (el) => {
+    if (config.debug) console.log('[Lego Trace] snap() called for:', el.tagName);
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
     const data = getPrivateData(el);
     const name = el.tagName.toLowerCase();
@@ -910,6 +1009,9 @@ const Lego = (() => {
 
       if (allStyleNames.length > 0) {
         const sheetsToApply = allStyleNames.flatMap(key => styleRegistry.get(key) || []);
+        if (config.debug) {
+          console.log('[Lego Debug] Applying styles to', el.tagName, '- Names:', allStyleNames, '- Sheets:', sheetsToApply.length);
+        }
         if (sheetsToApply.length > 0) {
           shadow.adoptedStyleSheets = [...sheetsToApply];
         }
@@ -935,10 +1037,7 @@ const Lego = (() => {
       const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || templateNode.getAttribute('b-data') || '{}');
       const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}', parentScope);
 
-      el._studs = reactive({
-        ...scriptLogic,
-        ...templateLogic,
-        ...instanceLogic,
+      const baseState = {
         $vars: {},
         $element: el,
         get $parent() { return findAncestor(el, '*') },
@@ -947,7 +1046,13 @@ const Lego = (() => {
         },
         get $route() { return Lego.globals.$route },
         get $go() { return Lego.globals.$go }
-      }, el);
+      };
+
+      mergeDescriptors(scriptLogic, baseState);
+      mergeDescriptors(templateLogic, baseState);
+      mergeDescriptors(instanceLogic, baseState);
+
+      el._studs = reactive(baseState, el);
 
       Object.defineProperty(el, 'state', {
         get() { return this._studs },
@@ -967,7 +1072,20 @@ const Lego = (() => {
       activeBlocks.add(el);
       render(el);
 
-      [...shadow.children].forEach(snap);
+      // Deeply initialize all nested components
+      const nestedComponents = shadow.querySelectorAll('*');
+      if (config.debug) console.log('[Lego Debug] Nested scan in', el.tagName, '- Found elements:', nestedComponents.length);
+      nestedComponents.forEach(child => {
+        const childTag = child.tagName.toLowerCase();
+        const isRegistered = !!registry[childTag];
+        if (config.debug && childTag.includes('-')) {
+          console.log('[Lego Debug] Checking', childTag, '- Registered:', isRegistered);
+        }
+        if (isRegistered) snap(child);
+      });
+
+      // Track this shadow root for later component registration
+      if (!el._legoShadow) el._legoShadow = shadow;
 
       if (typeof el._studs.mounted === 'function') {
         try {
@@ -1078,6 +1196,7 @@ const Lego = (() => {
     const path = window.location.pathname;
     const search = window.location.search;
     const match = routes.find(r => r.regex.test(path));
+    console.log('Matching route', path, match);
     if (!match) return;
 
     // Resolve targets: Functional selectors > List of queries > History State > Default lego-router
@@ -1088,6 +1207,7 @@ const Lego = (() => {
       const defaultOutlet = document.querySelector('lego-router');
       if (defaultOutlet) resolvedElements = [defaultOutlet];
     }
+    console.log('Matching route', window.location.pathName)
 
     if (resolvedElements.length === 0) return;
 
@@ -1139,6 +1259,7 @@ const Lego = (() => {
       if (!root || typeof root.nodeType !== 'number') root = document.body;
       styleConfig = options.styles || {};
       config.loader = options.loader; // Register loader hook
+      if (options.debug !== true) config.debug = options.debug;
 
       // Pre-load all defined style sets into Constructable Stylesheets
       const loadPromises = Object.entries(styleConfig).map(async ([key, urls]) => {
@@ -1157,6 +1278,46 @@ const Lego = (() => {
         styleRegistry.set(key, sheets.filter(s => s !== null));
       });
       await Promise.all(loadPromises);
+
+      // Re-apply stylesheets to blocks that initialized before styleRegistry was populated
+      if (config.debug) console.log('[Lego Debug] Re-applying stylesheets to', activeBlocks.size, 'blocks');
+      activeBlocks.forEach(block => {
+        if (block._legoShadow) {
+          const templateNode = registry[block.tagName.toLowerCase()];
+          if (!templateNode) return;
+
+          const defStyles = (templateNode.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
+          const instStyles = (block.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
+
+          // Re-calculate inherited styles
+          const inheritedStyles = [];
+          let parent = block.parentElement || (block.getRootNode ? block.getRootNode().host : null);
+          while (parent) {
+            const instCascade = (parent.getAttribute('b-cascade') || "").split(/\s+/).filter(Boolean);
+            if (instCascade.length) inheritedStyles.push(...instCascade);
+            const pName = parent.tagName ? parent.tagName.toLowerCase() : '';
+            if (registry[pName]) {
+              const defCascade = (registry[pName].getAttribute('b-cascade') || "").split(/\s+/).filter(Boolean);
+              if (defCascade.length) inheritedStyles.push(...defCascade);
+            }
+            parent = parent.parentElement || (parent.getRootNode && parent.getRootNode().host);
+          }
+
+          const explicit = [...new Set([...defStyles, ...instStyles])];
+          const inherited = [...new Set(inheritedStyles)];
+          const allStyleNames = [...new Set([...inherited, ...explicit])];
+
+          if (allStyleNames.length > 0) {
+            const sheetsToApply = allStyleNames.flatMap(key => styleRegistry.get(key) || []);
+            if (config.debug) {
+              console.log('[Lego Debug] Post-init: Applying styles to', block.tagName, '- Names:', allStyleNames, '- Sheets:', sheetsToApply.length);
+            }
+            if (sheetsToApply.length > 0) {
+              block._legoShadow.adoptedStyleSheets = [...sheetsToApply];
+            }
+          }
+        }
+      });
 
       // Initialize route BEFORE scanning DOM to prevent double render
       if (routes.length > 0) {
@@ -1320,7 +1481,12 @@ const Lego = (() => {
 
       const name = deriveBlockName(filename);
       // Inject $db helper into the scope
-      const logicObj = new Function(`return ${script}`)();
+      let logicObj = {};
+      try {
+        logicObj = new Function('Lego', '$db', `return ${script}`)(Lego, Lego.globals.$db);
+      } catch (e) {
+        config.onError(e, 'script', name);
+      }
 
       if (style) {
         template = `<style>${style}</style>` + template;
@@ -1351,13 +1517,28 @@ const Lego = (() => {
       legoFileLogic.set(tagName, logic);
 
       // Initialize shared state with try-catch safety
+      // Initialize shared state with try-catch safety
       try {
-        sharedStates.set(tagName.toLowerCase(), reactive({ ...logic }, document.body));
+        const sharedState = {};
+        mergeDescriptors(logic, sharedState);
+        sharedStates.set(tagName.toLowerCase(), reactive(sharedState, document.body));
       } catch (e) {
         config.onError(e, 'define', tagName);
       }
 
       document.querySelectorAll(tagName).forEach(snap);
+
+      // Also scan inside all shadow roots for late-registered components
+      activeBlocks.forEach(block => {
+        if (block._legoShadow) {
+          block._legoShadow.querySelectorAll(tagName).forEach(instance => {
+            if (!getPrivateData(instance).snapped) {
+              if (config.debug) console.log('[Lego Debug] Lazy-initializing', tagName, 'in', block.tagName);
+              snap(instance);
+            }
+          });
+        }
+      });
     },
 
 
@@ -1389,5 +1570,3 @@ if (typeof window !== 'undefined') {
 } else if (typeof global !== 'undefined') {
   global.Lego = Lego;
 }
-
-
