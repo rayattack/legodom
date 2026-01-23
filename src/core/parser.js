@@ -10,8 +10,11 @@ export const defineLegoFile = (Lego, content, filename = 'block.lego') => {
   let logicObj = {};
   if (script) {
     try {
+      const trimmed = script.trim();
+      const match = trimmed.match(/export\s+default\s+({[\s\S]*})/);
+      const code = match ? match[1] : trimmed;
       // Evaluate script in context of Lego and $db
-      logicObj = new Function('Lego', '$db', `return ${script}`)(Lego, Lego.globals.$db);
+      logicObj = new Function('Lego', '$db', `return ${code}`)(Lego, Lego.globals.$db);
     } catch (e) {
       config.onError(e, 'script', blockName);
     }

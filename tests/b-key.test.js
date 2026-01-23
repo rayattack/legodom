@@ -36,7 +36,7 @@ global.CSSStyleSheet = class {
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
 // Load the library code
-const libCode = fs.readFileSync(path.resolve(import.meta.dirname, '../main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(import.meta.dirname, '../dist/main.js'), 'utf8');
 eval(libCode);
 
 describe('b-key Directive Tests', () => {

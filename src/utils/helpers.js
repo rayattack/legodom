@@ -19,12 +19,19 @@ export const getDelimiters = () => {
   return config.syntax === 'brackets' ? ['[[', ']]'] : ['{{', '}}'];
 };
 
+const REGEX_CACHE = new Map();
+
 export const createRegex = () => {
   const [start, end] = getDelimiters();
+  const key = start + end;
+  if (REGEX_CACHE.has(key)) return REGEX_CACHE.get(key);
+
   // Escape special regex characters
   const s = start.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const e = end.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`${s}(.*?)${e}`, 'g');
+  const regex = new RegExp(`${s}(.*?)${e}`, 'g');
+  REGEX_CACHE.set(key, regex);
+  return regex;
 };
 
 export const deriveBlockName = (filename) => {

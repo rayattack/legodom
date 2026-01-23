@@ -35,7 +35,7 @@ describe('LocalStorage Quota Fix', () => {
     // Store original
     originalSetItem = window.localStorage.setItem.bind(window.localStorage);
 
-    const mainJs = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
+    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
     window.eval(mainJs);
     Lego = window.Lego;
     Lego.init();

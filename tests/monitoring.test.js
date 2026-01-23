@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
-import { Monitoring } from '../monitoring-plugin.js';
+import { Monitoring } from '../src/plugins/monitoring.js';
 
 // Setup Mock DOM with Performance API
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
@@ -28,7 +28,7 @@ global.Element = dom.window.Element;
 global.Event = dom.window.Event;
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
-const libCode = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
 eval(libCode);
 
 describe('LegoDOM Monitoring Plugin', () => {

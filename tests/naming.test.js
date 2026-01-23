@@ -21,7 +21,7 @@ global.Event = dom.window.Event;
 global.fetch = vi.fn();
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
-const libCode = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
 eval(libCode);
 
 describe('Block Naming Policy', () => {
