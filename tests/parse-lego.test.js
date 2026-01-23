@@ -4,7 +4,7 @@ import {
   deriveBlockName,
   generateBlockCall,
   validateLego
-} from '../parse-lego.js';
+} from '../src/utils/parser-utils.js';
 
 describe('parse-lego tests', () => {
   it('should derive block name correctly', () => {

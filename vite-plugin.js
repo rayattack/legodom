@@ -3,7 +3,7 @@
  * Auto-discovers and transforms .lego files
  */
 
-import { parseLego, generateBlockCall, validateLego } from './parse-lego.js';
+import { parseLego, generateBlockCall, validateLego } from './src/utils/parser-utils.js';
 import path from 'path';
 import fg from 'fast-glob';
 
