@@ -1009,6 +1009,9 @@ const Lego = (() => {
 
       if (allStyleNames.length > 0) {
         const sheetsToApply = allStyleNames.flatMap(key => styleRegistry.get(key) || []);
+        if (config.debug) {
+          console.log('[Lego Debug] Applying styles to', el.tagName, '- Names:', allStyleNames, '- Sheets:', sheetsToApply.length);
+        }
         if (sheetsToApply.length > 0) {
           shadow.adoptedStyleSheets = [...sheetsToApply];
         }
@@ -1275,6 +1278,46 @@ const Lego = (() => {
         styleRegistry.set(key, sheets.filter(s => s !== null));
       });
       await Promise.all(loadPromises);
+
+      // Re-apply stylesheets to blocks that initialized before styleRegistry was populated
+      if (config.debug) console.log('[Lego Debug] Re-applying stylesheets to', activeBlocks.size, 'blocks');
+      activeBlocks.forEach(block => {
+        if (block._legoShadow) {
+          const templateNode = registry[block.tagName.toLowerCase()];
+          if (!templateNode) return;
+
+          const defStyles = (templateNode.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
+          const instStyles = (block.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
+
+          // Re-calculate inherited styles
+          const inheritedStyles = [];
+          let parent = block.parentElement || (block.getRootNode ? block.getRootNode().host : null);
+          while (parent) {
+            const instCascade = (parent.getAttribute('b-cascade') || "").split(/\s+/).filter(Boolean);
+            if (instCascade.length) inheritedStyles.push(...instCascade);
+            const pName = parent.tagName ? parent.tagName.toLowerCase() : '';
+            if (registry[pName]) {
+              const defCascade = (registry[pName].getAttribute('b-cascade') || "").split(/\s+/).filter(Boolean);
+              if (defCascade.length) inheritedStyles.push(...defCascade);
+            }
+            parent = parent.parentElement || (parent.getRootNode && parent.getRootNode().host);
+          }
+
+          const explicit = [...new Set([...defStyles, ...instStyles])];
+          const inherited = [...new Set(inheritedStyles)];
+          const allStyleNames = [...new Set([...inherited, ...explicit])];
+
+          if (allStyleNames.length > 0) {
+            const sheetsToApply = allStyleNames.flatMap(key => styleRegistry.get(key) || []);
+            if (config.debug) {
+              console.log('[Lego Debug] Post-init: Applying styles to', block.tagName, '- Names:', allStyleNames, '- Sheets:', sheetsToApply.length);
+            }
+            if (sheetsToApply.length > 0) {
+              block._legoShadow.adoptedStyleSheets = [...sheetsToApply];
+            }
+          }
+        }
+      });
 
       // Initialize route BEFORE scanning DOM to prevent double render
       if (routes.length > 0) {
