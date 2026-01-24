@@ -61,3 +61,5 @@ export const resolve = (path, obj) => {
 };
 
 export const isNode = (val) => typeof Node !== 'undefined' && val instanceof Node;
+
+export const directiveSpec = (t, n) => ({ type: t, node: n, expr: n.getAttribute(t) })

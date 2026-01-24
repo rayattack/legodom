@@ -5,6 +5,32 @@ import { syncModelValue } from '../utils/dom.js';
 
 export const bFor = {
   name: 'b-for',
+  scan(node, { checkGlobal, pendingOperations }) {
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const match = node.getAttribute('b-for')?.match(/^\s*(\w+)\s+in\s+([\s\S]+?)\s*$/);
+    if (match) {
+      checkGlobal(match[2]);
+      const anchor = document.createComment(`b-for: ${match[1]} in ${match[2].trim()}`);
+
+      // Defer DOM modification to avoid breaking TreeWalker
+      pendingOperations.push(() => {
+        if (node.parentNode) {
+          node.parentNode.insertBefore(anchor, node);
+          node.remove();
+        }
+      });
+
+      return {
+        type: 'b-for',
+        anchor,
+        itemName: match[1],
+        listName: match[2].trim(),
+        keyPath: node.getAttribute('b-key') || null,
+        template: node.cloneNode(true)
+      };
+    }
+  },
+
   execute({ binding, state, global, helpers }) {
     const { bind, updateNodeBindings } = helpers;
     if (!bind || !updateNodeBindings) {
@@ -13,21 +39,6 @@ export const bFor = {
     }
 
     const { anchor, listName, itemName, keyPath, template } = binding;
-    // self reference - usually execution context element. Binding has node or anchor?
-    // In b-for, binding.anchor is the reference point. The original node is binding.template.
-    // The list is evaluated in the context of the container (parent of anchor).
-    // The renderer passes 'el' (the container) as 'self' for list evaluation usually?
-    // In renderer.js: safeEval(b.listName, { state, global, self: el })
-    // We need 'el' (the host component or container).
-    // The binding object in renderer.js doesn't explicitly store 'el' (the container), but the execute context should provide it.
-    // We'll assume the context passes 'contextEl' or similar.
-
-    // Looking at renderer.js: list = safeEval(b.listName, { state, global, self: el })
-    // 'el' is the element being rendered (the container).
-    // binding.anchor.parentNode should be 'el' or close to it?
-    // No, 'el' is the blockRoot usually? No, render(el) renders the block.
-    // The template might be inside the shadowRoot of 'el'.
-    // So 'self' for safeEval should be 'el'.
 
     // We will expect 'contextEl' in the arguments.
     const { contextEl } = helpers;

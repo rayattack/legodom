@@ -151,53 +151,19 @@ export const scanForBindings = (container) => {
     };
 
     if (node.nodeType === Node.ELEMENT_NODE) {
-      if (node.hasAttribute('b-if')) {
-        const expr = node.getAttribute('b-if');
-        checkGlobal(expr);
-        // Create an anchor point to keep track of where the element belongs in the DOM
-        const anchor = document.createComment(`b-if: ${expr}`);
-        const data = getPrivateData(node);
-        data.anchor = anchor;
-        bindings.push({ type: 'b-if', node, anchor, expr });
-      }
-
-      if (node.hasAttribute('b-show')) {
-        const expr = node.getAttribute('b-show');
-        checkGlobal(expr);
-        bindings.push({ type: 'b-show', node, expr });
-      }
-      if (node.hasAttribute('b-for')) {
-        const match = node.getAttribute('b-for').match(/^\s*(\w+)\s+in\s+([\s\S]+?)\s*$/);
-        if (match) {
-          checkGlobal(match[2]);
-          // Create anchor comment to mark where clones will be inserted
-          const anchor = document.createComment(`b-for: ${match[1]} in ${match[2].trim()}`);
-
-          // DEFER DOM MODIFICATION
-          pendingOperations.push(() => {
-            if (current.parentNode) {
-              current.parentNode.insertBefore(anchor, current);
-              current.remove();
-            }
+      // Dynamic Directive Scanning
+      for (const [name, implementation] of Object.entries(directives)) {
+        if (implementation.scan) {
+          const result = implementation.scan(node, {
+            checkGlobal,
+            getPrivateData,
+            pendingOperations,
+            current
           });
-
-          bindings.push({
-            type: 'b-for',
-            anchor,  // Use anchor instead of node
-            itemName: match[1],
-            listName: match[2].trim(),
-            keyPath: node.getAttribute('b-key') || null,
-            template: node.cloneNode(true)  // Store the whole node as template
-          });
+          if (result) bindings.push(result);
         }
       }
-      if (node.hasAttribute('b-text')) bindings.push({ type: 'b-text', node, path: node.getAttribute('b-text') });
-      if (node.hasAttribute('b-html')) {
-        const expr = node.getAttribute('b-html');
-        checkGlobal(expr);
-        bindings.push({ type: 'b-html', node, expr });
-      }
-      if (node.hasAttribute('b-sync')) bindings.push({ type: 'b-sync', node });
+
       const [start] = getDelimiters();
       [...node.attributes].forEach(attr => {
         if (attr.value.includes(start)) {
