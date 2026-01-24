@@ -2,6 +2,7 @@ import { safeEval } from '../utils/safe-eval.js';
 import { scanForAttribute } from '../utils/helpers.js';
 
 export const bHtml = {
+  name: 'b-html',
   scan: node => scanForAttribute('b-html', node),
 
   execute: ({ binding, state, global }) => {

@@ -92,9 +92,17 @@ export const resolve = (path, obj) => {
 export const isNode = (val) => typeof Node !== 'undefined' && val instanceof Node;
 
 
-export const scanForAttribute = (name, node) => {
+export const scanForAttribute = (name, node, context) => {
   if (node.nodeType !== Node.ELEMENT_NODE) return;
   const attr = [...node.attributes].find(a => a.name === name || a.name.startsWith(`${name}.`));
   if (!attr) return;
-  return { type: name, node, expr: attr.value, modifiers: attr.name.split('.').slice(1) };
+  let extras = {};
+  if (context) extras = context(attr, node);
+  return {
+    type: name,
+    node,
+    expr: attr.value,
+    modifiers: attr.name.split('.').slice(1),
+    ...extras
+  };
 }

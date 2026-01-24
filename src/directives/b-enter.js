@@ -2,17 +2,26 @@ import { safeEval } from "../utils/safe-eval.js";
 import { scanForAttribute } from "../utils/helpers.js";
 
 export const bEnter = {
-  scan: node => scanForAttribute('b-enter', node),
+  name: 'b-enter',
+  scan: node => scanForAttribute('b-enter', node, (attr, node) => {
+    const modifiers = attr.name.split('.').slice(1);
+    return { modifiers }
+  }),
 
   execute: ({ binding, state }) => {
-    // idempotency check, let's not create an observer if we have on already
-    if (binding.observer) return;
+    if (binding.observer || binding.done) return;
 
-    const observer = new IntersectionObserver(entries => {
+    const observer = new IntersectionObserver((entries, io) => {
       const entry = entries[0];
-      if (entry.isIntersecting) safeEval(binding.expr, { state });
-      // optional run once code
-    })
+      if (entry.isIntersecting) {
+        safeEval(binding.expr, { state });
+        if (binding.modifiers.includes('once')) {
+          io.disconnect();
+          binding.observer = null;
+          binding.done = true;
+        }
+      }
+    });
 
     observer.observe(binding.node);
     binding.observer = observer;  // store observer on the binding obj so we can clean it later

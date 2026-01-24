@@ -6,13 +6,18 @@ export const bLeave = {
   scan: node => scanForAttribute('b-leave', node),
 
   execute: ({ binding, state }) => {
-    // idempotency check, let's not create an observer if we have on already
-    if (binding.observer) return;
+    if (binding.observer || binding.done) return;
 
-    const observer = new IntersectionObserver(entries => {
+    const observer = new IntersectionObserver((entries, io) => {
       const entry = entries[0];
-      if (!entry.isIntersecting) safeEval(binding.expr, { state });
-      // optional run once code
+      if (!entry.isIntersecting) {
+        safeEval(binding.expr, { state });
+        if (binding.modifiers.includes('once')) {
+          io.disconnect();
+          binding.observer = null;
+          binding.done = true;
+        }
+      }
     })
 
     observer.observe(binding.node);

@@ -1,6 +1,6 @@
 import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, privateData, forPools } from './registry.js';
 import { globals } from './globals.js';
-import { directives } from './directives.js';
+import { directives } from '../directives/index.js';
 import { config, mergeDescriptors, resolve, isNode } from '../utils/helpers.js';
 import { findAncestor } from '../utils/dom.js';
 import { parseJSObject } from '../utils/safe-eval.js';

@@ -6,16 +6,28 @@ export const setSnap = (fn) => { snapFn = fn; };
 
 export const routes = [];
 
+
+export const findRoute = (path) => {
+  const match = routes.find(r => r.regex.test(path));
+  if (!match) return null;
+  const values = path.match(match.regex).slice(1);
+  const params = match.paramNames ? Object.fromEntries(match.paramNames.map((n, i) => [n, values[i]])) : {};
+  return { match, params };
+};
+
 export const _matchRoute = async (targetQueries = null, contextEl = null) => {
   if (typeof window === 'undefined') return;
   const path = window.location.pathname;
-  const match = routes.find(r => r.regex.test(path));
-  if (config.debug) console.log('[Lego Trace] Matching route', path, match);
-  if (!match) return;
+  const routeData = findRoute(path);
+
+  if (config.debug) console.log('[Lego Trace] Matching route', path, routeData?.match);
+  if (!routeData) return;
+
+  const { match, params } = routeData;
 
   // Middleware check
   if (match.middleware) {
-    const shouldProceed = await match.middleware({ path, params: {} }); // TODO: Parse params
+    const shouldProceed = await match.middleware({ path, params });
     if (!shouldProceed) return;
   }
 

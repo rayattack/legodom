@@ -8,7 +8,7 @@ import { setStyleConfig, loadStylesheets, styleRegistry } from './core/styleshee
 import { config, mergeDescriptors } from './utils/helpers.js';
 import { defineLegoFile } from './core/parser.js';
 import { dbFactory, initCrossTabSync, handleDbUpdate } from './features/persistence.js';
-import { _go, routes, setSnap as setRouterSnap, _matchRoute, setSnap } from './features/router.js';
+import { _go, routes, setSnap as setRouterSnap, _matchRoute, setSnap, findRoute } from './features/router.js';
 import { setErrorHandlers, findErrorBoundary } from './features/error.js';
 
 // Dependency Injection Setup
@@ -100,10 +100,10 @@ const Lego = {
     if (routes.length > 0) {
       const path = window.location.pathname;
       const search = window.location.search;
-      const match = routes.find(r => r.regex.test(path));
-      if (match) {
-        const values = path.match(match.regex).slice(1);
-        const params = Object.fromEntries(match.paramNames.map((n, i) => [n, values[i]]));
+      const routeData = findRoute(path);
+
+      if (routeData) {
+        const { match, params } = routeData;
         const query = Object.fromEntries(new URLSearchParams(search));
 
         globalState.$route.url = path + search;
