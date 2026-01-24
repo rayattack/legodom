@@ -2,7 +2,7 @@ import { safeEval } from '../utils/safe-eval.js';
 
 export const bIf = {
   name: 'b-if',
-  scan(node, { checkGlobal, getPrivateData }) {
+  scan: (node, { checkGlobal, getPrivateData }) {
     if (node.nodeType === Node.ELEMENT_NODE && node.hasAttribute('b-if')) {
       const expr = node.getAttribute('b-if');
       checkGlobal(expr);

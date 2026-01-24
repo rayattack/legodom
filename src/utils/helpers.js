@@ -91,4 +91,10 @@ export const resolve = (path, obj) => {
 
 export const isNode = (val) => typeof Node !== 'undefined' && val instanceof Node;
 
-export const directiveSpec = (t, n) => ({ type: t, node: n, expr: n.getAttribute(t) })
+
+export const scanForAttribute = (name, node) => {
+  if (node.nodeType !== Node.ELEMENT_NODE) return;
+  const attr = [...node.attributes].find(a => a.name === name || a.name.startsWith(`${name}.`));
+  if (!attr) return;
+  return { type: name, node, expr: attr.value, modifiers: attr.name.split('.').slice(1) };
+}

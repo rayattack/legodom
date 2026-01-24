@@ -86,7 +86,7 @@ export const bFor = {
 
       child.querySelectorAll('[b-sync]').forEach(input => {
         const path = input.getAttribute('b-sync');
-        if (path.startsWith(itemName + '.')) {
+        if (path.startsWith(`${itemName}.`)) {
           const mainList = safeEval(listName, { state, global, self: contextEl });
           syncModelValue(input, resolve(path.split('.').slice(1).join('.'), mainList[i]));
         }

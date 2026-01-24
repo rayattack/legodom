@@ -85,7 +85,7 @@ export const bind = (container, blockRoot, loopCtx = null) => {
         const updateState = () => {
           try {
             let target, last;
-            if (loopCtx && prop.startsWith(loopCtx.name + '.')) {
+            if (loopCtx && prop.startsWith(`${loopCtx.name}.`)) {
               const list = safeEval(loopCtx.listName, { state, global: globals, self: blockRoot });
               const item = list[loopCtx.index];
               if (!item) return;

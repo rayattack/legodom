@@ -76,7 +76,8 @@ const Lego = {
   globals: globalState,
   route: (path, tagName, middleware = null) => {
     const paramNames = [];
-    const regexPath = path.replace(/:([^\/]+)/g, (_, name) => {
+    let regexPath = path === '*' ? '.*' : path;
+    regexPath = regexPath.replace(/:([^\/]+)/g, (_, name) => {
       paramNames.push(name);
       return '([^/]+)';
     });
@@ -130,7 +131,7 @@ const Lego = {
             : result;
 
           Promise.resolve(promise)
-            .then(legoFile => Lego.defineLegoFile(legoFile, tagName + '.lego'))
+            .then(legoFile => Lego.defineLegoFile(legoFile, `${tagName}.lego`))
             .catch(e => console.error(`[Lego] Failed to load ${tagName}:`, e));
         }
       }
