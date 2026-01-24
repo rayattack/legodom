@@ -9,8 +9,7 @@
   "files": [
     "dist",
     "src",
-    "vite-plugin.js",
-    "parse-lego.js"
+    "vite-plugin.js"
   ],
   "exports": {
     ".": {
@@ -18,8 +17,7 @@
       "require": "./dist/main.js",
       "default": "./dist/main.js"
     },
-    "./vite-plugin": "./vite-plugin.js",
-    "./parse-lego": "./parse-lego.js"
+    "./vite-plugin": "./vite-plugin.js"
   },
   "keywords": [
     "framework",

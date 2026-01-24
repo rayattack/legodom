@@ -19,8 +19,11 @@ export const _matchRoute = async (targetQueries = null, contextEl = null) => {
     if (!shouldProceed) return;
   }
 
-  if (targetQueries && contextEl && match.tagName) {
-    const targets = targetQueries.flatMap(q => resolveTargets(q, contextEl));
+  const targetsToResolve = targetQueries && targetQueries.length ? targetQueries : ['lego-router'];
+  const context = contextEl || document;
+
+  if (match.tagName) {
+    const targets = targetsToResolve.flatMap(q => resolveTargets(q, context));
     targets.forEach(t => {
       if (!t) return;
       t.innerHTML = `<${match.tagName}></${match.tagName}>`;
