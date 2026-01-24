@@ -38,10 +38,6 @@ const Lego = {
   db: dbFactory,
   snap,
   unsnap,
-  define: (name, templateNode, logicObj, errorAttr) => {
-    // Legacy define? main.js had a 'define' method that seemed unused/legacy
-    // Check main.js line 1500 implementation...
-  },
   defineLegoFile: (content, filename) => defineLegoFile(Lego, content, filename),
   block: (tagName, templateHTML, logic = {}, styles = "", cascade = "", error = "") => {
     const t = document.createElement('template');

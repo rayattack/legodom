@@ -143,6 +143,7 @@ export const scanForBindings = (container) => {
     };
     if (isInsideBoundary(node)) continue;
 
+    // TODO: there is a better way to do this, not just sure yet - will research
     const checkGlobal = (str) => {
       if (/\bglobal\b/.test(str)) {
         const target = container.host || container;

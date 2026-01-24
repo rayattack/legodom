@@ -1,5 +1,6 @@
 import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, privateData, forPools } from './registry.js';
 import { globals } from './globals.js';
+import { directives } from './directives.js';
 import { config, mergeDescriptors, resolve, isNode } from '../utils/helpers.js';
 import { findAncestor } from '../utils/dom.js';
 import { parseJSObject } from '../utils/safe-eval.js';
@@ -152,6 +153,14 @@ export const unsnap = (el) => {
   if (data) {
     if (data.bindings) {
       data.bindings.forEach(binding => {
+        const directive = directives[binding.type];
+        if (directive && directive.destroy) {
+          try {
+            directive.destroy({ binding });
+          } catch (e) {
+            console.error(`[Lego] Error in directive cleanup (${binding.type}):`, e);
+          }
+        }
         binding.node = null;
         binding.anchor = null;
       });

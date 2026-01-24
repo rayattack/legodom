@@ -3,6 +3,20 @@ import { proxyCache } from './registry.js';
 import { config, isNode } from '../utils/helpers.js';
 import { isDbDescriptor, initializeDbProp, handleDbUpdate } from '../features/persistence.js';
 
+
+/**
+ * Creates a deeply reactive proxy for a state object.
+ * 
+ * - **Deep Reactivity:** Recursively wraps nested objects in proxies.
+ * - **Subscriber Model:** Notifies the `el` (the html `block`) whenever a property changes.
+ * - **Batching:** Uses the global batcher to deduplicate updates.
+ * - **Persistence:** Automatically detects and hydrates `$db` descriptors.
+ * 
+ * @param {object} obj - The source of truth (state object)
+ * @param {HTMLElement} el - The subscriber (html `block`) to re-render on change
+ * @param {Batcher} [batcher=globalBatcher] - The update scheduler
+ * @returns {Proxy} A reactive proxy of `obj`
+ */
 export const reactive = (obj, el, batcher = globalBatcher) => {
   if (obj === null || typeof obj !== 'object' || isNode(obj)) return obj;
   if (proxyCache.has(obj)) return proxyCache.get(obj);
@@ -36,9 +50,6 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
       // Only trigger reactivity if the update was effectively on THIS proxy
       // If receiver is a child object (like localScope in b-for), we don't want to trigger parent updates
       const isSelf = receiver === proxyCache.get(t);
-      if (config.debug) {
-        // Check debug info?
-      }
       if (isSelf) {
         // Use previously captured 'old' value because 't[k]' is already updated by Reflect.set
         if (old !== v) {

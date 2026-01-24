@@ -3,6 +3,12 @@ import { config, deriveBlockName } from '../utils/helpers.js';
 import { parseLego } from '../utils/parser-utils.js';
 import { snap } from './lifecycle.js';
 
+/**
+ * Define a Lego block from a .lego file
+ * @param {Lego} Lego - The Lego instance
+ * @param {string} content - The content of the .lego file
+ * @param {string} [filename='block.lego'] - The filename of the .lego file
+ */
 export const defineLegoFile = (Lego, content, filename = 'block.lego') => {
   const parsed = parseLego(content, filename);
   const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr } = parsed;

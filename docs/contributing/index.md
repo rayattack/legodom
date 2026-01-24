@@ -49,5 +49,6 @@ Follow the path of a block from definition to pixels:
 15. [**Router**](./15-router) - The "Surgical" Update philosophy
 16. [**State**](./16-state) - Global state & $db
 17. [**LegoDOM**](./17-legodom) - The public API
+18. [**Directive Lifecycle**](./18-directive-lifecycle) - Scan, Execute, Destroy
 
 Dive in.

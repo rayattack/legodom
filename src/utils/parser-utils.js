@@ -2,7 +2,7 @@ import { deriveBlockName } from './helpers.js';
 export { deriveBlockName };
 
 /**
- * Parser for .lego Single File Blocks (SFC)
+ * Parser for .lego Single File Blocks (SFB)
  * Extracts template, script, and style sections from .lego files
  */
 
