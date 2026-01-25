@@ -1,48 +1,249 @@
-# Mama "We Made It!"
-Everything we’ve discussed i.e. the Scanner, the Registry, the Router, and the Snap etc. "Everything" stays dormant until `Lego.init()` is called. This function is not just a starter; it’s an orchestrator that synchronizes the JavaScript environment with the existing HTML on the page.
+# We Made It! The Public API
+
+Everything we've discussed—the Scanner, the Registry, the Router, and the Snap—stays dormant until `Lego.init()` is called. This function is not just a starter; it's an orchestrator that synchronizes the JavaScript environment with the existing HTML on the page.
+
+## The Lego Object: The Assembler
+
+Location: `src/index.js`
+
+The entire framework is assembled in this file:
+
+```js
+// src/index.js
+import { snap, unsnap } from './core/lifecycle.js';
+import { bind, render } from './core/renderer.js';
+import { registry, legoFileLogic, sharedStates, activeBlocks } from './core/registry.js';
+import { globalBatcher } from './core/batcher.js';
+import { reactive } from './core/reactive.js';
+import { config, mergeDescriptors } from './utils/helpers.js';
+import { globals, setGlobals } from './core/globals.js';
+import { routes, _go, _matchRoute } from './features/router.js';
+import { Lego_db } from './features/persistence.js';
+import { defineLegoFile } from './core/parser.js';
+
+// Dependency Injection
+globalBatcher.setHandler(render);
+setGlobals({
+  $go: _go,
+  $db: Lego_db
+});
+
+const Lego = {
+  // Core API
+  init: async (root = document.body, options = {}) => {
+    // ... (see Topic 6 for full implementation)
+  },
+  
+  block: (tagName, templateHTML, logic = {}, styles = "", cascade = "", error = "") => {
+    // Register a block programmatically
+    const t = document.createElement('template');
+    t.setAttribute('b-id', tagName);
+    t.setAttribute('b-stylesheets', styles);
+    if (cascade) t.setAttribute('b-cascade', cascade);
+    if (error) t.setAttribute('b-error', error);
+    t.innerHTML = templateHTML;
+    
+    registry[tagName] = t;
+    legoFileLogic.set(tagName, logic);
+    
+    // Create reactive singleton for shared state
+    const sharedState = {};
+    mergeDescriptors(logic, sharedState);
+    sharedStates.set(tagName.toLowerCase(), reactive(sharedState, document.body));
+    
+    // Upgrade existing elements
+    document.querySelectorAll(tagName).forEach(snap);
+  },
+  
+  defineLegoFile: (content, filename = 'block.lego') => {
+    return defineLegoFile(Lego, content, filename);
+  },
+  
+  // Routing API
+  route: (path, tagName, options = {}) => {
+    const paramNames = [];
+    const pattern = path.replace(/:(\w+)/g, (_, name) => {
+      paramNames.push(name);
+      return '([^/]+)';
+    });
+    
+    routes.push({
+      path,
+      tagName,
+      regex: new RegExp(`^${pattern}$`),
+      paramNames,
+      guards: options.guards || []
+    });
+  },
+  
+  // Utilities
+  snap,
+  unsnap,
+  db: Lego_db,
+  globals,
+  config
+};
+
+// Auto-expose to window
+if (typeof window !== 'undefined') {
+  window.Lego = Lego;
+} else if (typeof global !== 'undefined') {
+  global.Lego = Lego;
+}
+
+export { Lego };
+export default Lego;
+```
 
 ## The Lego Initializer
 
-The code for `init()` is deceptively small because its primary job is to flip the switches on the systems we've already built.
+The `init()` function is deceptively small because its primary job is to flip the switches on the systems we've already built.
 
 ### 1. Bootstrapping the Watchdog
 
-The core of the initialization is setting up the `MutationObserver` we discussed in Topic 7.
+The core of the initialization is setting up the `MutationObserver` (see Topic 7):
 
--   **The Target**: It targets `document.body`.
-    
--   **The Configuration**: It uses `{ childList: true, subtree: true }`.
-    
--   **The Why**: By starting the observer _before_ the first render, LegoDOM ensures that any elements it creates during the initial startup are also caught and "snapped" into life.
-    
+```js
+const observer = new MutationObserver(m => m.forEach(r => {
+  r.addedNodes.forEach(checkAndLoad);
+  r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
+}));
 
-### 3. The "Initial Snap" (The Recursive Wake-up)
+observer.observe(root, { childList: true, subtree: true });
+```
 
-Once the observer is live, the code calls `snap(document.body)`.
+-   **The Target**: It targets the root (usually `document.body`)
+-   **The Configuration**: Uses `{ childList: true, subtree: true }`
+-   **The Why**: By starting the observer _before_ the first render, LegoDOM ensures that any elements it creates during startup are also caught and "snapped" into life
+
+### 2. The "Initial Snap" (The Recursive Wake-up)
+
+Once the observer is live, the code walks the existing DOM:
+
+```js
+const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+checkAndLoad(root);
+while (walker.nextNode()) checkAndLoad(walker.currentNode);
+```
 
 -   **The Why**: The `MutationObserver` only sees _new_ changes. It cannot see the HTML that was already there when the page loaded.
     
--   **The Logic**: By manually calling `snap` on the body, LegoDOM recursively walks through your entire server-rendered HTML. It finds every custom tag (e.g., `<user-card>`) and "upgrades" them into blocks.
+-   **The Logic**: By using a TreeWalker, LegoDOM recursively walks through your entire server-rendered HTML, finding every custom tag (e.g., `<user-card>`) and "upgrading" them.
+
+### 3. Activating the Global Router
+
+The **Router Hijack** (Topic 15) is installed:
+
+```js
+document.addEventListener('click', e => {
+  const path = e.composedPath();
+  const link = path.find(el => 
+    el.tagName === 'A' && 
+    (el.hasAttribute('b-target') || el.hasAttribute('b-link'))
+  );
+  
+  if (link) {
+    e.preventDefault();
+    const href = link.getAttribute('href');
+    const targets = link.getAttribute('b-target')?.split(/\s+/) || [];
+    globals.$go(href, ...targets).get();
+  }
+});
+```
+
+-   Instead of attaching listeners to every `<a>` tag (slow and breaks when new links are added), it uses **Event Delegation**
+-   It waits for clicks to bubble up to document, checks if they are `b-link` clicks, then triggers the router
+
+### 4. The First Route Check
+
+Finally, `init()` calls the router manually for the first time:
+
+```js
+if (routes.length > 0) {
+  _matchRoute();
+}
+```
+
+-   **The Why**: If a user navigates directly to `mysite.com/dashboard`, the browser loads the page, but the JavaScript needs to know which block to put into the router view immediately
+-   This manual call ensures the UI matches the URL on the very first frame
+
+### 5. Cross-Tab Sync Initialization
+
+Enables localStorage synchronization:
+
+```js
+initCrossTabSync();
+```
+
+This sets up the `storage` event listener so `$db` properties sync across browser tabs.
+
+## The Public API Surface
+
+**Core Methods:**
+- `Lego.init(root, options)` - Initialize the framework
+- `Lego.block(name, html, logic, styles)` - Register a block
+- `Lego.defineLegoFile(content, filename)` - Parse and register .lego content
+
+**Routing:**
+- `Lego.route(path, tagName, options)` - Register a route
+- `Lego.globals.$go(path, ...targets)` - Navigate programmatically
+
+**State:**
+- `Lego.globals` - Global reactive state
+- `Lego.db(key).default(value)` - Create persistent state
+
+**Utilities:**
+- `Lego.snap(el)` - Manually upgrade an element
+- `Lego.unsnap(el)` - Manually teardown an element
+- `Lego.config` - Framework configuration
+
+## Zero-Config Philosophy
+
+Lego is designed to be **Zero-Config**. By putting all initialization logic into `init()`, the developer only has to care about one thing: "When is my DOM ready?"
+
+Simple usage:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script type="module">
+    import Lego from './dist/lego.mjs';
     
-
-### 4. Activating the Global Listener
-
-This is where the **Router Hijack** (Topic 17) is installed.
-
--   The code adds a single click listener to the `window`.
+    Lego.route('/home', 'home-page');
+    Lego.route('/about', 'about-page');
     
--   **The Why**: Instead of attaching listeners to every individual `<a>` tag (which would be slow and break when new links are added), it uses **Event Delegation**. It waits for clicks to bubble up to the window, checks if they are `b-link` clicks, and then decides whether to trigger the router.
-    
+    Lego.init();
+  </script>
+</head>
+<body>
+  <lego-router></lego-router>
+</body>
+</html>
+```
 
-### 5. The First Route Check
+The framework handles:
+- Setting up the MutationObserver
+- Scanning existing DOM
+- Registering event listeners
+- Initializing the router
+- Enabling cross-tab sync
 
-Finally, `init()` calls `router()` manually for the first time.
+## The Architecture "Why"
 
--   **The Why**: If a user navigates directly to `mysite.com/dashboard`, the browser loads the page, but the JavaScript needs to know which block to put into the `router-view` immediately. This manual call ensures the UI matches the URL on the very first frame.
-    
+The code is layered to ensure correct timing:
+1. **Setup Phase** (`import`): Modules load, dependencies resolve
+2. **Wiring Phase** (top of index.js): Dependency injection (batcher gets render, globals get $go)
+3. **Registration Phase** (user code): Define routes and blocks
+4. **Initialization Phase** (`Lego.init()`): Start observer, scan DOM, activate router
+5. **Runtime Phase**: Reactive updates, routing, persistence
 
-----------
+This ensures:
+- No circular dependency errors
+- Modules can be tested in isolation
+- The observer is watching before any blocks are created
+- The router is ready before the first navigation
 
-**The Architecture "Why"**: Lego is designed to be **Zero-Config**. By putting all these steps into `init()`, the developer only has to care about one thing: "When is my DOM ready?" The code handles the complex timing of making sure the Watchdog is looking while the Router is switching and the Snap is initializing.
+---
 
-**Summary**: `Lego.init()` is the bridge. It turns a static document into a reactive application by starting the observer, snapping the existing HTML, and hijacking the navigation.
+**Summary**: `Lego.init()` is the bridge that turns a static document into a reactive application. Defined in `src/index.js`, it orchestrates all the subsystems (lifecycle, renderer, router, persistence) into a cohesive whole. The modular architecture makes the codebase maintainable while the public API remains simple and intuitive.

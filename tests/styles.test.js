@@ -55,7 +55,7 @@ global.CSSStyleSheet = class {
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
 // 2. Load the library code
-const libCode = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
 // Evaluate library code in the mock environment
 eval(libCode);
 

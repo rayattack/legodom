@@ -750,6 +750,35 @@ Lego.debug.stylesheets(document.querySelector('my-block'));
 // Returns: { explicit: [...], inherited: [...], applied: [...] }
 ```
 
+
+## b-enter & b-leave
+
+Trigger expressions when an element enters or leaves the viewport (Intersection Observer).
+
+### Basic Usage
+
+Perfect for animations, lazy loading, or analytics visibility tracking.
+
+```html
+<div b-enter="playAnimation()" b-leave="resetAnimation()">
+  Scroll to see me animate!
+</div>
+```
+
+### The `.once` Modifier
+
+If you want the event to trigger **only the first time** it happens (e.g., for entrance animations that shouldn't repeat or "seen" analytics), use the `.once` modifier.
+
+```html
+<!-- Only tracks variables once -->
+<img src="placeholder.jpg" b-enter.once="loadRealImage()">
+
+<!-- Only logs analytics once -->
+<div b-enter.once="logView('ad-banner')"></div>
+```
+
+**Note:** The `.once` modifier automatically disconnects the internal Observer after firing, freeing up resources.
+
 ## Combining Directives
 
 ### b-show + b-for

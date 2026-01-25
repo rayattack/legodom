@@ -30,7 +30,7 @@ describe('Reactive Persistence ($db)', () => {
     window.cancelAnimationFrame = (id) => clearTimeout(id);
 
     // Load Lego
-    const mainJs = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
+    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
     window.eval(mainJs);
     Lego = window.Lego;
     Lego.init();

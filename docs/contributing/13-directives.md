@@ -1,243 +1,373 @@
-# You know C++, I know Web Components++
+# Directives: The Building Blocks of Interactivity
 
-Let's break down the two simplest yet most vital directives in LegoDOM: b-if and b-text. These are the "workhorses" that handle visibility and data display without you having to write manual DOM manipulation code.
+Directives like `b-if`, `b-text`, `b-for`, and `b-sync` are the "Instructions" that bridge the gap between your JavaScript state and the DOM. Without them, your state would just be numbers and strings sitting in memory with no way to manifest on the screen.
 
-## Conditional Directives `b-if` & `b-show`
+## The Modular Directive System
 
-Directives like `b-if`, `b-text`, and `b-for` are the "Instructions" that bridge the gap between your JavaScript state and the DOM. Without them, your state would just be numbers and strings sitting in memory with no way to manifest on the screen.
+In the refactored architecture, each directive lives in its own file in `src/directives/`. They all export a consistent interface with `scan` and `execute` methods.
 
-### 1. Conditional Visibility (`b-show`)
-
-The `b-show` directive is used to show or hide elements based on a truthy or falsy value in your state.
-
--   **How it works**: During the `render()` cycle, LegoDOM executes `safeEval(b.expr, { state, self: b.node })`.
-    
--   **The Implementation**:
-
-    
-    ```js
-    if (b.type === 'b-show') b.node.style.display = safeEval(b.expr, { state, self: b.node }) ? '' : 'none';
-    ```
-    
-    -   LegoDOM does not physically remove the element from the DOM (which is expensive), this library uses `display: none`.
-    
-    -   This means **b-show** is incredibly fast because the browser doesn't have to recalculate the entire DOM tree.
-        
-    -  It however also means the element still exists in memory and its `mounted` hook remains active even when hidden.
-
-
-### 2. Alternating Visibility (`b-if`)
-
-#### 1. The "Place in Line" Problem
-
-When an element has `b-if="false"`, we want it to disappear. If we simply remove it (`node.remove()`), the browser "forgets" where that element was supposed to live.
-
--   **The Risk:** If that element was originally between a `<h1>` and a `<footer>`, and the condition turns `true` later, how does LegoDOM know exactly where to put it back?
-    
--   **The Solution:** We leave a "bookmark" or an **Anchor** (a tiny, invisible `Comment` node) exactly where the element used to be.
+Location: `src/directives/index.js`
 
 ```js
-if (node.hasAttribute('b-if')) {
-    const expr = node.getAttribute('b-if');
-    // Create an anchor point to keep track of where the element belongs in the DOM
-    const anchor = document.createComment(`b-if: ${expr}`);
-    const data = getPrivateData(node);
-    data.anchor = anchor;
-    bindings.push({ type: 'b-if', node, anchor, expr });
-}
-```
-    
+// src/directives/index.js
+import { bIf } from './b-if.js';
+import { bFor } from './b-for.js';
+import { bShow } from './b-show.js';
+import { bText } from './b-text.js';
+import { bHtml } from './b-html.js';
+import { bSync } from './b-sync.js';
 
-### 2. Why use a Comment Node?
-
-We use `document.createComment()` because:
-
--   It is a valid DOM node that occupies a specific position in the `childNodes` list.
-    
--   It is completely invisible to the user and doesn't affect CSS layouts or accessibility.
-    
--   It acts as a permanent reference point for the `replaceChild` operation.
-    
-
-### 3. Why store it in `getPrivateData`?
-
-LegoDOM was designed in a way that the `render()` function runs every time state changes.
-
--   **Consistency:** By storing the anchor in the element's `privateData` (via `WeakMap`), we ensure that the same specific element is always paired with the same specific anchor.
-    
--   **The Swap Logic:**
-    
-    -   **Condition becomes `false`:** We find the element in the DOM and replace it with its stored anchor: `parent.replaceChild(anchor, node)`.
-        
-    -   **Condition becomes `true`:** We find the anchor in the DOM and replace it with the element: `parent.replaceChild(node, anchor)`.
-        
-
-### 4. Memory Safety
-
-By using `getPrivateData` (which is a `WeakMap`), we ensure that if the block is destroyed, the reference to the `anchor` is garbage collected. If we didn't store it here, we would have to scan the entire DOM or maintain complex external maps to find where to re-insert hidden elements, which would be a massive performance hit.
-
-**In short:** The anchor is the "Reserved Seat" sign at a theater. `getPrivateData` is the list that remembers which seat belongs to which person while they are out in the lobby.
-
-
-## Raw HTML Injection (`b-html`)
-
-LegoDOM is secure by default: all text interpolation is escaped. If your data contains `<b>Bold</b>`, it detects it as text, not HTML.
-
-`b-html` is the **only** hatch to render raw HTML.
-
-```javascript
-if (b.type === 'b-html') {
-    // SECURITY CRITICAL: This is the only place we set innerHTML directly.
-    b.node.innerHTML = safeEval(b.expr, { state, self: b.node });
-}
+export const directives = {
+  'b-if': bIf,
+  'b-for': bFor,
+  'b-show': bShow,
+  'b-text': bText,
+  'b-html': bHtml,
+  'b-sync': bSync
+};
 ```
 
-**Why separate directive?**
-By forcing you to use `b-html="..."`, we make it obvious during code reviews that "This part is dangerous." It prevents accidental XSS where a developer thought `{{ content }}` would render HTML.
+## Conditional Directives: `b-if` & `b-show`
 
+### 1. Simple Visibility (`b-show`)
 
-
-## Simple Text Interpolation (`b-text`)
-
-While you can use <code v-pre>{{mustaches}}</code>, `b-text` is the "cleaner" way to bind the entire content of an element to a single variable.
-
--   **The Logic**: It uses the `resolve()` helper to walk through your state object based on a string path.
-    
-    -   Example: `<span b-text="user.profile.name"></span>`.
-        
--   **The Implementation**:
-    
-    ```js
-    if (b.type === 'b-text') b.node.textContent = escapeHTML(resolve(b.path, state));
-    ```
-
--   **Security**: Note the use of `escapeHTML()`. This is a critical security feature that prevents **XSS (Cross-Site Scripting) attacks** by turning characters like `<` into `&lt;`, ensuring that user-provided data cannot execute malicious scripts in your app.
-
-
-### 3. Efficiency in the Render Loop
-
-Because both of these were "mapped" during the `scanForBindings` phase (Topic 11), the `render` engine holds a direct reference to the DOM `node`.
-
--   It doesn't have to look for the element by ID or class.
-    
--   It just goes: "Variable X changed -> Go to memory address for Node Y -> Update `.style.display` or `.textContent`".
-
-
-## Iterative Directive: `b-for` & The Pool
-
-LegoDOM looks for the pattern `item in list` (e.g., `user in users`).
-
--   **Capture**: During the scanning phase, it saves a deep clone of the `b-for` element itself as the "template node" (using `node.cloneNode(true)`) and then empties the element so it can be filled dynamically. This approach handles both element children and text-only content correctly.
-    
-
-### The Concept of "The Pool" (`forPools`)
-
-To prevent "DOM Thrashing" (constantly creating and deleting elements), LegoDOM uses a `WeakMap` called `forPools`.
-
--   **The Cache**: Each `b-for` node has its own `Map` inside the pool.
-    
--   **The Key**: It identifies each item in your array. If the item is an object, it assigns a hidden `__id`. If it's a primitive (like a string), it combines the index and the value.
-    
--   **Why?**: If you re-order a list of 100 items, LegoDOM doesn't create 100 new elements. it finds the existing elements in the "pool" by their key and simply moves them to the new position.
-    
-
-### 3. The Local Scope Injection
-
-This is a brilliant piece of JavaScript engineering. When rendering a list item, LegoDOM needs the item (e.g., `user`) to be available, but it also needs the parent block's data to be available.
-
+Location: `src/directives/b-show.js`
 
 ```js
-const localScope = Object.assign(Object.create(state), { [b.itemName]: item });
+// src/directives/b-show.js
+import { safeEval } from '../utils/safe-eval.js';
 
+export const bShow = {
+  scan: (node) => {
+    if (node.hasAttribute('b-show')) {
+      return {
+        type: 'b-show',
+        node,
+        expr: node.getAttribute('b-show')
+      };
+    }
+  },
+  
+  execute: ({ binding, state }) => {
+    const show = !!safeEval(binding.expr, state);
+    binding.node.style.display = show ? '' : 'none';
+  }
+};
 ```
 
--   **Prototype Inheritance**: It creates a new object where the **prototype** is the block's state (`_studs`).
-    
-- **The Result**: Inside the loop, if you reference <code v-pre>{{user.name}}</code>, it finds it on the `localScope`. If you reference <code v-pre>{{globalTitle}}</code> (defined in the parent), it doesn't find it on `localScope`, so it automatically looks up the prototype chain to find it in the parent `state`.
-    
+**How it works:**
+-   Uses `display: none` instead of removing from DOM (fast!)
+-   Element remains in memory and lifecycle hooks stay active
+-   No re-layout calculations needed
 
-### 4. Updating and Pruning
+### 2. Conditional Rendering (`b-if`)
 
--   **Update**: For every item in the current array, it calls `updateNodeBindings(child, localScope)` to fill in the mustaches for that specific row.
-    
--   **Surgical Sync**: It specifically looks for `b-sync` inputs inside the loop to ensure two-way binding works correctly for individual list items.
-    
--   **Prune**: After the loop finishes, any element left in the "pool" that wasn't used in the current render (meaning it was deleted from your data array) is physically removed from the DOM.
-
-## Directive: `b-sync` (Two-Way Binding)
-
-The `b-sync` directive is designed to keep an `<input>`, `<textarea>`, or `<select>` element in perfect synchronization with a specific variable in your state.
+Location: `src/directives/b-if.js`
 
 ```js
-if (child.hasAttribute('b-sync')) {
-    const prop = child.getAttribute('b-sync');
-    const updateState = () => {
-        let target, last;
-        if (loopCtx && prop.startsWith(loopCtx.name + '.')) {
-        const list = safeEval(loopCtx.listName, { state, global: Lego.globals, self: blockRoot });
-        const item = list[loopCtx.index];
-        if (!item) return;
-        const subPath = prop.split('.').slice(1);
-        last = subPath.pop();
-        target = subPath.reduce((o, k) => o[k], item);
-        } else {
-        const keys = prop.split('.');
-        last = keys.pop();
-        target = keys.reduce((o, k) => o[k], state);
+// src/directives/b-if.js
+import { safeEval } from '../utils/safe-eval.js';
+
+export const bIf = {
+  scan: (node) => {
+    if (node.hasAttribute('b-if')) {
+      const expr = node.getAttribute('b-if');
+      // Create a comment anchor to mark the position
+      const anchor = document.createComment(`b-if: ${expr}`);
+      node.parentNode.insertBefore(anchor, node);
+      
+      return {
+        type: 'b-if',
+        node,
+        anchor,
+        expr
+      };
+    }
+  },
+  
+  execute: ({ binding, state }) => {
+    const condition = !!safeEval(binding.expr, state);
+    const isAttached = !!binding.node.parentNode;
+    
+    if (condition && !isAttached) {
+      // Condition became true - swap anchor with node
+      binding.anchor.parentNode.replaceChild(binding.node, binding.anchor);
+    } else if (!isAttached) {
+      // Condition became false - swap node with anchor
+      binding.node.parentNode.replaceChild(binding.anchor, binding.node);
+    }
+  }
+};
+```
+
+**The Anchor Pattern:**
+-   When `b-if="false"`, the element is removed but a comment node marks its position
+-   Comment nodes are invisible and don't affect layout
+-   When condition becomes true, we swap the comment back with the element
+-   This preserves exact DOM position for re-insertion
+
+## Text Directives: `b-text` & `b-html`
+
+### 3. Safe Text Interpolation (`b-text`)
+
+Location: `src/directives/b-text.js`
+
+```js
+// src/directives/b-text.js
+import { resolve } from '../utils/helpers.js';
+import { escapeHTML } from '../utils/dom.js';
+
+export const bText = {
+  scan: (node) => {
+    if (node.hasAttribute('b-text')) {
+      return {
+        type: 'b-text',
+        node,
+        path: node.getAttribute('b-text')
+      };
+    }
+  },
+  
+  execute: ({ binding, state }) => {
+    const value = resolve(binding.path, state);
+    binding.node.textContent = escapeHTML(value ?? '');
+  }
+};
+```
+
+**Security Note:** Always uses `escapeHTML()` from `src/utils/dom.js` to prevent XSS attacks.
+
+### 4. Raw HTML Injection (`b-html`)
+
+Location: `src/directives/b-html.js`
+
+```js
+// src/directives/b-html.js
+import { safeEval } from '../utils/safe-eval.js';
+
+export const bHtml = {
+  scan: (node) => {
+    if (node.hasAttribute('b-html')) {
+      return {
+        type: 'b-html',
+        node,
+        expr: node.getAttribute('b-html')
+      };
+    }
+  },
+  
+  execute: ({ binding, state }) => {
+    // SECURITY CRITICAL: This is the only place we set innerHTML directly
+    binding.node.innerHTML = safeEval(binding.expr, state) || '';
+  }
+};
+```
+
+**Security Warning:** By forcing explicit `b-html` usage, code reviews can easily spot potentially dangerous HTML injection.
+
+## List Rendering: `b-for` & The Pool
+
+Location: `src/directives/b-for.js`
+
+This is the most complex directive. It handles:
+1. Template extraction
+2. DOM recycling via pools
+3. Local scope creation
+4. Item identity tracking
+
+```js
+// src/directives/b-for.js (simplified)
+import { safeEval } from '../utils/safe-eval.js';
+import { forPools, itemIdMap } from '../core/registry.js';
+import { bind } from '../core/renderer.js';
+
+export const bFor = {
+  scan: (node, provider) => {
+    if (node.hasAttribute('b-for')) {
+      const expr = node.getAttribute('b-for');
+      const match = expr.match(/^\s*(\w+)\s+in\s+(.+)\s*$/);
+      
+      if (match) {
+        const [, itemName, listExpr] = match;
+        const template = node.innerHTML;
+        node.innerHTML = ''; // Clear for dynamic rendering
+        
+        return {
+          type: 'b-for',
+          node,
+          itemName,
+          listExpr,
+          template
+        };
+      }
+    }
+  },
+  
+  execute: ({ binding, state, el }) => {
+    const list = safeEval(binding.listExpr, state) || [];
+    
+    // Get or create pool for this b-for
+    if (!forPools.has(binding.node)) {
+      forPools.set(binding.node, new Map());
+    }
+    const pool = forPools.get(binding.node);
+    
+    const currentKeys = new Set();
+    
+    list.forEach((item, index) => {
+      // Generate stable key for item
+      const key = generateKey(item, index);
+      currentKeys.add(key);
+      
+      // Reuse or create child element
+      let child = pool.get(key);
+      if (!child) {
+        child = createFromTemplate(binding.template);
+        pool.set(key, child);
+        bind(child, el, { loopContext: { itemName: binding.itemName, index } });
+      }
+      
+      // Create local scope with prototype chain
+      const localScope = Object.assign(Object.create(state), {
+        [binding.itemName]: item,
+        $index: index
+      });
+      
+      // Update child with item data
+      updateChild(child, localScope);
+      
+      // Ensure correct position
+      if (binding.node.children[index] !== child) {
+        binding.node.insertBefore(child, binding.node.children[index] || null);
+      }
+    });
+    
+    // Remove unused items from pool
+    for (const [key, child] of pool.entries()) {
+      if (!currentKeys.has(key)) {
+        child.remove();
+        pool.delete(key);
+      }
+    }
+  }
+};
+```
+
+**Key Features:**
+1. **DOM Recycling:** Reuses existing elements instead of creating new ones
+2. **Stable Keys:** Objects get `__id`, primitives use `index-value`
+3. **Prototype Chain:** Local scope inherits from parent state
+4. **Pruning:** Removes elements no longer in the list
+
+## Two-Way Binding: `b-sync`
+
+Location: `src/directives/b-sync.js`
+
+```js
+// src/directives/b-sync.js
+import { resolve } from '../utils/helpers.js';
+import { syncModelValue } from '../utils/dom.js';
+
+export const bSync = {
+  scan: (node, provider) => {
+    if (node.hasAttribute('b-sync')) {
+      const path = node.getAttribute('b-sync');
+      
+      // Attach event listeners
+      const updateState = (e) => {
+        const state = provider._studs;
+        if (!state) return;
+        
+        const keys = path.split('.');
+        const last = keys.pop();
+        const target = keys.reduce((o, k) => o?.[k], state);
+        
+        if (target) {
+          const newVal = node.type === 'checkbox' ? node.checked : 
+                         node.type === 'number' ? parseFloat(node.value) :
+                         node.value;
+          
+          if (target[last] !== newVal) {
+            target[last] = newVal; // Triggers reactive proxy
+          }
         }
-        const newVal = child.type === 'checkbox' ? child.checked : child.value;
-        if (target && target[last] !== newVal) target[last] = newVal;
-    };
-    child.addEventListener('input', updateState);
-    child.addEventListener('change', updateState);
-}
+      };
+      
+      node.addEventListener('input', updateState);
+      node.addEventListener('change', updateState);
+      
+      return {
+        type: 'b-sync',
+        node,
+        path
+      };
+    }
+  },
+  
+  execute: ({ binding, state }) => {
+    const value = resolve(binding.path, state);
+    syncModelValue(binding.node, value);
+  }
+};
 ```
 
-### 1. The Setup: Listening for Changes
+The `syncModelValue` helper (in `src/utils/dom.js`) handles the complexity of different input types:
 
-When the `scanForBindings` function encounters a `b-sync="somePath"` attribute, it doesn't just record it for rendering; it attaches an **event listener** to the element.
+```js
+// src/utils/dom.js
+export const syncModelValue = (el, value) => {
+  // Avoid updating if user is currently typing
+  if (document.activeElement === el && el.value === String(value ?? '')) {
+    return;
+  }
+  
+  if (el.type === 'checkbox') {
+    el.checked = !!value;
+  } else if (el.type === 'radio') {
+    el.checked = el.value === String(value);
+  } else {
+    el.value = value ?? '';
+  }
+};
+```
 
--   **The Event**: It listens for the `input` event (which fires every time a character is typed).
-    
--   **The Logic**: When the event fires, LegoDOM captures the `event.target.value`.
-    
--   **The Update**: It uses the internal `set()` helper to reach into your block's `_studs` and update the value at the path you specified (e.g., `user.name`).
-    
+**Prevents Echo Effect:** Checks if element is focused before updating to avoid cursor jumping.
 
-### 2. The Implementation: Multi-Type Support
+## Extending the System
 
-LegoDOM is smart enough to handle different types of inputs automatically:
+Want to add a custom directive? Just create a new file:
 
--   **Checkboxes**: It looks at `.checked` instead of `.value`.
-    
--   **Numbers**: If the input `type` is "number" or "range", it automatically converts the string from the DOM into a real JavaScript `Number` before saving it to your state.
-    
+```js
+// src/directives/b-tooltip.js
+export const bTooltip = {
+  scan: (node) => {
+    if (node.hasAttribute('b-tooltip')) {
+      return {
+        type: 'b-tooltip',
+        node,
+        expr: node.getAttribute('b-tooltip')
+      };
+    }
+  },
+  
+  execute: ({ binding, state }) => {
+    const text = safeEval(binding.expr, state);
+    binding.node.title = text;
+  }
+};
+```
 
-### 3. Preventing the "Echo" Effect
+Then register it in `src/directives/index.js`:
 
-A common problem in two-way binding is the "Infinite Update Loop":
+```js
+import { bTooltip } from './b-tooltip.js';
 
-1.  You type "A".
-    
-2.  `b-sync` updates the state to "A".
-    
-3.  The state change triggers a `render()`.
-    
-4.  `render()` updates the input value to "A".
-    
-5.  The cursor jumps to the end of the input or triggers another event.
-    
+export const directives = {
+  // ... existing directives
+  'b-tooltip': bTooltip
+};
+```
 
-**How Lego solves it**: During the `render()` phase for a `b-sync` binding, LegoDOM checks if the element is currently the `document.activeElement` (the thing you are typing in). If it is, and the value hasn't changed from what's already there, it skips the update to avoid disturbing your typing flow.
+---
 
-### 4. The `b-sync` inside `b-for` loops
-
-As mentioned in Topic 14, `b-sync` works inside loops. If you have a list of inputs generated by a `b-for`, each input is synced to its specific item in the array. LegoDOM uses the `localScope` (with its prototype chain) to ensure that typing in the 3rd input only updates the 3rd item in your data list.
-
-----------
-
-**Summary**: `b-if` manages visibility via CSS, and `b-text` manages safe text updates via property resolution.
-
-`b-for` is a "Reconciliation Engine". It uses a memory pool to recycle DOM nodes and clever prototype inheritance to give each row access to both its own data and the parent's data.
-
-`b-sync` automates the "Boilerplate" of web development. You no longer have to write `onchange` handlers for every input; you just name the variable, and LegoDOM handles the rest.
+**Summary**: The modular directive system in `src/directives/` provides a clean, extensible architecture. Each directive is self-contained with scan and execute methods. The system uses clever techniques like comment anchors (`b-if`), DOM pools (`b-for`), and prototype chains (local scopes) to achieve maximum performance while maintaining clean, understandable code.

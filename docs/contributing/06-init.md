@@ -2,61 +2,129 @@
 
 The `init()` function is the heart of LegoDOM. It orchestrates the entire initialization process, setting up the observer, connecting the global state, and processing existing blocks.
 
-## The LegoDOM Entry Point
+## Location in the Codebase
 
-When your HTML finishes loading
-
-```js
-if (typeof window !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', Lego.init);
-  window.Lego = Lego;
-}
-```
-
-
-LegoDOM executes `Lego.init()`. This is the orchestration phase where the library sets up its "eyes" (the observer) and connects the global state to the page.
+The `init()` method is defined in `src/index.js` as part of the exported `Lego` object:
 
 ```js
-  return {
-    init: () => {
-      document.querySelectorAll('template[b-id]').forEach(t => {
-        registry[t.getAttribute('b-id')] = t;
-      });
-      const observer = new MutationObserver(m => m.forEach(r => {
-        r.addedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && snap(n));
-        r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
-      }));
-      observer.observe(document.body, { childList: true, subtree: true });
+// src/index.js
+import { snap, unsnap } from './core/lifecycle.js';
+import { bind, render } from './core/renderer.js';
+import { registry, activeBlocks, getPrivateData } from './core/registry.js';
+import { config } from './utils/helpers.js';
+import { setGlobals, globals } from './core/globals.js';
+import { loadStylesheets } from './core/stylesheets.js';
+import { routes, _go, _matchRoute } from './features/router.js';
+import { initCrossTabSync } from './features/persistence.js';
+import { defineLegoFile } from './core/parser.js';
 
-      snap(document.body);
-      bind(document.body, { _studs: Lego.globals, _data: { bound: false } });
+const Lego = {
+  init: async (root = document.body, options = {}) => {
+    // 1. Validate root
+    if (!root || typeof root.nodeType !== 'number') root = document.body;
+    
+    // 2. Configure
+    setStyleConfig(options.styles || {});
+    config.loader = options.loader;
+    config.debug = options.debug === true;
 
-      if (routes.length > 0) {
-        // Smart History: Restore surgical targets on Back button
-        window.addEventListener('popstate', (event) => {
-          const targets = event.state?.legoTargets || null;
-          _matchRoute(targets);
-        });
+    // 3. Load stylesheets
+    await loadStylesheets();
 
-        document.addEventListener('click', e => {
-          const link = e.target.closest('a[b-link]');
-          if (link) {
-            e.preventDefault();
-            const href = link.getAttribute('href');
-            const targetAttr = link.getAttribute('b-target');
-            const targets = targetAttr ? targetAttr.split(' ') : [];
+    // 4. Initialize routing if configured
+    if (routes.length > 0) {
+      const path = window.location.pathname;
+      const search = window.location.search;
+      const match = routes.find(r => r.regex.test(path));
+      if (match) {
+        const values = path.match(match.regex).slice(1);
+        const params = Object.fromEntries(match.paramNames.map((n, i) => [n, values[i]]));
+        const query = Object.fromEntries(new URLSearchParams(search));
 
-            // Execute navigation via $go logic
-            Lego.globals.$go(href, ...targets);
-          }
-        });
-        _matchRoute();
+        globals.$route.url = path + search;
+        globals.$route.route = match.path;
+        globals.$route.params = params;
+        globals.$route.query = query;
+        globals.$route.method = 'GET';
+        globals.$route.body = null;
       }
-    },
-    // ... other functions ...
-  };
+    }
 
+    // 5. Register inline templates
+    document.querySelectorAll('template[b-id]').forEach(t => {
+      registry[t.getAttribute('b-id')] = t;
+    });
+
+    // 6. Setup auto-loader if configured
+    const checkAndLoad = (n) => {
+      if (n.nodeType !== Node.ELEMENT_NODE) return;
+      snap(n);
+      const tagName = n.tagName.toLowerCase();
+      if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
+        const result = config.loader(tagName);
+        if (result) {
+          const promise = (typeof result === 'string')
+            ? fetch(result).then(r => r.text())
+            : result;
+
+          Promise.resolve(promise)
+            .then(legoFile => Lego.defineLegoFile(legoFile, tagName + '.lego'))
+            .catch(e => console.error(`[Lego] Failed to load ${tagName}:`, e));
+        }
+      }
+    };
+
+    // 7. Setup MutationObserver
+    const observer = new MutationObserver(m => m.forEach(r => {
+      r.addedNodes.forEach(checkAndLoad);
+      r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
+    }));
+    observer.observe(root, { childList: true, subtree: true });
+
+    // 8. Process existing DOM
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    checkAndLoad(root);
+    while (walker.nextNode()) checkAndLoad(walker.currentNode);
+
+    // 9. Bind globals to root
+    root._studs = globals;
+    bind(root, root);
+    render(root);
+
+    // 10. Setup routing event listeners
+    if (routes.length > 0) {
+      window.addEventListener('popstate', (event) => {
+        const targets = event.state?.legoTargets || null;
+        _matchRoute(targets);
+      });
+
+      document.addEventListener('click', e => {
+        const path = e.composedPath();
+        const link = path.find(el => el.tagName === 'A' && (el.hasAttribute('b-target') || el.hasAttribute('b-link')));
+        if (link) {
+          e.preventDefault();
+          const href = link.getAttribute('href');
+          const targetAttr = link.getAttribute('b-target');
+          const targets = targetAttr ? targetAttr.split(/\s+/).filter(Boolean) : [];
+
+          const shouldPush = link.getAttribute('b-link') !== 'false';
+          globals.$go(href, ...targets).get(shouldPush);
+        }
+      });
+      _matchRoute();
+    }
+
+    // 11. Initialize cross-tab sync
+    initCrossTabSync();
+  },
+  // ... other methods
+};
+
+export { Lego };
+export default Lego;
 ```
+
+## The Initialization Flow
 
 ### 1. Template Registration
 
@@ -66,71 +134,119 @@ The first thing `init()` does is look for blueprints you've already defined in y
 document.querySelectorAll('template[b-id]').forEach(t => {
   registry[t.getAttribute('b-id')] = t;
 });
-
 ```
 
-It scans the entire document for any `<template>` tag that has a `b-id` attribute. It then adds these to the `registry` object we discussed in [Topic 2](/contributing/02-registry). This allows you to define blocks directly in your HTML file without writing a single line of JavaScript.
+It scans the entire document for any `<template>` tag that has a `b-id` attribute. It then adds these to the `registry` object (from `src/core/registry.js`). This allows you to define blocks directly in your HTML file without writing a single line of JavaScript.
 
-### 2. Setting up the "Eyes" (`MutationObserver`)
+### 2. Stylesheet Loading
 
-This is the most critical part of the initialization. LegoDOM creates a `MutationObserver`.
+If you're using shared stylesheets, `init()` loads them:
+
+```js
+await loadStylesheets();
+```
+
+This is handled by `src/core/stylesheets.js` and uses the Constructable Stylesheets API for performance.
+
+### 3. Setting up the "Eyes" (`MutationObserver`)
+
+This is the most critical part of the initialization. LegoDOM creates a `MutationObserver`:
 
 ```js
 const observer = new MutationObserver(m => m.forEach(r => {
-  r.addedNodes.forEach(n => {
-    if (n.nodeType === Node.ELEMENT_NODE) {
-      snap(n);
-      
-      // Auto-Discovery (v2.0): Check for remote blocks
-      const tagName = n.tagName.toLowerCase();
-      if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
-        // ... Call loader ...
-      }
-    }
-  });
+  r.addedNodes.forEach(checkAndLoad);
   r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
 }));
-observer.observe(document.body, { childList: true, subtree: true });
+observer.observe(root, { childList: true, subtree: true });
 ```
 
-- **What it does**: It watches the `document.body` for any changes to the HTML structure.
-- **Auto-Discovery (New in v2.0)**: If `snap(n)` fails because the block isn't in the registry, the observer now checks `config.loader`. If a loader is defined, it triggers a fetch to pull the block definition from the server. This enables the "HTMX+Blocks" pattern.
+- **What it does**: It watches the root element (usually `document.body`) for any changes to the HTML structure.
     
--   **The Config**: It observes `{ childList: true, subtree: true }`. This means it sees if an element is added to the body, or if an element is added deep inside another element.
+- **The Config**: It observes `{ childList: true, subtree: true }`. This means it sees if an element is added to the body, or if an element is added deep inside another element.
     
--   **The Reaction**:
+- **The Reaction**:
     
-    -   If a new node is **added**, it calls `snap(n)` (which we will cover soon) to turn that raw HTML into a living block.
+    -   If a new node is **added**, it calls `checkAndLoad(n)` (which calls `snap(n)` from `src/core/lifecycle.js`) to turn that raw HTML into a living block.
         
-    -   If a node is **removed**, it calls `unsnap(n)` to clean up memory and fire lifecycle hooks.
+    -   If a node is **removed**, it calls `unsnap(n)` (also from `src/core/lifecycle.js`) to clean up memory and fire lifecycle hooks.
         
 
-### 3. The "First Snap"
+### 4. Auto-Discovery & Lazy Loading (v2.0+)
 
-After setting up the observer, it calls `snap(document.body)`.
+The `checkAndLoad` function enables server-side block loading:
+
+```js
+const checkAndLoad = (n) => {
+  if (n.nodeType !== Node.ELEMENT_NODE) return;
+  snap(n);
+  const tagName = n.tagName.toLowerCase();
+  if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
+    const result = config.loader(tagName);
+    if (result) {
+      // Fetch and compile the block
+      Promise.resolve(result)
+        .then(legoFile => Lego.defineLegoFile(legoFile, tagName + '.lego'))
+        .catch(e => console.error(`[Lego] Failed to load ${tagName}:`, e));
+    }
+  }
+};
+```
+
+If `snap(n)` encounters an unknown block and `config.loader` is defined, it:
+1. Calls the loader function with the tag name
+2. Fetches the `.lego` file (or receives it directly)
+3. Compiles it using `defineLegoFile()` from `src/core/parser.js`
+4. Retries snapping the element
+
+This enables the "HTMX+Blocks" pattern and server-side rendering.
+
+### 5. The "First Snap"
+
+After setting up the observer, it processes all existing elements:
+
+```js
+const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+checkAndLoad(root);
+while (walker.nextNode()) checkAndLoad(walker.currentNode);
+```
 
 -   **Why?** The observer only sees _new_ things being added. It doesn't see what was already there when the page loaded.
     
--   By calling `snap` on the body, LegoDOM manually processes every custom block that was present in the initial HTML.
+-   By using a `TreeWalker`, LegoDOM efficiently processes every custom block that was present in the initial HTML.
     
 
-### 4. Global Data Binding
+### 6. Global Data Binding
 
-Finally, it binds the `Lego.globals` state to the `document.body`.
+The root element gets bound to the global state:
 
-JavaScript
-
+```js
+root._studs = globals;
+bind(root, root);
+render(root);
 ```
-bind(document.body, { _studs: Lego.globals, _data: { bound: false } });
 
+This treats the entire root as if it were a giant block. This allows you to use reactive data in your "Light DOM" (the regular HTML outside of blocks) by referencing values stored in `Lego.globals` (from `src/core/globals.js`).
+
+### 7. Routing Initialization
+
+If you have defined any routes using `Lego.route()`, the `init` function sets up:
+
+1. **History Management**: Listens for `popstate` events (back/forward buttons)
+2. **Link Interception**: Captures clicks on `<a>` tags with `b-link` or `b-target` attributes
+3. **Initial Route Match**: Calls `_matchRoute()` to render the current route
+
+All routing logic is in `src/features/router.js`.
+
+### 8. Cross-Tab Synchronization
+
+Finally, `init()` enables localStorage synchronization across browser tabs:
+
+```js
+initCrossTabSync();
 ```
 
-This is a clever move: it treats the entire website body as if it were a giant block. This allows you to use reactive data in your "Light DOM" (the regular HTML outside of blocks) by referencing values stored in `Lego.globals`.
+This is handled by `src/features/persistence.js` and allows `$db` properties to sync automatically.
 
-### 5. Routing Initialization
+---
 
-If you have defined any routes using `Lego.route()`, the `init` function sets up global click listeners and history management so that links with the `b-link` attribute don't refresh the page but instead perform a "surgical" swap of content.
-
-----------
-
-**Summary of `init()`:** It finds templates, starts a "watchdog" for new elements, processes existing elements, and enables global data.
+**Summary of `init()`:** It finds templates, starts a "watchdog" for new elements, processes existing elements, enables global data, initializes routing, and sets up cross-tab sync. The entire initialization is modular, with each concern handled by its respective module in `src/`.

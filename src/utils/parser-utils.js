@@ -1,5 +1,8 @@
+import { deriveBlockName } from './helpers.js';
+export { deriveBlockName };
+
 /**
- * Parser for .lego Single File Blocks (SFC)
+ * Parser for .lego Single File Blocks (SFB)
  * Extracts template, script, and style sections from .lego files
  */
 
@@ -86,28 +89,7 @@ export function parseLego(content, filename = 'block.lego') {
   return result;
 }
 
-/**
- * Derive block name from filename
- * Handles: "sample-block.lego" -> "sample-block"
- *          "SampleBlock.lego" -> "sample-block" (PascalCase)
- *          "sample_block.lego" -> "sample-block" (snake_case)
- * @param {string} filename
- * @returns {string}
- */
-export function deriveBlockName(filename) {
-  const basename = filename.split('/').pop().replace(/\.lego$/, '');
-  // 1. Convert snake_case to kebab-case
-  // 2. Convert PascalCase/camelCase to kebab-case
-  const name = basename
-    .replace(/_/g, '-')
-    .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .toLowerCase();
 
-  if (!name.includes('-')) {
-    throw new Error(`[Lego] Invalid block definition: "${filename}". Block names must contain a hyphen (e.g. user-card.lego or UserCard.lego).`);
-  }
-  return name;
-}
 
 /**
  * Generate Lego.block() code from parsed .lego file

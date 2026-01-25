@@ -1,16 +1,23 @@
 {
   "name": "lego-dom",
-  "version": "2.1.1-alpha",
+  "version": "2.1.1",
   "license": "MIT",
   "description": "A feature-rich web components + SFC frontend framework",
-  "main": "main.js",
+  "main": "dist/lego.min.js",
+  "module": "dist/lego.mjs",
   "type": "module",
+  "files": [
+    "dist",
+    "src",
+    "vite-plugin.js"
+  ],
   "exports": {
-    ".": "./lego.js",
-    "./main.js": "./main.js",
-    "./lego.js": "./lego.js",
-    "./vite-plugin": "./vite-plugin.js",
-    "./parse-lego": "./parse-lego.js"
+    ".": {
+      "import": "./dist/lego.mjs",
+      "require": "./dist/lego.min.js",
+      "default": "./dist/lego.min.js"
+    },
+    "./vite-plugin": "./vite-plugin.js"
   },
   "keywords": [
     "framework",
@@ -22,7 +29,8 @@
   "author": "Tersoo Ortserga",
   "scripts": {
     "test": "vitest run",
-    "build": "esbuild main.js --minify --outfile=main.min.js",
+    "build": "node build.js",
+    "clean": "rm -rf dist",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"

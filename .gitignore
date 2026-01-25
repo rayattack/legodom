@@ -9,3 +9,6 @@ docs/.vitepress/dist/
 *.log
 .todo
 .legodom
+
+unpublish.sh
+www/

@@ -37,7 +37,7 @@ global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
 // 2. Load the library code
 // We read it as a string to execute it in our shimmed global environment
-const libCode = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
 eval(libCode);
 
 describe('Lego JS Node Environment Tests', () => {
