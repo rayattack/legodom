@@ -10,7 +10,8 @@ export const bLeave = {
 
     const observer = new IntersectionObserver((entries, io) => {
       const entry = entries[0];
-      if (!entry.isIntersecting) {
+      if (entry.isIntersecting) binding.activated = true;
+      if (!entry.isIntersecting && binding.activated) {
         safeEval(binding.expr, { state });
         if (binding.modifiers.includes('once')) {
           io.disconnect();

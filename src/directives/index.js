@@ -5,6 +5,8 @@ import { bHtml } from './b-html.js';
 import { bSync } from './b-sync.js';
 import { bFor } from './b-for.js';
 import { bInit } from './b-init.js';
+import { bEnter } from './b-enter.js';
+import { bLeave } from './b-leave.js';
 
 
 export const directives = {
@@ -14,5 +16,7 @@ export const directives = {
   'b-html': bHtml,
   'b-sync': bSync,
   'b-for': bFor,
-  'b-init': bInit
+  'b-init': bInit,
+  'b-enter': bEnter,
+  'b-leave': bLeave
 };
