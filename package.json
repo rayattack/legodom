@@ -5,6 +5,7 @@
   "description": "A feature-rich web components + SFC frontend framework",
   "main": "dist/lego.min.js",
   "module": "dist/lego.mjs",
+  "types": "./dist/lego.d.ts",
   "type": "module",
   "files": [
     "dist",

@@ -19,6 +19,16 @@ async function init() {
         message: 'Project name:',
         initial: 'lego-app',
         onState: (state) => (targetDir = state.value.trim() || 'lego-app')
+      },
+      {
+        type: 'select',
+        name: 'language',
+        message: 'Select language:',
+        choices: [
+          { title: 'JavaScript', value: 'js' },
+          { title: 'TypeScript', value: 'ts' }
+        ],
+        initial: 0
       }
     ],
     {
@@ -27,6 +37,9 @@ async function init() {
       }
     }
   );
+
+  const { language } = result;
+  const isTS = language === 'ts';
 
   const root = path.join(cwd, targetDir);
   const renameFiles = {
@@ -63,9 +76,17 @@ async function init() {
   );
 
   const write = (file, content) => {
-    const targetPath = renameFiles[file]
-      ? path.join(root, renameFiles[file])
-      : path.join(root, file);
+    // Handling renaming for TS
+    let targetFileName = renameFiles[file] || file;
+
+    // Rename main.js and vite.config.js to .ts if TS mode
+    if (isTS) {
+      if (file === 'src/app.js') targetFileName = 'src/app.ts';
+      if (file === 'vite.config.js') targetFileName = 'vite.config.ts';
+    }
+
+    const targetPath = path.join(root, targetFileName);
+
     if (content) {
       fs.writeFileSync(targetPath, content);
     } else {
@@ -75,6 +96,8 @@ async function init() {
 
   const files = fs.readdirSync(templateDir);
   for (const file of files) {
+    if (file === 'package.json') continue; // Handle separately
+    if (file === 'tsconfig.json' && !isTS) continue; // Skip tsconfig for JS projects
     write(file);
   }
 
@@ -83,6 +106,11 @@ async function init() {
   );
 
   pkg.name = path.basename(root);
+
+  // Remove typescript dependency if JS project
+  if (!isTS) {
+    delete pkg.devDependencies.typescript;
+  }
 
   write('package.json', JSON.stringify(pkg, null, 2));
 

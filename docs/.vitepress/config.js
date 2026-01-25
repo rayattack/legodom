@@ -100,6 +100,7 @@ export default defineConfig({
             { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
             { text: 'Large Apps', link: '/guide/directory-structure' },
             { text: 'Server Side Blocks', link: '/guide/server-side' },
+            { text: 'TypeScript', link: '/guide/typescript' },
             { text: 'Testing', link: '/guide/testing' },
           ]
         }
@@ -167,9 +168,6 @@ export default defineConfig({
   },
 
   markdown: {
-    theme: {
-      light: 'github-light',
-      dark: 'github-dark'
-    }
+    theme: 'github-dark'
   }
 });

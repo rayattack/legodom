@@ -12,25 +12,33 @@ Create a block that defines your layout structure and includes a `<slot>` for th
 
 ```html
 <!-- src/blocks/app-shell.lego -->
-<template b-stylesheets="bulma main" b-cascade="bulma main">
-  <div class="app-layout">
-    <aside class="sidebar">
+<!-- The Magic: b-cascade passes 'tailwind' down to children (like the router views) -->
+<template b-stylesheets="tailwind main" b-cascade="tailwind">
+  <div class="flex min-h-screen">
+    <aside class="w-64 border-r border-gray-200">
       <side-menu></side-menu>
     </aside>
     
-    <main class="content">
+    <main class="flex-1 p-8">
       <!-- The router (or page) will be projected here -->
+      <!-- Because of b-cascade, it will receive the tailwind styles -->
       <slot></slot>
     </main>
   </div>
 </template>
 
 <style>
-  .app-layout { display: flex; min-height: 100vh; }
-  .sidebar { width: 250px; border-right: 1px solid #eee; }
-  .content { flex: 1; padding: 2rem; }
+  /* Local overrides if needed, but mostly utilizing Tailwind utility classes */
 </style>
 ```
+
+### The Strategy: Cascade = Inheritance
+By adding `b-cascade="tailwind"` to your shell, you unlock "Global Styles" for your entire app.
+1.  **Define** `tailwind` in `Lego.init({ styles: { tailwind: '...' } })`.
+2.  **Cascade** it from `<app-shell>`.
+3.  **Use** utility classes in any page rendered by the router.
+
+This gives you the best of both worlds: Shadow DOM encapsulation by default, with opt-in global inheritance where it makes sense.
 
 ### 2. Wrap the Router
 

@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: LegoDOM
-  text: Build Reactive Web Components
-  tagline: A tiny, zero-dependency Web library for creating reactive Web Components directly in the browser
+  text: Reactive Web Components
+  tagline: A tiny, zero-dependency UI library powered by reactive Web Components
   image:
     src: /logo.svg
     alt: LegoDOM
@@ -20,41 +20,29 @@ hero:
       link: /examples/
 
 features:
-  - icon: 🎯
-    title: Mental Model Simplicity
-    details: No virtual DOM, no compilation step, no JSX. Just HTML with a few directives and reactive objects.
-  
-  - icon: ⚡
-    title: Zero Dependencies
-    details: Under 500 lines of code with no external dependencies. The entire library is smaller than most framework router plugins.
-  
   - icon: 🔄
-    title: True Reactivity
-    details: Direct object mutation triggers updates. No setters, no actions, no reducers. Just change the data and the DOM updates.
+    title: Universal Portability
+    details: Blocks are just HTML. Render them on the server, load them in a SPA, or inject them dynamically. They work everywhere.
   
   - icon: 🧩
-    title: Web Components Native
-    details: Built on standard Web Components with Shadow DOM. Works anywhere, plays well with existing code.
+    title: Automatic "Snap"
+    details: The "Snap" engine detects blocks and attaches logic instantly. No complex hydration or prop-drilling required.
+  
+  - icon: ⚡
+    title: Radical Simplicity
+    details: Learn the entire API in an afternoon. No build step, no VDOM, no magic compilers (unless you want them).
+  
+  - icon: 🛡️
+    title: Native Power
+    details: Built on true Web Standards—Custom Elements and Shadow DOM. Your code is future-proof and encapsulated by default.
   
   - icon: 📦
-    title: Single File Blocks
-    details: Use .lego files with Vite for a modern development experience, or load directly in the browser.
+    title: Zero-Dependency Runtime
+    details: Weighs less than 10kb gzipped. Includes Router, Store, and Reactivity engine without the bloat.
   
-  - icon: 🎨
-    title: Scoped Styles
-    details: Shadow DOM encapsulation means your styles never leak. Use the 'self' keyword to target block root.
-  
-  - icon: 🛣️
-    title: Built-in Router
-    details: Client-side routing included. Define routes, handle parameters, and add middleware without extra packages.
-  
-  - icon: 💪
-    title: TypeScript Ready
-    details: Full JSDoc annotations for excellent IDE support and optional TypeScript integration.
-  
-  - icon: 🚀
-    title: Production Ready
-    details: Battle-tested patterns from Vue and React, adapted for pure Web Components. No framework lock-in.
+  - icon: �
+    title: Framework Agnostic
+    details: Since blocks are native elements, they work inside React, Vue, Svelte, or vanilla HTML without adapters.
 ---
 
 ## Blocks & Naming

@@ -6,6 +6,7 @@
 import { parseLego, generateBlockCall, validateLego } from './src/utils/parser-utils.js';
 import path from 'path';
 import fg from 'fast-glob';
+import { transform } from 'esbuild';
 
 const VIRTUAL_MODULE_ID = 'virtual:lego-blocks';
 const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID;
@@ -128,6 +129,19 @@ export default function legoPlugin(options = {}) {
 
         if (!validation.valid) {
           throw new Error(`Invalid .lego file "${filename}":\n${validation.errors.join('\n')}`);
+        }
+
+        // TypeScript Support
+        if (parsed.script && parsed.scriptLang === 'ts') {
+          try {
+            const result = await transform(parsed.script, {
+              loader: 'ts',
+              format: 'esm'
+            });
+            parsed.script = result.code;
+          } catch (e) {
+            throw new Error(`TypeScript compilation failed for ${filename}: ${e.message}`);
+          }
         }
 
         const blockCall = generateBlockCall(parsed);

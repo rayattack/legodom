@@ -78,6 +78,10 @@ export function parseLego(content, filename = 'block.lego') {
       }
     } else if (tagName === 'script') {
       result.script = innerContent.trim();
+      const langMatch = attrs.match(/lang=["']([^"']+)["']/);
+      if (langMatch) {
+        result.scriptLang = langMatch[1];
+      }
     } else if (tagName === 'style') {
       result.style = innerContent.trim();
     }
