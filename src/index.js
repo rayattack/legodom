@@ -46,6 +46,9 @@ const Lego = {
     if (cascade) t.setAttribute('b-cascade', cascade);
     if (error) t.setAttribute('b-error', error);
     t.innerHTML = templateHTML;
+
+    // HMR Optimization: REMOVED (Basic re-registration only)
+
     registry[tagName] = t;
     legoFileLogic.set(tagName, logic);
 
@@ -58,6 +61,15 @@ const Lego = {
     }
 
     document.querySelectorAll(tagName).forEach(snap);
+
+    // HMR Support: Find and reload existing instances
+    [...activeBlocks].forEach(block => {
+      if (block.tagName.toLowerCase() === tagName.toLowerCase()) {
+        if (config.debug) console.log('[Lego HMR] Reloading', tagName);
+        unsnap(block);
+        snap(block);
+      }
+    });
 
     activeBlocks.forEach(block => {
       if (block._legoShadow) {

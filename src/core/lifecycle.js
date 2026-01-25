@@ -20,7 +20,11 @@ export const snap = (el) => {
   if (templateNode && !data.snapped) {
     data.snapped = true;
     const tpl = templateNode.content.cloneNode(true);
-    const shadow = el.attachShadow({ mode: 'open' });
+
+    // Support HMR/Re-init: Reuse output if exists
+    let shadow = el.shadowRoot;
+    if (shadow) shadow.innerHTML = ''; // Clear old content
+    else shadow = el.attachShadow({ mode: 'open' });
 
     applyStyles(el);
 

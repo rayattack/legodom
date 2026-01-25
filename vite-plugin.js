@@ -139,21 +139,16 @@ const $db = Lego.db;
 ${blockCall}
 
 export default '${parsed.blockName}';
+
+// HMR Code Injected
+if (import.meta.hot) {
+  import.meta.hot.accept((newModule) => {
+    // The new module will re-run 'Lego.block(...)' to register the update.
+    // LegoDOM's index.js will handle the live re-render.
+  });
+}
 `;
       }
-    },
-
-    handleHotUpdate({ file, server }) {
-      if (file.endsWith('.lego')) {
-        console.log(`[vite-plugin-lego] Hot reload: ${path.basename(file)}`);
-        // Trigger full reload for block content changes
-        server.ws.send({
-          type: 'full-reload',
-          path: '*'
-        });
-      }
-    },
-
-
+    }
   };
 }
