@@ -69,8 +69,8 @@ LegoDOM supports **SSC (Server-Side Blocks)** - you can render blocks on the ser
 The core library (`main.js`) is **under 500 lines** of well-commented JavaScript.
 
 - **No dependencies** - Zero `node_modules` bloat
-- **~22KB** - Unminified, human-readable code
-- **~7KB** - Minified and gzipped
+- **~25KB** - Unminified, human-readable code
+- **~9KB** - Minified and gzipped
 
 Compare that to:
 - Vue 3: ~33KB (minified + gzipped)
