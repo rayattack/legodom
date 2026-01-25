@@ -1,0 +1,37 @@
+{
+  "name": "vscode-lego",
+  "displayName": "LegoDOM Support",
+  "description": "Language support for LegoDOM (.lego) files",
+  "icon": "logo.svg",
+  "version": "0.0.1",
+  "publisher": "legodom",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "lego",
+        "aliases": [
+          "Lego",
+          "lego"
+        ],
+        "extensions": [
+          ".lego"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lego",
+        "scopeName": "source.lego",
+        "path": "./syntaxes/lego.tmLanguage.json"
+      }
+    ]
+  }
+}

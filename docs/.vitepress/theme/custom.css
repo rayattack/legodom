@@ -1,0 +1,14 @@
+/* Force code blocks to have a dark background */
+:root {
+  --vp-code-block-bg: #0d1117; /* GitHub Dark Dimmed background */
+}
+
+/* Ensure the pre tag uses this variable, overriding light mode defaults */
+.vp-doc pre {
+  background-color: var(--vp-code-block-bg) !important;
+}
+
+/* Optional: Ensure text color matches expected contrast if not fully handled by Shiki */
+.vp-doc pre code {
+  color: #c9d1d9;
+}

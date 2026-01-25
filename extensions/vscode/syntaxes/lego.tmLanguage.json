@@ -1,0 +1,14 @@
+{
+  "scopeName": "source.lego",
+  "patterns": [
+    {
+      "include": "text.html.basic"
+    },
+    {
+      "comment": "Lego Delimiters",
+      "begin": "\\[\\[",
+      "end": "\\]\\]",
+      "name": "constant.character.escape.lego"
+    }
+  ]
+}
