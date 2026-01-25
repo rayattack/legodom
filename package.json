@@ -1,9 +1,9 @@
 {
   "name": "lego-dom",
-  "version": "2.1.1-alpha",
+  "version": "2.1.1",
   "license": "MIT",
   "description": "A feature-rich web components + SFC frontend framework",
-  "main": "dist/main.js",
+  "main": "dist/lego.min.js",
   "module": "dist/lego.mjs",
   "type": "module",
   "files": [
@@ -14,8 +14,8 @@
   "exports": {
     ".": {
       "import": "./dist/lego.mjs",
-      "require": "./dist/main.js",
-      "default": "./dist/main.js"
+      "require": "./dist/lego.min.js",
+      "default": "./dist/lego.min.js"
     },
     "./vite-plugin": "./vite-plugin.js"
   },

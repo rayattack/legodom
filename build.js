@@ -17,7 +17,7 @@ async function build() {
   await esbuild.build({
     ...common,
     format: 'iife',
-    outfile: 'dist/main.js',
+    outfile: 'dist/lego.min.js',
     minify: !isDev,
     sourcemap: isDev,
   });

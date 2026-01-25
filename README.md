@@ -32,7 +32,7 @@ Lego includes a **Vite plugin** for developers who prefer **Single File Componen
 ## Why Lego?
 
 - ⚡ **Extremely Fast** – No virtual DOM. No reconciliation. Direct DOM updates.
-- 📦 **Zero Dependencies** – Weighs less than 4kb gzipped.
+- 📦 **Zero Runtime Dependencies** – Weighs less than 10kb gzipped.
 - 🛠️ **No Build Step** – Works directly in the browser with standard `<script>` tags.
 - 🧩 **Native Web Components** – Real Custom Elements, real Shadow DOM.
 - 🌐 **Built-in Routing** – Lego Router included for client-side routing.
@@ -71,7 +71,7 @@ This scaffolds a complete project with Vite, the LegoDOM plugin, and a sample co
     <button @click="toggle()">Toggle Name</button>
   </template>
 
-  <script src="https://unpkg.com/lego-dom/main.js"></script>
+  <script src="https://unpkg.com/lego-dom/dist/lego.min.js"></script>
   <script>
     document.querySelector('hello-world').state = {
       name: 'World',
