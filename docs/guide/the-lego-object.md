@@ -87,7 +87,7 @@ manifest: '/lego.manifest.json'
 **Properties:**
 - `base`: (String) URL prefix. Defaults to `""`.
 - `suffix`: (Boolean | String) Extention to append. `true` adds `.lego`.
-- `legos`: (Array<String>) List of tag names to generate URLs for.
+- `legos`: (Array&lt;String&gt;) List of tag names to generate URLs for.
 - `map`: (Object) Explicit `tag: url` pairs.
 - `headers`: (Object) Dynamic headers (`Function`, `$globals.key`).
 - `credentials`: (String) Fetch mode (`include`, `omit`, `same-origin`).
