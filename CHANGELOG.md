@@ -1,6 +1,7 @@
 # Changelog
 
-## [2.1.1] - 2026-01-26
+## [2.1.2] - 2026-01-26
+## [2.1.1] - unbuilt [bumped to 2.1.2]
 Welcome to **LegoDOM v2**! This release represents a massive architectural shift to modular files from large sinfle iife
 
 ### Features
