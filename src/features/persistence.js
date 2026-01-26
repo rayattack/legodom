@@ -87,14 +87,64 @@ const scheduleSave = (key, value, debounce) => {
   }
 };
 
-export const dbFactory = (key) => ({
-  __type: 'lego-db',
-  key,
-  _default: undefined,
-  _debounce: 0,
-  default(v) { this._default = v; return this; },
-  debounce(ms) { this._debounce = ms; return this; }
-});
+export const dbFactory = (key) => {
+  const descriptor = {
+    __type: 'lego-db',
+    key,
+    _default: undefined,
+    _debounce: 0,
+
+    // Initialization-time methods (return this for chaining)
+    default(v) { this._default = v; return this; },
+    debounce(ms) { this._debounce = ms; return this; },
+
+    // Runtime methods (return values/promises)
+    save(value, debounce = 0) {
+      scheduleSave(key, value, debounce);
+
+      // Trigger reactivity for all bindings
+      if (dbBindings.has(key)) {
+        dbBindings.get(key).forEach(({ target, prop, el, batcher }) => {
+          target[prop] = value;
+          if (el && batcher) batcher.add(el);
+        });
+      }
+
+      return value;
+    },
+
+    get() {
+      try {
+        const item = localStorage.getItem(key);
+        return item !== null ? JSON.parse(item) : null;
+      } catch (e) {
+        console.warn(`[Lego] Failed to get localStorage value for key "${key}":`, e);
+        return null;
+      }
+    },
+
+    delete() {
+      try {
+        localStorage.removeItem(key);
+        storageKeys.delete(key.startsWith('lego:') ? key : `lego:${key}`);
+
+        // Notify all bindings
+        if (dbBindings.has(key)) {
+          dbBindings.get(key).forEach(({ target, prop, el, batcher }) => {
+            target[prop] = null;
+            if (el && batcher) batcher.add(el);
+          });
+        }
+        return true;
+      } catch (e) {
+        console.error(`[Lego] Failed to delete localStorage key "${key}":`, e);
+        return false;
+      }
+    }
+  };
+
+  return descriptor;
+};
 
 export const isDbDescriptor = (desc) => desc && desc.__type === 'lego-db';
 

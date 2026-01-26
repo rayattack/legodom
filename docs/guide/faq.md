@@ -219,7 +219,7 @@ LegoDOM automatically adds a `b-id` attribute to every block once it is fully in
 
 ```css
 /* Hide only Undefined Custom Elements that haven't been snapped yet */
-:not(:defined):not([b-id]) {
+:not(:defined):not([b-id]):not(lego-router) {
   opacity: 0 !important;
   visibility: hidden;
 }
@@ -229,9 +229,10 @@ LegoDOM automatically adds a `b-id` attribute to every block once it is fully in
   opacity: 1 !important;
   visibility: visible;
   transition: opacity 0.2s ease-in;
-  display: block;
 }
 ```
+
+> **Note:** We exclude `lego-router` because it's a plain container element used by the routing system, not a registered LegoDOM component, so it won't receive the `b-id` attribute.
 
 This ensures a smooth fade-in for your application.
 

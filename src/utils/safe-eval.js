@@ -37,6 +37,7 @@ export const safeEval = (expr, context, throwError = true) => {
       $element: context.self,
       $route: globals.$route,
       $go: (path, ...targets) => _go(path, ...targets)(context.self),
+      $db: globals.$db,
       $emit: (name, detail) => {
         context.self.dispatchEvent(new CustomEvent(name, {
           detail,
