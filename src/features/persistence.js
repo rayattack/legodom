@@ -124,7 +124,18 @@ export const initializeDbProp = (obj, k, desc, el, batcher) => {
 export const handleDbUpdate = (target, prop, value) => {
   const meta = dbMetadata.get(target);
   if (meta && meta[prop]) {
-    scheduleSave(meta[prop].key, value, meta[prop].debounce);
+    const key = meta[prop].key;
+    scheduleSave(key, value, meta[prop].debounce);
+
+    // Sync other local bindings immediately (Same Tab)
+    if (dbBindings.has(key)) {
+      dbBindings.get(key).forEach(({ target: t, prop: p, el, batcher }) => {
+        if (t !== target) { // Don't notify self
+          t[p] = value;
+          if (el && batcher) batcher.add(el);
+        }
+      });
+    }
   }
 };
 
