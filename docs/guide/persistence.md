@@ -63,6 +63,57 @@ Delays the *write to disk* operation.
 **ALWAYS** use `.debounce(300)` or higher for values bound to high-frequency inputs like `<input type="range">` or text fields.
 :::
 
+## Runtime Methods
+
+In addition to reactive persistence (using `.default()` and `.debounce()`), you can perform one-off operations directly from methods or templates:
+
+### `.set(value: any, debounce?: number)`
+
+Writes a value to localStorage and triggers reactivity for all components using this key.
+
+```javascript
+// In a method
+logout() {
+  $db('auth-token').set(null);
+}
+
+// In a template
+<button @click="$db('theme').set('dark')">Dark Mode</button>
+```
+
+**Parameters:**
+- `value`: The data to save (automatically JSON serialized)
+- `debounce` (optional): Milliseconds to wait before writing to disk (default: 0)
+
+**Returns:** The saved value
+
+### `.get()`
+
+Reads the current value from localStorage.
+
+```javascript
+mounted() {
+  const token = $db('auth-token').get();
+  if (token) this.authenticate(token);
+}
+```
+
+**Returns:** The parsed value, or `null` if the key doesn't exist
+
+### `.delete()`
+
+Removes the key from localStorage and notifies all reactive bindings.
+
+```javascript
+clearCache() {
+  $db('user-cache').delete();
+}
+```
+
+**Returns:** `true` if successful, `false` on error
+
+> **Note:** Unlike reactive properties (which require declaring `myProp: $db('key').default(val)` in your component), these runtime methods can be called anywhere without prior declaration.
+
 ## Cross-Tab Synchronization
 
 One of the "magic" features of `$db` is automatic synchronization.

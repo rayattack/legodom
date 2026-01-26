@@ -99,7 +99,7 @@ export const dbFactory = (key) => {
     debounce(ms) { this._debounce = ms; return this; },
 
     // Runtime methods (return values/promises)
-    save(value, debounce = 0) {
+    set(value, debounce = 0) {
       scheduleSave(key, value, debounce);
 
       // Trigger reactivity for all bindings
