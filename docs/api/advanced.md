@@ -37,7 +37,7 @@ Lego.snap(element)
 - **Development tools** - Building block preview tools (like Lego Studio)
 - **Custom loaders** - Implementing alternative block loading strategies
 
-**You typically DON'T need this** - LegoDOM's `MutationObserver` automatically detects and initializes block added to the DOM.
+**You typically DON'T need this** - LegoDOM's Native Web Component detection automatically initializes blocks added to the DOM.
 
 ### Example: Dynamic Block Preview
 

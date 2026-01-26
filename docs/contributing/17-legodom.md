@@ -100,25 +100,11 @@ export default Lego;
 The `init()` function is deceptively small because its primary job is to flip the switches on the systems we've already built.
 
 ### 1. Bootstrapping the Watchdog
-
-The core of the initialization is setting up the `MutationObserver` (see Topic 7):
-
-```js
-const observer = new MutationObserver(m => m.forEach(r => {
-  r.addedNodes.forEach(checkAndLoad);
-  r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
-}));
-
-observer.observe(root, { childList: true, subtree: true });
-```
-
--   **The Target**: It targets the root (usually `document.body`)
--   **The Configuration**: Uses `{ childList: true, subtree: true }`
--   **The Why**: By starting the observer _before_ the first render, LegoDOM ensures that any elements it creates during startup are also caught and "snapped" into life
+LegoDOM creates the Native Web Components registry.
 
 ### 2. The "Initial Snap" (The Recursive Wake-up)
 
-Once the observer is live, the code walks the existing DOM:
+Once the registry is live, the code walks the existing DOM:
 
 ```js
 const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
@@ -126,9 +112,18 @@ checkAndLoad(root);
 while (walker.nextNode()) checkAndLoad(walker.currentNode);
 ```
 
--   **The Why**: The `MutationObserver` only sees _new_ changes. It cannot see the HTML that was already there when the page loaded.
-    
--   **The Logic**: By using a TreeWalker, LegoDOM recursively walks through your entire server-rendered HTML, finding every custom tag (e.g., `<user-card>`) and "upgrading" them.
+### The Logic Flow
+
+1.  **Registry**: `Lego.block` calls `customElements.define`.
+2.  **Detection**: Browser calls `connectedCallback` when element enters DOM.
+3.  **Upgrade**: The callback executes `snap()`, creating Shadow DOM.
+4.  **Binding**: `bind` scans for directives (`b-if`, `b-for`, etc).
+5.  **Reactivity**: `reactive` creates proxies for state.
+6.  **Rendering**: `render` updates the DOM based on state.
+
+### Why not MutationObserver? (v2.0+)
+
+Older versions used a global `MutationObserver`. We removed it because it couldn't detect changes inside Shadow DOMs boundaries. Native Web Components solve this universally.
 
 ### 3. Activating the Global Router
 
@@ -223,7 +218,7 @@ Simple usage:
 ```
 
 The framework handles:
-- Setting up the MutationObserver
+- Setting up the Registry
 - Scanning existing DOM
 - Registering event listeners
 - Initializing the router

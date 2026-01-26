@@ -14,7 +14,7 @@ Lego.init(root = document.body, options = {});
 
 When you call `init`, LegoDOM does three critical things:
 
-1.  **Starts the MutationObserver**: It begins watching the DOM for any new elements that match your registered blocks. If you insert a `<user-card>` via innerHTML or `document.createElement`, LegoDOM detects it and "snaps" it to life immediately.
+1.  **Registers Blocks**: It ensures all blocks are registered as Custom Elements so the browser can detect them.
 2.  **Binds Global State**: It ensures `Lego.globals` is reactive and linked to the DOM.
 3.  **Starts the Render Loop**: It initializes the update batcher that efficiently re-renders blocks when state changes.
 

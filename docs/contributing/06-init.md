@@ -148,27 +148,15 @@ await loadStylesheets();
 
 This is handled by `src/core/stylesheets.js` and uses the Constructable Stylesheets API for performance.
 
-### 3. Setting up the "Eyes" (`MutationObserver`)
+### 3. Setting up the Registry (`customElements`)
 
-This is the most critical part of the initialization. LegoDOM creates a `MutationObserver`:
+This is the most critical part of the initialization. LegoDOM registers your blocks as Native Web Components:
 
-```js
-const observer = new MutationObserver(m => m.forEach(r => {
-  r.addedNodes.forEach(checkAndLoad);
-  r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
-}));
-observer.observe(root, { childList: true, subtree: true });
-```
-
-- **What it does**: It watches the root element (usually `document.body`) for any changes to the HTML structure.
-    
-- **The Config**: It observes `{ childList: true, subtree: true }`. This means it sees if an element is added to the body, or if an element is added deep inside another element.
-    
-- **The Reaction**:
-    
-    -   If a new node is **added**, it calls `checkAndLoad(n)` (which calls `snap(n)` from `src/core/lifecycle.js`) to turn that raw HTML into a living block.
-        
-    -   If a node is **removed**, it calls `unsnap(n)` (also from `src/core/lifecycle.js`) to clean up memory and fire lifecycle hooks.
+- **What it does**: It tells the browser that whenever it sees a tag like `<user-card>`, it should treat it as a special `LegoBlock`.
+- **The Mechanism**: It calls `customElements.define('user-card', HTMLElement)`. 
+- **The Reaction**: 
+    - When a block is **added** (via HTML, JS, or `b-if`), the browser triggers `connectedCallback()` which calls `snap()`.
+    - When a block is **removed**, the browser triggers `disconnectedCallback()` which calls `unsnap()`.
         
 
 ### 4. Auto-Discovery & Lazy Loading (v2.0+)

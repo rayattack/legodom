@@ -38,7 +38,7 @@ Follow the path of a block from definition to pixels:
 4.  [**Reactivity**](./04-reactivity) - Proxy-based state management
 5.  [**Caching**](./05-caching) - LRU expression cache
 6.  [**Init**](./06-init) - How LegoDOM wakes up
-7.  [**Observer**](./07-observer) - MutationObserver integration
+7.  [**Registry**](./07-observer) - Native Web Components Integration
 8.  [**Snap**](./08-snap) - The lifecycle & Shadow DOM
 9.  [**Diffing**](./09-diffing) - No VDOM? No problem
 10. [**Studs**](./10-studs) - The three-tier data system

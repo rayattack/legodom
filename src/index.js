@@ -60,27 +60,36 @@ const Lego = {
       config.onError(e, 'define', tagName);
     }
 
-    document.querySelectorAll(tagName).forEach(snap);
-
-    // HMR Support: Find and reload existing instances
-    [...activeBlocks].forEach(block => {
-      if (block.tagName.toLowerCase() === tagName.toLowerCase()) {
-        if (config.debug) console.log('[Lego HMR] Reloading', tagName);
-        unsnap(block);
-        snap(block);
-      }
-    });
-
-    activeBlocks.forEach(block => {
-      if (block._legoShadow) {
-        block._legoShadow.querySelectorAll(tagName).forEach(instance => {
-          if (!getPrivateData(instance).snapped) {
-            if (config.debug) console.log('[Lego Debug] Lazy-initializing', tagName, 'in', block.tagName);
-            snap(instance);
+    if (!customElements.get(tagName)) {
+      try {
+        customElements.define(tagName, class extends HTMLElement {
+          connectedCallback() {
+            // Defer if not yet registered (shouldn't happen via Lego.block, but good safety)
+            if (registry[tagName]) snap(this);
+          }
+          disconnectedCallback() {
+            unsnap(this);
           }
         });
+      } catch (e) {
+        console.warn(`[Lego] Failed to register web component ${tagName}:`, e);
       }
-    });
+    } else {
+      // HMR or Re-definition: manually upgrade existing instances
+      document.querySelectorAll(tagName).forEach(el => {
+        unsnap(el);
+        snap(el);
+      });
+      // Also catch instances in shadow roots
+      activeBlocks.forEach(block => {
+        if (block._legoShadow) {
+          block._legoShadow.querySelectorAll(tagName).forEach(instance => {
+            unsnap(instance);
+            snap(instance);
+          });
+        }
+      });
+    }
   },
   getActiveBlocksCount: () => activeBlocks.size,
   getLegos: () => Object.keys(registry),
@@ -131,37 +140,13 @@ const Lego = {
       registry[t.getAttribute('b-id')] = t;
     });
 
-    const checkAndLoad = (n) => {
-      if (n.nodeType !== Node.ELEMENT_NODE) return;
-      snap(n);
-      const tagName = n.tagName.toLowerCase();
-      if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
-        const result = config.loader(tagName);
-        if (result) {
-          const promise = (typeof result === 'string')
-            ? fetch(result).then(r => r.text())
-            : result;
-
-          Promise.resolve(promise)
-            .then(legoFile => Lego.defineLegoFile(legoFile, `${tagName}.lego`))
-            .catch(e => console.error(`[Lego] Failed to load ${tagName}:`, e));
-        }
-      }
-    };
-
-    const observer = new MutationObserver(m => m.forEach(r => {
-      r.addedNodes.forEach(checkAndLoad);
-      r.removedNodes.forEach(n => n.nodeType === Node.ELEMENT_NODE && unsnap(n));
-    }));
-    observer.observe(root, { childList: true, subtree: true });
-
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-    checkAndLoad(root);
-    while (walker.nextNode()) checkAndLoad(walker.currentNode);
-
-    root._studs = globalState;
-    bind(root, root);
-    render(root);
+    // Root-level hydration (if root itself is a block or has logic)
+    if (root._studs) bind(root, root);
+    else {
+      root._studs = globalState;
+      bind(root, root);
+      render(root);
+    }
 
     if (options.studio) {
       if (!registry['lego-studio']) {
