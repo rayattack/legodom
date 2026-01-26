@@ -29,15 +29,15 @@ export const snap = (el) => {
     applyStyles(el);
 
     // TIER 1: Logic from Lego.block (Lego File)
-    // TIER 2: Logic from the <template b-data="..."> attribute
-    // TIER 3: Logic from the <my-comp b-data="..."> tag
+    // TIER 2: Logic from the <template b-logic="..."> attribute
+    // TIER 3: Logic from the <my-comp b-logic="..."> tag
     // SCOPED PROPS: Use parent block state as scope for instance logic evaluation
     const parentBlock = findAncestor(el, '*') || findAncestor(el.getRootNode().host, '*');
     const parentScope = parentBlock && parentBlock.state ? parentBlock.state : {};
 
     const scriptLogic = legoFileLogic.get(name) || {};
-    const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || templateNode.getAttribute('b-data') || '{}');
-    const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}', parentScope);
+    const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || '{}');
+    const instanceLogic = parseJSObject(el.getAttribute('b-logic') || '{}', parentScope);
 
     // Note: We need to access $go and $route. We assume they are attached to globals or we import them.
     // Since globals is the shared object, we should reference accessors there.
@@ -76,6 +76,7 @@ export const snap = (el) => {
     bind(shadow, el);
     activeBlocks.add(el);
     render(el);
+    el.setAttribute('b-id', name);
 
     // Deeply initialize all nested components
     const nestedComponents = shadow.querySelectorAll('*');

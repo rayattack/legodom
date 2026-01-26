@@ -58,10 +58,25 @@ export const safeEval = (expr, context, throwError = true) => {
 
 export const parseJSObject = (raw, scope = {}) => {
   if (!raw || raw.trim() === '{}') return {};
+
+  const attemptParse = (str) => {
+    return (new Function('scope', 'global', `with(global) { with(scope) { return (${str}); } }`))(scope, globals);
+  };
+
   try {
-    return (new Function('scope', 'global', `with(global) { with(scope) { return (${raw}); } }`))(scope, globals);
+    return attemptParse(raw);
   } catch (e) {
-    console.error(`[Lego] Error parsing b-data/b-logic: "${raw.length > 80 ? raw.slice(0, 80) + '...' : raw}"`, e);
+    // Retry with braces if it looks like a property list (and didn't start with brace)
+    const trimmed = raw.trim();
+    if (!trimmed.startsWith('{') && trimmed.includes(':')) {
+      try {
+        return attemptParse(`{${raw}}`);
+      } catch (e2) {
+        // Fall through to original error handling
+      }
+    }
+
+    console.error(`[Lego] Error parsing b-logic: "${raw.length > 80 ? raw.slice(0, 80) + '...' : raw}"`, e);
     return {};
   }
 };

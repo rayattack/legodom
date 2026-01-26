@@ -11,7 +11,10 @@ export const loadStylesheets = async () => {
   const loadPromises = Object.entries(styleConfig).map(async ([key, urls]) => {
     const sheets = await Promise.all(urls.map(async (url) => {
       try {
+        if (url instanceof CSSStyleSheet) return url;
+
         const response = await fetch(url);
+        if (!response.ok) throw new Error(`Status ${response.status}`);
         const cssText = await response.text();
         const sheet = new CSSStyleSheet();
         await sheet.replace(cssText);

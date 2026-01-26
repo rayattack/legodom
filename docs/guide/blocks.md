@@ -47,6 +47,8 @@ Define blocks directly in your HTML with `<template b-id>`:
 <!-- Uses the default "Default User" -->
 <hello-world></hello-world>
 
+> **Note:** Once initialized, the block will automatically receive a `b-id="hello-world"` attribute. This is useful for [preventing FOUC](/guide/faq#how-do-i-prevent-flash-of-unstyled-content-fouc).
+
 <!-- Overrides the default with "Alice" -->
 <hello-world b-logic="{ name: 'Alice' }"></hello-world>
 ```

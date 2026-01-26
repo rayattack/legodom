@@ -209,6 +209,32 @@ Lego.init(document.body, {
 CSS files **must** be placed in `/public/` when using Vite. Placing them in `src/` will cause Vite to serve them as JavaScript modules, which will break stylesheet loading.
 :::
 
+### How do I prevent Flash of Unstyled Content (FOUC)?
+
+If you see unstyled content briefly before your styles load (especially with external stylesheets like Tailwind), use the **Visibility Hatch**.
+
+LegoDOM automatically adds a `b-id` attribute to every block once it is fully initialized (Shadow DOM attached, styles applied, rendered). You can use this to hide blocks until they are ready:
+
+**In your global CSS (e.g., `index.html`):**
+
+```css
+/* Hide only Undefined Custom Elements that haven't been snapped yet */
+:not(:defined):not([b-id]) {
+  opacity: 0 !important;
+  visibility: hidden;
+}
+
+/* Ensure defined elements are visible */
+[b-id] {
+  opacity: 1 !important;
+  visibility: visible;
+  transition: opacity 0.2s ease-in;
+  display: block;
+}
+```
+
+This ensures a smooth fade-in for your application.
+
 ---
 
 ## Build & Development
