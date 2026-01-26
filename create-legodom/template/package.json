@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lego-dom": "^2.0.4"
+    "lego-dom": "^2.1.0"
   },
   "devDependencies": {
     "vite": "^5.0.0",
