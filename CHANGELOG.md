@@ -1,6 +1,44 @@
 # Changelog
 
-## [2.1.2] - 2026-01-26
+## [2.1.4] - 2026-01-26
+
+**Major Architecture Upgrade: Native Web Components**
+
+This release marks a significant shift in how LegoDOM detects and upgrades blocks, moving from a global `MutationObserver` to standard `customElements` definitions.
+
+**Core Changes:**
+- **Dropped**: The Global `MutationObserver` has been removed.
+- **Added**: `Lego.block` now registers blocks using `customElements.define`.
+- **Impact**: 
+    - Blocks are now detected instantly by the browser.
+    - **Fixes**: "Blank Page" issues when `b-if` re-inserts blocks inside Shadow DOMs.
+    - **Fixes**: Blocks inside `innerHTML` or `ShadowRoot` work automatically without manual scanning.
+
+**New Feature: Manifest API (for Server Blocks in Shadow DOM)**
+Because standard browser APIs cannot auto-detect *unknown* tags inside Shadow DOMs, we introduced a Manifest API to pre-register them.
+
+```js
+Lego.init({
+  manifest: [
+    { base: '/api/', legos: ['user-widget'] }
+  ]
+});
+```
+- **Pre-Registration**: Maps unknown tags to URLs so `customElements` works everywhere.
+- **Lazy Loading**: Code is only fetched when the tag appears in the DOM.
+- **Shadow Support**: Works perfectly inside nested Shadow Roots.
+
+**Security Improvements:**
+- **Secure Fetching**: Added support for `credentials: 'include'` to manifest groups.
+- **Dynamic Headers**: Added support for runtime header resolution (e.g. `'Authorization': () => token`).
+- **Safety**: Explicitly discouraged storing secrets in `localStorage` (`$db`).
+
+**Legacy Support:**
+- **Auto-Discovery**: The old "scan for unknown tags" behavior is preserved as an optional fallback (via a lightweight Observer) strictly for users providing a `loader` without a manifest.
+
+
+## [2.1.3] - 2026-01-26
+## [2.1.2] - unbuilt [bumped to 2.1.3]
 ## [2.1.1] - unbuilt [bumped to 2.1.2]
 Welcome to **LegoDOM v2**! This release represents a massive architectural shift to modular files from large sinfle iife
 

@@ -21,8 +21,77 @@ When you call `init`, LegoDOM does three critical things:
 ### Options
 
 -   `styles`: A map of shared stylesheets (see [Styling](/guide/blocks#styling-the-host)).
--   `loader`: An async function to dynamically fetch and compile blocks that haven't been loaded yet.
+-   `manifest`: A configuration for pre-registering blocks (see [Manifest Syntax](#manifest-syntax) below).
+-   `loader`: An async function to dynamically fetch blocks NOT in the manifest.
 -   `studio`: Enables the visual development environment.
+
+### Manifest Syntax
+
+The `manifest` option powers the lazy-loading of "Server Blocks". It accepts 3 formats:
+
+#### 1. Group Array (Recommended)
+Best for mixing multiple sources (e.g. backend API + static files).
+
+```js
+manifest: [
+  // Group 1: Backend API (No extension)
+  // Fetches: /api/blocks/user-widget
+  {
+    base: '/api/blocks/',
+    legos: ['user-widget', 'data-table'] 
+  },
+  
+  // Group 2: Static Files (With .lego extension)
+  // Fetches: /assets/nav-bar.lego
+  {
+    base: '/assets/',
+    suffix: true, 
+    legos: ['nav-bar', 'footer'] 
+  },
+
+  // Group 3: Secure Mappings
+  {
+    credentials: 'include', 
+    headers: { 
+      'Authorization': () => `Bearer ${Lego.globals.token}`, // Dynamic Function
+      'X-Session': '$globals.sessionId' // Memory Lookup
+    },
+    map: {
+      'server-time': 'POST:/api/time' 
+    }
+  }
+]
+```
+
+#### 2. Single Object (Protected Manifest)
+
+```js
+manifest: {
+  url: '/secure-manifest.json',
+  // Credentials are favored over token headers for security
+  credentials: 'include' 
+}
+```
+
+> [!CAUTION]
+> **Security Warning**: Avoid storing sensitive tokens in LocalStorage (`$db`). Any script on the page can access them. Prefer `credentials: 'include'` (HttpOnly Cookies) which are invisible to JavaScript, or store short-lived tokens in memory (`$globals`).
+
+
+#### 3. Remote JSON
+Keep your bundle small by loading the config from a file.
+
+```js
+manifest: '/lego.manifest.json'
+```
+
+**Properties:**
+- `base`: (String) URL prefix. Defaults to `""`.
+- `suffix`: (Boolean | String) Extention to append. `true` adds `.lego`.
+- `legos`: (Array<String>) List of tag names to generate URLs for.
+- `map`: (Object) Explicit `tag: url` pairs.
+- `headers`: (Object) Dynamic headers (`Function`, `$globals.key`).
+- `credentials`: (String) Fetch mode (`include`, `omit`, `same-origin`).
+
 
 ## The Registry: `Lego.block()`
 

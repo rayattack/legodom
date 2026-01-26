@@ -159,34 +159,41 @@ This is the most critical part of the initialization. LegoDOM registers your blo
     - When a block is **removed**, the browser triggers `disconnectedCallback()` which calls `unsnap()`.
         
 
-### 4. Auto-Discovery & Lazy Loading (v2.0+)
+### 4. Manifest (Pre-Registration)
 
-The `checkAndLoad` function enables server-side block loading:
+To support lazy-loading inside Shadow DOMs without an Observer, you can pre-register blocks using a manifest. This tells LegoDOM: "User-Card exists at this URL. If you see it, fetch it."
 
 ```js
-const checkAndLoad = (n) => {
-  if (n.nodeType !== Node.ELEMENT_NODE) return;
-  snap(n);
-  const tagName = n.tagName.toLowerCase();
-  if (tagName.includes('-') && !registry[tagName] && config.loader && !activeBlocks.has(n)) {
-    const result = config.loader(tagName);
-    if (result) {
-      // Fetch and compile the block
-      Promise.resolve(result)
-        .then(legoFile => Lego.defineLegoFile(legoFile, tagName + '.lego'))
-        .catch(e => console.error(`[Lego] Failed to load ${tagName}:`, e));
-    }
-  }
+Lego.init({
+  manifest: [
+    {
+      base: '/api/components/',
+      suffix: true, // Appends .lego
+      legos: ['user-card', 'nav-bar'] 
+    },
+    {
+      map: {
+        'server-time': 'POST:/api/time'
+      }
+    } 
+  ]
+});
+```
+
+- **Efficiency**: The browser handles detection via `customElements`. LegoDOM only fetches the code when the element is actually used.
+- **Shadow DOM**: Because the tag is known to the browser (registered as a lazy custom element), it works perfectly inside Shadow Roots.
+
+### 5. Auto-Discovery (Fallback)
+
+If you don't use a manifest, you can validly use `config.loader` with the Auto-Discovery observer.
+
+```js
+const discover = (n) => {
+// ...
 };
 ```
 
-If `snap(n)` encounters an unknown block and `config.loader` is defined, it:
-1. Calls the loader function with the tag name
-2. Fetches the `.lego` file (or receives it directly)
-3. Compiles it using `defineLegoFile()` from `src/core/parser.js`
-4. Retries snapping the element
-
-This enables the "HTMX+Blocks" pattern and server-side rendering.
+> **Note**: The `MutationObserver` is **ONLY** created if you provide a `loader` in initialization options. If you only use `manifest` (or standard registration), LegoDOM runs with **zero** observers for maximum performance.
 
 ### 5. The "First Snap"
 

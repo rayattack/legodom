@@ -136,16 +136,194 @@ const Lego = {
       }
     }
 
+    // 5. Register inline templates
     document.querySelectorAll('template[b-id]').forEach(t => {
-      registry[t.getAttribute('b-id')] = t;
+      const tagName = t.getAttribute('b-id');
+      registry[tagName] = t;
+
+      if (!customElements.get(tagName)) {
+        customElements.define(tagName, class extends HTMLElement {
+          connectedCallback() {
+            if (registry[tagName]) snap(this);
+          }
+          disconnectedCallback() {
+            unsnap(this);
+          }
+        });
+      }
     });
 
-    // Root-level hydration (if root itself is a block or has logic)
-    if (root._studs) bind(root, root);
-    else {
-      root._studs = globalState;
-      bind(root, root);
-      render(root);
+    // 6. Process Manifest (Pre-registration for Shadow DOM support)
+    const resolveHeaders = (headers) => {
+      if (!headers) return {};
+      const resolved = {};
+      Object.entries(headers).forEach(([key, val]) => {
+        if (typeof val === 'function') {
+          resolved[key] = val();
+        } else if (typeof val === 'string' && val.startsWith('$db.')) {
+          // $db.auth.token
+          const path = val.slice(4);
+          // Simple get from persistence layer
+          resolved[key] = Lego.db(path).get();
+        } else if (typeof val === 'string' && val.startsWith('$globals.')) {
+          // $globals.user.token
+          const keyPath = val.slice(9);
+          resolved[key] = globalsTarget[keyPath];
+        } else {
+          resolved[key] = val;
+        }
+      });
+      return resolved;
+    };
+
+    const registerLazy = (tagName, url, config = {}) => {
+      if (customElements.get(tagName)) return;
+
+      customElements.define(tagName, class extends HTMLElement {
+        async connectedCallback() {
+          if (registry[tagName]) {
+            snap(this);
+            return;
+          }
+
+          if (!Lego._fetching) Lego._fetching = new Set();
+          if (Lego._fetching.has(tagName)) return;
+          Lego._fetching.add(tagName);
+
+          try {
+            const method = url.startsWith('POST:') ? 'POST' : 'GET';
+            const cleanUrl = url.replace(/^POST:/, '');
+
+            // Resolve headers at runtime (just-in-time)
+            const headers = resolveHeaders(config.headers);
+
+            const fetchOpts = {
+              method,
+              headers,
+              credentials: config.credentials
+            };
+
+            const req = await fetch(cleanUrl, fetchOpts);
+            const content = await req.text();
+
+            Lego.defineLegoFile(content, `${tagName}.lego`);
+
+            if (registry[tagName]) snap(this);
+          } catch (e) {
+            console.error(`[Lego] Failed to load manifest block ${tagName}:`, e);
+          } finally {
+            Lego._fetching.delete(tagName);
+          }
+        }
+        disconnectedCallback() {
+          unsnap(this);
+        }
+      });
+    };
+
+    if (options.manifest) {
+      let m = options.manifest;
+
+      // 1. Check for Object with URL (Auth Manifest)
+      if (m.url && typeof m.url === 'string') {
+        try {
+          const headers = resolveHeaders(m.headers);
+          const r = await fetch(m.url, { headers, credentials: m.credentials });
+          m = await r.json();
+        } catch (e) {
+          console.error('[Lego] Failed to load manifest:', e);
+          m = [];
+        }
+      }
+      // 2. Check for String URL (Public Manifest)
+      else if (typeof m === 'string') {
+        try {
+          const r = await fetch(m);
+          m = await r.json();
+        } catch (e) {
+          console.error('[Lego] Failed to load manifest:', e);
+          m = [];
+        }
+      }
+
+      // Normalize to array
+      const groups = Array.isArray(m) ? m : [m];
+
+      for (const group of groups) {
+        const base = group.base || '';
+        const suffix = group.suffix === true ? '.lego' : (group.suffix || '');
+
+        const config = {
+          headers: group.headers || {},
+          credentials: group.credentials
+        };
+
+        // 1. Array style: legos: ['name']
+        if (group.legos) {
+          group.legos.forEach(name => {
+            registerLazy(name, `${base}${name}${suffix}`, config);
+          });
+        }
+        // 2. Map style: map: { 'name': 'url' }
+        if (group.map) {
+          Object.entries(group.map).forEach(([name, url]) => {
+            const fullUrl = url.match(/^https?:|^\//) ? url : `${base}${url}`;
+            registerLazy(name, fullUrl, config);
+          });
+        }
+      }
+    }
+
+    // Auto-Discovery: Watch for unknown tags to lazy-load (HTMX-style / Server Blocks)
+    if (config.loader) {
+      const discover = (n) => {
+        if (n.nodeType !== Node.ELEMENT_NODE) return;
+        const tagName = n.tagName.toLowerCase();
+        if (tagName.includes('-') && !registry[tagName] && !activeBlocks.has(n)) {
+          // Check if we are already fetching this tag to avoid dupes
+          if (Lego._fetching && Lego._fetching.has(tagName)) return;
+
+          if (!Lego._fetching) Lego._fetching = new Set();
+          Lego._fetching.add(tagName);
+
+          const result = config.loader(tagName);
+          if (result) {
+            const promise = (typeof result === 'string')
+              ? fetch(result).then(r => r.text())
+              : result;
+
+            Promise.resolve(promise)
+              .then(legoFile => {
+                Lego.defineLegoFile(legoFile, `${tagName}.lego`);
+                Lego._fetching.delete(tagName);
+              })
+              .catch(e => {
+                console.error(`[Lego] Failed to load ${tagName}:`, e);
+                Lego._fetching.delete(tagName);
+              });
+          }
+        }
+        // Recursively check children for other unknown blocks
+        if (n.children.length > 0) {
+          // Use lightweight iteration
+          let child = n.firstElementChild;
+          while (child) {
+            discover(child);
+            child = child.nextElementSibling;
+          }
+        }
+      };
+
+      const discoveryObserver = new MutationObserver(m => m.forEach(r => {
+        r.addedNodes.forEach(discover);
+      }));
+
+      // Observe with subtree to catch deep injections
+      discoveryObserver.observe(root, { childList: true, subtree: true });
+
+      // Initial scan
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      while (walker.nextNode()) discover(walker.currentNode);
     }
 
     if (options.studio) {

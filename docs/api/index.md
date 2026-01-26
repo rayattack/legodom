@@ -26,7 +26,9 @@ Lego requires:
 - Shadow DOM v1
 - ES6 Proxy
 - Template Literals
-- Native Web Components (Automatic Detection)
+- Native Web Components (Lifecycle)
+- Manifest API (Lazy Loading)
+- Auto-Discovery Observer (Optional)
 
 Supported browsers:
 - Chrome 63+

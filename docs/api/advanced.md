@@ -37,7 +37,7 @@ Lego.snap(element)
 - **Development tools** - Building block preview tools (like Lego Studio)
 - **Custom loaders** - Implementing alternative block loading strategies
 
-**You typically DON'T need this** - LegoDOM's Native Web Component detection automatically initializes blocks added to the DOM.
+**Note**: While LegoDOM primarily uses Native Web Components, it will start a lightweight `MutationObserver` for **Auto-Discovery** if you provide a `loader`. This watches for unknown tags to fetch from the server.
 
 ### Example: Dynamic Block Preview
 
