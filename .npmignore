@@ -10,4 +10,4 @@ tests/
 create-legodom/
 www/
 cdn.html
-unpublish_versions.sh
+unpublish.sh

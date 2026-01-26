@@ -1,7 +1,25 @@
 # Changelog
 
-## [2.1.1] - 2026-01-23
-Welcome to **LegoDOM v2**! This release represents a massive architectural shift to align the codebase and mental model with the "Lego" metaphor. We have moved away from Vue-centric terminology ("SFC", "Component", "Data") to Lego-centric terminology ("Lego File", "Block", "Logic").
+## [2.1.1] - 2026-01-26
+Welcome to **LegoDOM v2**! This release represents a massive architectural shift to modular files from large sinfle iife
+
+### Features
+- Added runtime methods to `$db` for one-off persistence operations:
+  - `$db(key).set(value, debounce?)` - Write to localStorage and trigger reactivity
+  - `$db(key).get()` - Read current value from localStorage
+  - `$db(key).delete()` - Remove key and notify all bindings
+- Made `$db` available in template expressions (event handlers, bindings, etc.)
+- Updated FOUC prevention documentation to exclude `lego-router` from hiding rules
+
+### Fixes
+- **BREAKING**: Renamed `$db.save()` to `$db.set()` for better API consistency with JavaScript `Map`
+- Fixed `$db` not triggering reactivity for local bindings in the same tab when values changed
+- Fixed FOUC CSS accidentally hiding `lego-router` container elements
+- Updated `create-legodom` template to use `lego-dom@^2.1.0`
+
+### Documentation
+- Added comprehensive runtime API documentation to `docs/guide/persistence.md`
+- Updated FAQ with corrected FOUC prevention CSS pattern
 
 
 ### Features
