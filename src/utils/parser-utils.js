@@ -20,7 +20,10 @@ export function parseLego(content, filename = 'block.lego') {
     stylesAttr: '',
     cascadeAttr: '',
     errorAttr: '',
-    blockName: deriveBlockName(filename)
+    blockName: deriveBlockName(filename),
+    hasTemplate: false,
+    hasScript: false,
+    hasStyle: false
   };
 
   let remaining = content;
@@ -60,6 +63,7 @@ export function parseLego(content, filename = 'block.lego') {
     const innerContent = remaining.slice(contentStart, contentEnd);
 
     if (tagName === 'template') {
+      result.hasTemplate = true;
       result.template = innerContent.trim();
       // Extract b-stylesheets attribute if present
       const bStylesMatch = attrs.match(/b-stylesheets=["']([^"']+)["']/);
@@ -77,12 +81,14 @@ export function parseLego(content, filename = 'block.lego') {
         result.errorAttr = bErrorMatch[1];
       }
     } else if (tagName === 'script') {
+      result.hasScript = true;
       result.script = innerContent.trim();
       const langMatch = attrs.match(/lang=["']([^"']+)["']/);
       if (langMatch) {
         result.scriptLang = langMatch[1];
       }
     } else if (tagName === 'style') {
+      result.hasStyle = true;
       result.style = innerContent.trim();
     }
 
@@ -146,7 +152,7 @@ function escapeTemplate(str) {
 export function validateLego(parsed) {
   const errors = [];
 
-  if (!parsed.template && !parsed.script && !parsed.style) {
+  if (!parsed.hasTemplate && !parsed.hasScript && !parsed.hasStyle) {
     errors.push('Block must have at least one section: <template>, <script>, or <style>');
   }
 

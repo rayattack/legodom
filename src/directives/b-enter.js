@@ -14,7 +14,7 @@ export const bEnter = {
     const observer = new IntersectionObserver((entries, io) => {
       const entry = entries[0];
       if (entry.isIntersecting) {
-        safeEval(binding.expr, { state });
+        safeEval(binding.expr, { state, self: binding.node });
         if (binding.modifiers.includes('once')) {
           io.disconnect();
           binding.observer = null;

@@ -122,6 +122,10 @@ export default function legoPlugin(options = {}) {
         const filePath = id.split('?')[0];
         const fs = await import('fs');
         const content = fs.readFileSync(filePath, 'utf-8');
+
+        // [FIX] Return empty module for empty files to prevent validation error
+        if (!content.trim()) return 'export default "";';
+
         const filename = path.basename(filePath);
 
         const parsed = parseLego(content, filename);

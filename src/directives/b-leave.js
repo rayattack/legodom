@@ -12,7 +12,7 @@ export const bLeave = {
       const entry = entries[0];
       if (entry.isIntersecting) binding.activated = true;
       if (!entry.isIntersecting && binding.activated) {
-        safeEval(binding.expr, { state });
+        safeEval(binding.expr, { state, self: binding.node });
         if (binding.modifiers.includes('once')) {
           io.disconnect();
           binding.observer = null;
