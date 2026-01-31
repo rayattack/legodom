@@ -191,14 +191,14 @@ const updateNodeBindings = (root, scope) => {
   const processNode = (node) => {
     if (node.nodeType === Node.TEXT_NODE) {
       if (node._tpl === undefined) node._tpl = node.textContent;
-      const out = node._tpl.replace(createRegex(), (_, k) => safeEval(k.trim(), { state: scope, global: globals, self: node }) ?? '');
+      const out = node._tpl.replace(createRegex(), (_, k) => safeEval(k.trim(), { state: scope, global: globals, self: node }, false) ?? '');
       if (node.textContent !== out) node.textContent = out;
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const [start] = getDelimiters();
       [...node.attributes].forEach(attr => {
         if (attr._tpl === undefined) attr._tpl = attr.value;
         if (attr._tpl.includes(start)) {
-          const out = attr._tpl.replace(createRegex(), (_, k) => safeEval(k.trim(), { state: scope, global: globals, self: node }) ?? '');
+          const out = attr._tpl.replace(createRegex(), (_, k) => safeEval(k.trim(), { state: scope, global: globals, self: node }, false) ?? '');
           if (attr.value !== out) {
             attr.value = out;
             if (attr.name === 'class') node.className = out;
@@ -246,11 +246,11 @@ export const render = (el) => {
 
       // Legacy/Internal binding types
       if (b.type === 'text') {
-        const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }) ?? '');
+        const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
         if (b.node.textContent !== out) b.node.textContent = out;
       }
       if (b.type === 'attr') {
-        const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }) ?? '');
+        const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
         if (b.node.getAttribute(b.attrName) !== out) {
           b.node.setAttribute(b.attrName, out);
           if (b.attrName === 'class') b.node.className = out;
