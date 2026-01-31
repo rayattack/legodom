@@ -10,7 +10,9 @@ export const findErrorBoundary = (el) => {
     // 1. Check instance-level attribute (override)
     const instanceError = current.getAttribute && current.getAttribute('b-error');
     if (instanceError) {
-      return { errorTag: instanceError, targetElement: current };
+      if (instanceError.toLowerCase() !== el.tagName.toLowerCase()) {
+        return { errorTag: instanceError, targetElement: current };
+      }
     }
 
     // 2. Check template-level attribute (default)
@@ -19,7 +21,9 @@ export const findErrorBoundary = (el) => {
     if (templateNode) {
       const templateError = templateNode.getAttribute('b-error');
       if (templateError) {
-        return { errorTag: templateError, targetElement: current };
+        if (templateError.toLowerCase() !== el.tagName.toLowerCase()) {
+          return { errorTag: templateError, targetElement: current };
+        }
       }
     }
 
@@ -56,25 +60,24 @@ export const renderErrorBlock = (errorTag, crashedEl, err) => {
     }
 
     // Create the error block
+    // Create the error block
     const errorBlock = document.createElement(errorTag);
+
+    // Pre-seed the state to avoid double-render and ensure $error exists on first render
+    errorBlock.$initialState = {
+      $error: {
+        message: err.message,
+        stack: err.stack,
+        component: crashedEl.tagName.toLowerCase()
+      }
+    };
 
     // Append to crashed element
     const target = crashedEl.shadowRoot || crashedEl;
     target.appendChild(errorBlock);
 
-    // Snap the error block first to initialize its state
+    // Snap the error block (will render immediately with $error available)
     _snap(errorBlock);
-
-    // Inject error information into the error block's state (after snapping)
-    if (errorBlock._studs) {
-      errorBlock._studs.$error = {
-        message: err.message,
-        stack: err.stack,
-        component: crashedEl.tagName.toLowerCase()
-      };
-      // Trigger a render to update the error display
-      _render(errorBlock);
-    }
   } catch (renderErr) {
     // If error rendering fails, fall back to console
     console.error('[Lego] Error boundary failed to render:', renderErr);

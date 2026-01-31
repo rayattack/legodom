@@ -57,6 +57,12 @@ export const snap = (el) => {
     mergeDescriptors(templateLogic, baseState);
     mergeDescriptors(instanceLogic, baseState);
 
+    // Support injection of initial state (e.g. from error boundaries)
+    if (el.$initialState) {
+      mergeDescriptors(el.$initialState, baseState);
+      delete el.$initialState; // Cleanup
+    }
+
     el._studs = reactive(baseState, el);
 
     Object.defineProperty(el, 'state', {
