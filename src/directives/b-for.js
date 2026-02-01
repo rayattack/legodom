@@ -26,7 +26,8 @@ export const bFor = {
         itemName: match[1],
         listName: match[2].trim(),
         keyPath: node.getAttribute('b-key') || null,
-        template: node.cloneNode(true)
+        template: node.cloneNode(true),
+        terminal: true
       };
     }
   },

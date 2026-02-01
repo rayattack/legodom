@@ -153,6 +153,7 @@ export const scanForBindings = (container) => {
 
     if (node.nodeType === Node.ELEMENT_NODE) {
       // Dynamic Directive Scanning
+      let isTerminal = false;
       for (const [name, implementation] of Object.entries(directives)) {
         if (implementation.scan) {
           const result = implementation.scan(node, {
@@ -161,9 +162,14 @@ export const scanForBindings = (container) => {
             pendingOperations,
             current
           });
-          if (result) bindings.push(result);
+          if (result) {
+            bindings.push(result);
+            if (result.terminal) isTerminal = true;
+          }
         }
       }
+
+      if (isTerminal) continue;
 
       const [start] = getDelimiters();
       [...node.attributes].forEach(attr => {
