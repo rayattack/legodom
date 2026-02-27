@@ -26,7 +26,7 @@ export const snap = (el) => {
   // TIER 2: Template-level logic
   const templateLogic = parseJSObject(
     templateNode.getAttribute('b-logic') || 
-    templateNode.getAttribute('b-data') || '{}'
+    templateNode.getAttribute('b-logic') || '{}'
   );
 
   // TIER 3: Instance-level logic (scoped to parent)
@@ -34,7 +34,7 @@ export const snap = (el) => {
   const parentScope = parentBlock?.state || {};
   const instanceLogic = parseJSObject(
     el.getAttribute('b-logic') || 
-    el.getAttribute('b-data') || '{}',
+    el.getAttribute('b-logic') || '{}',
     parentScope
   );
 

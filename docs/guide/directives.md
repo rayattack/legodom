@@ -371,8 +371,6 @@ Initialize block state (logic).
 <my-block b-logic="{ count: 0, name: 'Alice' }"></my-block>
 ```
 
-> **Note:** `b-data` is supported as a legacy alias for `b-logic`.
-
 ### With Complex Data
 
 ```html

@@ -35,16 +35,16 @@ export const snap = (el) => {
     // TIER 1: Logic from Lego.block (Lego File)
     const scriptLogic = legoFileLogic.get(name) || {};
 
-    // TIER 2: Logic from the <template b-data="..."> attribute
+    // TIER 2: Logic from the <template b-logic="..."> attribute
     const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || 
-                                        templateNode.getAttribute('b-data') || '{}');
+                                        templateNode.getAttribute('b-logic') || '{}');
 
-    // TIER 3: Logic from the <my-comp b-data="..."> tag
+    // TIER 3: Logic from the <my-comp b-logic="..."> tag
     // Scoped to parent's state for prop access
     const parentBlock = findAncestor(el, '*') || findAncestor(el.getRootNode().host, '*');
     const parentScope = parentBlock?.state || {};
     const instanceLogic = parseJSObject(el.getAttribute('b-logic') || 
-                                       el.getAttribute('b-data') || '{}', parentScope);
+                                       el.getAttribute('b-logic') || '{}', parentScope);
 
     // Build base state with helpers
     const baseState = {
@@ -188,8 +188,8 @@ style.textContent = style.textContent.replace(/\bself\b/g, ':host');
 This is where the block's state is born. LegoDOM merges data from three different sources:
 
 **TIER 1: Script Logic** (highest priority, defined via `Lego.block()` or `.lego` file `<script>`)
-**TIER 2: Template Logic** (defined via `<template b-data="...">`)
-**TIER 3: Instance Logic** (lowest priority, defined via `<my-comp b-data="...">`)
+**TIER 2: Template Logic** (defined via `<template b-logic="...">`)
+**TIER 3: Instance Logic** (lowest priority, defined via `<my-comp b-logic="...">`)
 
 All three are merged into a base state that includes global helpers (`$route`, `$go`, `$parent`, `$emit`), then wrapped in the **`reactive()`** proxy from `src/core/reactive.js`.
 

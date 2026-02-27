@@ -26,16 +26,16 @@ export const snap = (el) => {
   // TIER 2: Logic from the <template b-logic="..."> attribute
   const templateLogic = parseJSObject(
     templateNode.getAttribute('b-logic') || 
-    templateNode.getAttribute('b-data') || '{}'
+    templateNode.getAttribute('b-logic') || '{}'
   );
 
-  // TIER 3: Logic from the <my-comp b-data="..."> tag
+  // TIER 3: Logic from the <my-comp b-logic="..."> tag
   // Scoped to parent's state for prop access
   const parentBlock = findAncestor(el, '*') || findAncestor(el.getRootNode().host, '*');
   const parentScope = parentBlock?.state || {};
   const instanceLogic = parseJSObject(
     el.getAttribute('b-logic') || 
-    el.getAttribute('b-data') || '{}',
+    el.getAttribute('b-logic') || '{}',
     parentScope
   );
 
@@ -95,11 +95,11 @@ This data is stored in the `legoFileLogic` Map (from `src/core/registry.js`).
 ```js
 const templateLogic = parseJSObject(
   templateNode.getAttribute('b-logic') || 
-  templateNode.getAttribute('b-data') || '{}'
+  templateNode.getAttribute('b-logic') || '{}'
 );
 ```
 
-Lego looks at the `<template>` tag itself in your HTML. If you added a `b-logic` or `b-data` attribute there, it overrides the global definition.
+Lego looks at the `<template>` tag itself in your HTML. If you added a `b-logic` or `b-logic` attribute there, it overrides the global definition.
 
 **Example:**
 ```html
@@ -115,7 +115,7 @@ This is useful for creating "variants" of a block template without writing new J
 ```js
 const instanceLogic = parseJSObject(
   el.getAttribute('b-logic') || 
-  el.getAttribute('b-data') || '{}',
+  el.getAttribute('b-logic') || '{}',
   parentScope
 );
 ```
@@ -124,7 +124,7 @@ This is the data attached to the specific tag on your page. This is the "Final W
 
 **Example:**
 ```html
-<user-card b-data="{ name: 'Alice', role: 'superadmin' }"></user-card>
+<user-card b-logic="{ name: 'Alice', role: 'superadmin' }"></user-card>
 ```
 
 Notice that the instance logic is evaluated with `parentScope`. This allows you to pass props from parent blocks:
@@ -132,7 +132,7 @@ Notice that the instance logic is evaluated with `parentScope`. This allows you 
 ```html
 <!-- Parent block with users array -->
 <user-list>
-  <user-card b-data="{ user: users[0] }"></user-card>
+  <user-card b-logic="{ user: users[0] }"></user-card>
 </user-list>
 ```
 
@@ -194,7 +194,7 @@ The key innovation in the tier system is that **Tier 3 (instance) is scoped to t
 ```js
 const parentBlock = findAncestor(el, '*');
 const parentScope = parentBlock?.state || {};
-const instanceLogic = parseJSObject(el.getAttribute('b-data') || '{}', parentScope);
+const instanceLogic = parseJSObject(el.getAttribute('b-logic') || '{}', parentScope);
 ```
 
 This enables prop passing:
@@ -202,11 +202,11 @@ This enables prop passing:
 ```html
 <!-- Parent block -->
 <template b-id="todo-app">
-  <todo-item b-for="item in todos" b-data="{ todo: item }"></todo-item>
+  <todo-item b-for="item in todos" b-logic="{ todo: item }"></todo-item>
 </template>
 ```
 
-The `b-data="{ todo: item }"` expression is evaluated in the context of the parent's state, giving the child access to `item`.
+The `b-logic="{ todo: item }"` expression is evaluated in the context of the parent's state, giving the child access to `item`.
 
 ## Special Helpers Injected
 

@@ -123,8 +123,6 @@ Access state in templates using `[[ ]]`:
 }"></user-card>
 ```
 
-> **Note:** `b-data` is supported as a backward-compatible alias for `b-logic`.
-
 ### Data Merging (The Three Tiers)
 
 LegoDOM uses a sophisticated three-tier merging strategy to initialize block state. This allows you to define defaults at the block level, customize them in templates, and then override them for specific instances.
