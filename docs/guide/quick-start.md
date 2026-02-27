@@ -15,7 +15,7 @@ In HTML `<style>` goes inside `<template></template>` tags but in Lego Files the
 
 
 ```html
-<template b-id="click-counter" b-data="{ message: 'Welcome!', count: 0 }">
+<template b-id="click-counter" b-logic="{ message: 'Welcome!', count: 0 }">
   <style>
     self {
       display: block;
@@ -47,7 +47,7 @@ In HTML `<style>` goes inside `<template></template>` tags but in Lego Files the
 <click-counter></click-counter>
 
 <!-- Overrides message, keeps count=0 -->
-<click-counter b-data="{ message: 'Bienvenido!' }"></click-counter>
+<click-counter b-logic="{ message: 'Bienvenido!' }"></click-counter>
 
 <script src="https://unpkg.com/lego-dom/main.js"></script>
 ```

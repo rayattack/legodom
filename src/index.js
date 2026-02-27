@@ -98,9 +98,13 @@ const Lego = {
   route: (path, tagName, middleware = null) => {
     const paramNames = [];
     let regexPath = path === '*' ? '.*' : path;
-    regexPath = regexPath.replace(/:([^\/]+)/g, (_, name) => {
-      paramNames.push(name);
-      return '([^/]+)';
+    // Escape regex metacharacters in static segments, then replace param placeholders
+    regexPath = regexPath.replace(/:([^\/]+)|[.*+?^${}()|[\]\\]/g, (match, name) => {
+      if (name) {
+        paramNames.push(name);
+        return '([^/]+)';
+      }
+      return '\\' + match;
     });
     routes.push({ path, regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
   },

@@ -15,7 +15,7 @@ Lego includes a **Vite plugin** for developers who prefer **Single File Componen
 ```html
 <!-- user-card.lego -->
 <template>
-  <h1>{{ name }}</h1>
+  <h1>[[ name ]]</h1>
 </template>
 
 <style>

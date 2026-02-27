@@ -9,7 +9,8 @@ const expressionCache = new LRUCache(1000);
 
 export const safeEval = (expr, context, throwError = true) => {
   // 1. Security: Block dangerous patterns
-  if (/\b(function|eval|import|class|module|deploy|constructor|__proto__)\b/.test(expr)) {
+  if (/\b(function|eval|import|class|module|deploy|constructor|__proto__|prototype)\b/.test(expr) ||
+      /\[\s*['"`].*\+|\+.*['"`]\s*\]/.test(expr)) {
     console.warn(`[Lego] Security Warning: Blocked dangerous expression "${expr}"`);
     return undefined;
   }

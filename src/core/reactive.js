@@ -41,8 +41,10 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
       return val;
     },
     set: (t, k, v, receiver) => {
-      // FIX: Pass receiver to Reflect.set to ensure we set property on the correct object 
-      // (e.g. localScope inheriting from state) instead of forcing it onto state.
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        console.warn(`[Lego] Blocked setting dangerous property: "${k}"`);
+        return true;
+      }
       const old = t[k];
       if (config.debug && old !== v) console.log('[Lego Trace] Reactive SET:', k, 'Old:', old, 'New:', v, 'Target:', t);
       const r = Reflect.set(t, k, v, receiver);
