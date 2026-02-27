@@ -51,8 +51,7 @@ Lego.block('my-block', `
   <button @click="count++">Click me</button>
   <p>Count: [[ count ]]</p>
 `, {
-  count: 0,
-  // Note: Lego.block() is also available as an alias
+  count: 0
 });
 ```
 
@@ -128,10 +127,10 @@ Templates define what your block looks like. Use `[[ ]]` for dynamic content:
 
 ### 2. State (Logic)
 
-Each block has reactive state called "logic":
+Each block has reactive state called "logic". Just assign values directly — no `setState` or special syntax needed:
 
 ```js
-{ 
+{
   name: 'Alice',
   age: 25,
   calculateAge() {
@@ -140,24 +139,33 @@ Each block has reactive state called "logic":
 }
 ```
 
+::: tip If You Know React
+In React, you call `setCount(count + 1)` to update state. In LegoDOM, you just write `count++` — the Proxy-based reactivity system detects the change and updates the DOM automatically.
+:::
+
 ### 3. Events
 
-Use `@eventname` to handle events:
+Use `@eventname` to handle events (similar to Vue's `@click` or Svelte's `on:click`):
 
 ```html
 <button @click="handleClick()">Click</button>
 <input @input="handleInput()" />
-<form @submit="handleSubmit(event)">
+<form @submit.prevent="handleSubmit()">
 ```
+
+Modifiers like `.prevent` and `.stop` work inline — no need to call `event.preventDefault()` in your handler.
 
 ### 4. Directives
 
 Special attributes for common patterns:
 
-- `b-show` - Conditional rendering
-- `b-for` - List rendering
-- `b-sync` - Two-way binding
-- `b-logic` - State initialization
+| Directive | Purpose | React/Svelte Equivalent |
+|-----------|---------|------------------------|
+| `b-if` | Add/remove from DOM | `{condition && <El/>}` / `{#if}` |
+| `b-show` | Toggle visibility | `style={{ display: ... }}` / `class:hidden` |
+| `b-for` | List rendering | `.map()` / `{#each}` |
+| `b-sync` | Two-way binding | `value` + `onChange` / `bind:value` |
+| `b-logic` | Pass data to a block | `props` / `export let` |
 
 For extensive information, see [Directives](/guide/directives).
 

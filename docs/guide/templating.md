@@ -85,7 +85,9 @@ Lego automatically escapes HTML to prevent XSS:
 <!-- Renders as: &lt;script&gt;alert("XSS")&lt;/script&gt; -->
 ```
 
-**By default,## Raw HTML
+By default, all interpolated values are HTML-escaped to prevent XSS attacks.
+
+## Raw HTML
 
 To render raw HTML content, use the `b-html` directive.
 

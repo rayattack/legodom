@@ -233,8 +233,6 @@ Called when the block is removed from the DOM.
     }
   }
 }
-  }
-}
 ```
 
 ## Performance Hooks (Metrics)

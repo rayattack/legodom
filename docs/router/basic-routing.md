@@ -48,9 +48,9 @@ Lego.route('*', 'not-found-page');
 
 ```
 
-## Handling Parameters (`$params`)
+## Handling Parameters
 
-When you use a dynamic path like `/user/:id`, LegoDOM automatically parses the URL and makes the data available to the block via the global `$route` object.
+When you use a dynamic path like `/user/:id`, LegoDOM automatically parses the URL and makes the data available to the block via the `$route` object.
 
 In your block template:
 
@@ -59,7 +59,6 @@ In your block template:
   <h1>User Profile</h1>
   <p>Viewing ID: [[ $route.params.id ]]</p>
 </template>
-
 ```
 
 In your block logic:
@@ -69,21 +68,15 @@ mounted() {
   const userId = this.$route.params.id;
   this.fetchUserData(userId);
 }
-
 ```
 
-**or**
-
+In `.lego` files:
 
 ```html
 <!-- profile-page.lego -->
-<style>
-  /* nothing here for now */
-</style>
-
 <template>
   <h1>User Profile</h1>
-  <p>Viewing ID: [[ $params.id ]]</p>
+  <p>Viewing ID: [[ $route.params.id ]]</p>
 </template>
 
 <script>
@@ -95,6 +88,10 @@ export default {
 }
 </script>
 ```
+
+::: tip Shorthand
+`$params` is also available as a shorthand for `$route.params` in templates: `[[ $params.id ]]`. Both work identically.
+:::
 
 ## Summary
 

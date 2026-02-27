@@ -154,16 +154,14 @@ Commonly, you use `$go` inside your block logic:
 ```html
 <script>
   export default {
-    methods: {
-      async loadUser() {
-        const userId = Lego.globals.$route.params.id; // Access in JS logic
-        const user = await fetch(`/api/users/${userId}`).then(r => r.json());
-        this.username = user.name;
-      },
-      openSettings() {
-        // Open settings in the sidebar without losing the main page context
-        this.$go('/settings-panel', '#sidebar').get(false);
-      }
+    async loadUser() {
+      const userId = this.$route.params.id;
+      const user = await fetch(`/api/users/${userId}`).then(r => r.json());
+      this.username = user.name;
+    },
+    openSettings() {
+      // Open settings in the sidebar without losing the main page context
+      this.$go('/settings-panel', '#sidebar').get(false);
     }
   }
 </script>
@@ -283,32 +281,54 @@ Lego.route('/customers/:id/orders/:orderId', 'order-details-page');
 
 ## 5. Middleware & Guards
 
-Middleware runs **before** the surgical swap happens. It### Accessing Parameters
-Route parameters are available directly via `$route.params` in templates.
+Middleware runs **before** the route swap happens. It receives the route context and can block navigation by returning `false`. This is the primary mechanism for authentication guards and permission checks.
 
-> **Note:** `$route` is a global helper available in all templates.
+### Middleware Signature
 
 ```javascript
-/* 
- * Middleware Signature:
- * (params: Object, globals: Object) => boolean | Promise<boolean>
- * Return `true` to allow navigation, `false` to block.
- */
+// ({ path, params }) => boolean | Promise<boolean>
+// Return `true` to allow navigation, `false` to block.
+```
 
-// Example: Auth Guard
-const requireAuth = (params, globals) => {
-  if (!globals.user) {
-    // Redirect to login using surgical routing!
-    globals.$go('/login', '#main').get(); 
-    return false; // Stop original navigation
+The middleware function receives an object with `path` (the matched URL) and `params` (extracted route parameters).
+
+### Example: Auth Guard
+
+```javascript
+const requireAuth = async ({ path, params }) => {
+  const token = $db('auth.token').get();
+  if (!token) {
+    // Redirect to login
+    Lego.globals.$go('/login').get();
+    return false; // Block original navigation
   }
-  return true;
+  return true; // Allow navigation
 };
 
 Lego.route('/admin', 'admin-panel', requireAuth);
+Lego.route('/settings', 'settings-page', requireAuth);
 ```
 
-## 5. Smart History
+### Accessing Route Parameters
+
+Route parameters are available via `$route.params` in templates and `this.$route.params` in script logic:
+
+```html
+<!-- In templates -->
+<p>User ID: [[ $route.params.id ]]</p>
+```
+
+```js
+// In block logic
+mounted() {
+  const userId = this.$route.params.id;
+  this.fetchUser(userId);
+}
+```
+
+> **Note:** `$route` is a global reactive object available in all blocks.
+
+## 6. Smart History
 
 Lego's router is "History Aware".
 When you use `b-target`, Lego stores the target selectors in the browser's History State.
