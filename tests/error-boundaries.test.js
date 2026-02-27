@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -26,7 +27,7 @@ global.Event = dom.window.Event;
 global.CustomEvent = dom.window.CustomEvent;
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('Error Boundaries (b-error)', () => {
@@ -43,29 +44,21 @@ describe('Error Boundaries (b-error)', () => {
   });
 
   describe('Template-Level Boundaries', () => {
-    it('should catch render errors and display error block (via defineLegoFile)', async () => {
+    it('should catch render errors and display error block', async () => {
       // Define error boundary block
       window.Lego.block('error-card', '<div class="error">ERROR: [[ $error ? $error.message : "unknown" ]]</div>', {});
 
-      // Use defineLegoFile for template-level b-error
-      const legoFile = `
-        <template b-error="error-card">
-          <div>[[ crash() ]]</div>
-        </template>
-        <script>
-          export default {
-            crash() {
-              throw new Error('Template crash');
-            }
-          }
-        </script>
-      `;
-      window.Lego.defineLegoFile(legoFile, 'crashy-block.lego');
+      // Define crashy block with template-level b-error
+      window.Lego.block('crashy-block', '<div>[[ crash() ]]</div>', {
+        crash() {
+          throw new Error('Template crash');
+        }
+      }, '', '', 'error-card');
 
       const el = document.createElement('crashy-block');
       document.body.appendChild(el);
 
-      await new Promise(r => setTimeout(r, 150));
+      await flush(150);
 
       const target = el.shadowRoot || el;
       const errorCard = target.querySelector('error-card');
@@ -87,7 +80,7 @@ describe('Error Boundaries (b-error)', () => {
       el1.setAttribute('b-error', 'generic-error');
       document.body.appendChild(el1);
 
-      await new Promise(r => setTimeout(r, 150));
+      await flush(150);
 
       const target1 = el1.shadowRoot || el1;
       expect(target1.querySelector('generic-error')).toBeTruthy();
@@ -106,7 +99,7 @@ describe('Error Boundaries (b-error)', () => {
       el.setAttribute('b-error', 'debug-error');
       document.body.appendChild(el);
 
-      await new Promise(r => setTimeout(r, 200));
+      await flush(200);
 
       const target = el.shadowRoot || el;
       const errorBlock = target.querySelector('debug-error');
@@ -138,7 +131,7 @@ describe('Error Boundaries (b-error)', () => {
       parent.setAttribute('b-error', 'parent-error');
       document.body.appendChild(parent);
 
-      await new Promise(r => setTimeout(r, 200));
+      await flush(200);
 
       const target = parent.shadowRoot || parent;
       expect(target.querySelector('parent-error')).toBeTruthy();
@@ -170,7 +163,7 @@ describe('Error Boundaries (b-error)', () => {
       root.setAttribute('b-error', 'root-error');
       document.body.appendChild(root);
 
-      await new Promise(r => setTimeout(r, 250));
+      await flush(250);
 
       const rootTarget = root.shadowRoot || root;
       const middleComp = rootTarget.querySelector('middle-comp');
@@ -195,7 +188,7 @@ describe('Error Boundaries (b-error)', () => {
       el.setAttribute('b-error', 'mount-error');
       document.body.appendChild(el);
 
-      await new Promise(r => setTimeout(r, 150));
+      await flush(150);
 
       const target = el.shadowRoot || el;
       expect(target.querySelector('mount-error')).toBeTruthy();
@@ -214,12 +207,12 @@ describe('Error Boundaries (b-error)', () => {
       el.setAttribute('b-error', 'handler-error');
       document.body.appendChild(el);
 
-      await new Promise(r => setTimeout(r, 100));
+      await flush();
 
       const button = el.shadowRoot.querySelector('button');
       button.click();
 
-      await new Promise(r => setTimeout(r, 100));
+      await flush();
 
       const target = el.shadowRoot || el;
       expect(target.querySelector('handler-error')).toBeTruthy();
@@ -240,7 +233,7 @@ describe('Error Boundaries (b-error)', () => {
       const el = document.createElement('no-boundary');
       document.body.appendChild(el);
 
-      await new Promise(r => setTimeout(r, 150));
+      await flush(150);
 
       expect(errorSpy).toHaveBeenCalled();
       expect(errorSpy.mock.calls[0][0].message).toBe('No boundary');
@@ -268,7 +261,7 @@ describe('Error Boundaries (b-error)', () => {
       el.setAttribute('b-error', 'broken-error');
       document.body.appendChild(el);
 
-      await new Promise(r => setTimeout(r, 200));
+      await flush(200);
 
       // Either onError was called OR console.error was called
       const errorWasCaught = errorSpy.mock.calls.length > 0 || consoleSpy.mock.calls.some(

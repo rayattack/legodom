@@ -296,7 +296,7 @@ A multi-page application demonstrating client-side routing.
         user: null,
         
         async mounted() {
-          const userId = Lego.globals.params.id;
+          const userId = this.$route.params.id;
           const response = await fetch(`https://jsonplaceholder.typicode.com/users/${userId}`);
           this.user = await response.json();
           this.loading = false;
@@ -346,10 +346,10 @@ A multi-page application demonstrating client-side routing.
 - `/contact` - Contact form
 
 ### ✅ Dynamic Routes
-Access parameters via `Lego.globals.params`:
+Access parameters via `$route.params`:
 
 ```js
-const userId = Lego.globals.params.id;
+const userId = this.$route.params.id;
 ```
 
 ### ✅ Data Fetching
@@ -382,7 +382,7 @@ Lego.route('/users/:id', 'user-profile');
 ```js
 {
   mounted() {
-    const userId = Lego.globals.params.id;
+    const userId = this.$route.params.id;
     this.fetchUser(userId);
   }
 }

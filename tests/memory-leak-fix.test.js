@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -24,7 +25,7 @@ global.Element = dom.window.Element;
 global.Event = dom.window.Event;
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('Memory Leak Fix - Circular References', () => {
@@ -39,7 +40,7 @@ describe('Memory Leak Fix - Circular References', () => {
     const el = document.createElement('leak-test');
     el.setAttribute('b-data', '{ msg: "test" }');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Verify element is initialized
     expect(el._studs).toBeDefined();
@@ -48,7 +49,7 @@ describe('Memory Leak Fix - Circular References', () => {
 
     // Remove element (triggers unsnap)
     el.remove();
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // MEMORY LEAK FIX: Verify circular references are broken
     expect(el._studs).toBeNull();
@@ -60,14 +61,14 @@ describe('Memory Leak Fix - Circular References', () => {
 
     const el = document.createElement('vars-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const input = el.shadowRoot.querySelector('input');
     expect(el._studs.$vars.myInput).toBe(input);
 
     // Remove and verify cleanup
     el.remove();
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     expect(el._studs).toBeNull();
   });
@@ -78,11 +79,11 @@ describe('Memory Leak Fix - Circular References', () => {
     const el = document.createElement('binding-test');
     el.setAttribute('b-data', '{ show: true }');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Remove
     el.remove();
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Internal bindings should be cleared
     expect(el._studs).toBeNull();
@@ -94,7 +95,7 @@ describe('Memory Leak Fix - Circular References', () => {
     const el = document.createElement('pool-test');
     el.setAttribute('b-data', '{ items: [1, 2, 3, 4, 5] }');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Verify pool exists - cloned divs are now siblings in shadowRoot
     const children = el.shadowRoot.querySelectorAll('div');
@@ -102,7 +103,7 @@ describe('Memory Leak Fix - Circular References', () => {
 
     // Remove and verify pool cleanup
     el.remove();
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     expect(el._studs).toBeNull();
     expect(window.Lego.getActiveBlocksCount()).toBe(0);
@@ -114,13 +115,13 @@ describe('Memory Leak Fix - Circular References', () => {
 
     const el = document.createElement('parent-leak');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     expect(window.Lego.getActiveBlocksCount()).toBe(2);
 
     // Remove parent
     el.remove();
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Both parent and child should be cleaned up
     expect(window.Lego.getActiveBlocksCount()).toBe(0);
@@ -136,14 +137,14 @@ describe('Memory Leak Fix - Circular References', () => {
 
     const el = document.createElement('error-unmount');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Should not throw
     expect(() => {
       el.remove();
     }).not.toThrow();
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Cleanup should still happen despite error
     expect(el._studs).toBeNull();
@@ -157,10 +158,10 @@ describe('Memory Leak Fix - Circular References', () => {
       const el = document.createElement('bulk-test');
       el.setAttribute('b-data', `{ index: ${i} }`);
       document.body.appendChild(el);
-      await new Promise(r => setTimeout(r, 5));
+      await flush(5);
 
       el.remove();
-      await new Promise(r => setTimeout(r, 5));
+      await flush(5);
 
       // Verify cleanup happened
       expect(el._studs).toBeNull();

@@ -125,6 +125,41 @@ export default {
 }
 ```
 
+## b-init
+
+Runs an expression **exactly once** when the element is first rendered. Subsequent re-renders will not re-execute the expression.
+
+### Usage
+
+```html
+<div b-init="console.log('Component initialized')">
+  Content here
+</div>
+```
+
+### Common Use Cases
+
+**Analytics tracking:**
+```html
+<section b-init="trackPageView('pricing')">
+  <h1>Pricing</h1>
+</section>
+```
+
+**One-time setup:**
+```html
+<canvas b-init="initChart()"></canvas>
+```
+
+**Lazy image loading:**
+```html
+<img b-init="loadImage()" data-src="/photos/hero.jpg">
+```
+
+::: tip When to use b-init vs mounted()
+Use `b-init` for **element-level** one-time setup (e.g., a specific element inside a template). Use `mounted()` for **block-level** initialization (e.g., fetching data, starting timers).
+:::
+
 ## b-for
 
 List rendering.
@@ -370,8 +405,6 @@ Initialize block state (logic).
 ```html
 <my-block b-logic="{ count: 0, name: 'Alice' }"></my-block>
 ```
-
-> **Note:** `b-data` is supported as a legacy alias for `b-logic`.
 
 ### With Complex Data
 

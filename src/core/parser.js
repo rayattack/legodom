@@ -17,7 +17,8 @@ export const defineLegoFile = (Lego, content, filename = 'block.lego') => {
   if (script) {
     try {
       const trimmed = script.trim();
-      const match = trimmed.match(/export\s+default\s+({[\s\S]*})/);
+      // Allow optional block/line comments between `default` and `{`
+      const match = trimmed.match(/export\s+default\s+(?:\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*({[\s\S]*})/);
       const code = match ? match[1] : trimmed;
       // Evaluate script in context of Lego and $db
       logicObj = new Function('Lego', '$db', `return ${code}`)(Lego, Lego.globals.$db);

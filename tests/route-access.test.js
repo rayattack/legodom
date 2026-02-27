@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -33,7 +34,7 @@ global.CSSStyleSheet = class {
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
 // Load the library code
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('$route Access', () => {
@@ -51,7 +52,7 @@ describe('$route Access', () => {
     const el = document.createElement('home-page');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const routeEl = el.shadowRoot.querySelector('#route-test');
     expect(routeEl.textContent.trim()).toBe('/');
@@ -69,9 +70,25 @@ describe('$route Access', () => {
     const el = document.createElement('test-block');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     expect(el.shadowRoot.querySelector('#test').textContent.trim()).toBe('/');
+  });
+
+  it('$params should be a shorthand for $route.params in templates', async () => {
+    window.Lego.globals.$route.params = { id: '42' };
+
+    window.Lego.block('params-test', `<div id="params-out">[[ $params.id ]]</div>`);
+
+    const el = document.createElement('params-test');
+    document.body.appendChild(el);
+
+    await flush();
+
+    expect(el.shadowRoot.querySelector('#params-out').textContent.trim()).toBe('42');
+
+    // Clean up
+    window.Lego.globals.$route.params = {};
   });
 
   it('$route should be available via globals in getters', async () => {
@@ -82,7 +99,7 @@ describe('$route Access', () => {
     const el = document.createElement('logic-test');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     expect(el.shadowRoot.querySelector('#logic-route').textContent.trim()).toBe('/');
   });

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -30,7 +31,7 @@ describe('Reactive Persistence ($db)', () => {
     window.cancelAnimationFrame = (id) => clearTimeout(id);
 
     // Load Lego
-    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
     window.eval(mainJs);
     Lego = window.Lego;
     Lego.init();
@@ -48,7 +49,7 @@ describe('Reactive Persistence ($db)', () => {
       val: Lego.db('test.key').default('default-val')
     });
     document.body.innerHTML = '<db-test-default></db-test-default>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const el = document.querySelector('db-test-default');
     expect(el.state.val).toBe('default-val');
@@ -62,7 +63,7 @@ describe('Reactive Persistence ($db)', () => {
       val: Lego.db('test.key.hyd').default('default-val')
     });
     document.body.innerHTML = '<db-test-hyd></db-test-hyd>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const el = document.querySelector('db-test-hyd');
     expect(el.state.val).toBe('stored-val');
@@ -74,12 +75,12 @@ describe('Reactive Persistence ($db)', () => {
       val: Lego.db('test.write').default('init')
     });
     document.body.innerHTML = '<db-write></db-write>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const el = document.querySelector('db-write');
     el.state.val = 'new-val';
 
-    await new Promise(r => setTimeout(r, 20)); // wait for event loop
+    await flush(20); // wait for event loop
 
     expect(JSON.parse(window.localStorage.getItem('test.write'))).toBe('new-val');
   });
@@ -89,7 +90,7 @@ describe('Reactive Persistence ($db)', () => {
       val: Lego.db('test.debounce').default('init').debounce(50)
     });
     document.body.innerHTML = '<db-debounce></db-debounce>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const el = document.querySelector('db-debounce');
     el.state.val = 'A';
@@ -100,7 +101,7 @@ describe('Reactive Persistence ($db)', () => {
     expect(window.localStorage.getItem('test.debounce')).toBeNull();
 
     // Wait for debounce
-    await new Promise(r => setTimeout(r, 70));
+    await flush(70);
 
     expect(JSON.parse(window.localStorage.getItem('test.debounce'))).toBe('C');
   });
@@ -110,7 +111,7 @@ describe('Reactive Persistence ($db)', () => {
       val: Lego.db('test.sync').default('A')
     });
     document.body.innerHTML = '<db-sync></db-sync>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const el = document.querySelector('db-sync');
     expect(el.state.val).toBe('A');
@@ -123,7 +124,7 @@ describe('Reactive Persistence ($db)', () => {
     });
     window.dispatchEvent(event);
 
-    await new Promise(r => setTimeout(r, 20));
+    await flush(20);
 
     expect(el.state.val).toBe('B');
     expect(el.shadowRoot.innerHTML).toContain('B');
@@ -134,7 +135,7 @@ describe('Reactive Persistence ($db)', () => {
     Lego.block('db-logic-test', '<span>[[ config ]]</span>');
 
     document.body.innerHTML = '<db-logic-test b-logic="{ config: $db(\'attr.config\').default(\'off\') }"></db-logic-test>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const el = document.querySelector('db-logic-test');
     const span = el.shadowRoot.querySelector('span');
@@ -148,7 +149,7 @@ describe('Reactive Persistence ($db)', () => {
       storageArea: window.localStorage
     }));
 
-    await new Promise(r => setTimeout(r, 20));
+    await flush(20);
     expect(span.innerHTML).toContain('on');
   });
 });

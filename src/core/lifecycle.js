@@ -1,4 +1,4 @@
-import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, privateData, forPools } from './registry.js';
+import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, privateData, snapState } from './registry.js';
 import { globals } from './globals.js';
 import { directives } from '../directives/index.js';
 import { config, mergeDescriptors, resolve, isNode } from '../utils/helpers.js';
@@ -36,8 +36,8 @@ export const snap = (el) => {
     const parentScope = parentBlock && parentBlock.state ? parentBlock.state : {};
 
     const scriptLogic = legoFileLogic.get(name) || {};
-    const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || '{}');
-    const instanceLogic = parseJSObject(el.getAttribute('b-logic') || '{}', parentScope);
+    const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || templateNode.getAttribute('b-data') || '{}');
+    const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}', parentScope);
 
     // Note: We need to access $go and $route. We assume they are attached to globals or we import them.
     // Since globals is the shared object, we should reference accessors there.
@@ -57,6 +57,12 @@ export const snap = (el) => {
     mergeDescriptors(templateLogic, baseState);
     mergeDescriptors(instanceLogic, baseState);
 
+    // Support injection of initial state (e.g. from error boundaries)
+    if (el.$initialState) {
+      mergeDescriptors(el.$initialState, baseState);
+      delete el.$initialState; // Cleanup
+    }
+
     el._studs = reactive(baseState, el);
 
     Object.defineProperty(el, 'state', {
@@ -66,7 +72,11 @@ export const snap = (el) => {
       enumerable: false
     });
 
+    // Suppress child connectedCallbacks during appendChild so children
+    // don't snap before this parent's mounted() hook has run.
+    snapState.locked = true;
     shadow.appendChild(tpl);
+    snapState.locked = false;
 
     const style = shadow.querySelector('style');
     if (style) {
@@ -78,7 +88,20 @@ export const snap = (el) => {
     render(el);
     el.setAttribute('b-id', name);
 
-    // Deeply initialize all nested components
+    // Track this shadow root for later component registration
+    if (!el._legoShadow) el._legoShadow = shadow;
+
+    // Fire mounted() BEFORE snapping children so child components
+    // can read any state the parent sets during mounted().
+    if (typeof el._studs.mounted === 'function') {
+      try {
+        el._studs.mounted.call(el._studs);
+      } catch (e) {
+        handleError(e, el, 'mounted');
+      }
+    }
+
+    // Deeply initialize all nested components (after mounted)
     const nestedComponents = shadow.querySelectorAll('*');
     if (config.debug) console.log('[Lego Debug] Nested scan in', el.tagName, '- Found elements:', nestedComponents.length);
     nestedComponents.forEach(child => {
@@ -89,17 +112,6 @@ export const snap = (el) => {
       }
       if (isRegistered) snap(child);
     });
-
-    // Track this shadow root for later component registration
-    if (!el._legoShadow) el._legoShadow = shadow;
-
-    if (typeof el._studs.mounted === 'function') {
-      try {
-        el._studs.mounted.call(el._studs);
-      } catch (e) {
-        handleError(e, el, 'mounted');
-      }
-    }
   }
 
   let provider = el.parentElement;
@@ -175,18 +187,6 @@ export const unsnap = (el) => {
     privateData.delete(el);
   }
 
-  // 7. Clear from for-loop pools
-  if (forPools.has(el)) {
-    const pool = forPools.get(el);
-    pool.forEach((node, key) => {
-      if (node && node._studs) {
-        node._studs = null;
-      }
-    });
-    pool.clear();
-    forPools.delete(el);
-  }
-
-  // 9. Recursively unsnap light DOM children
+  // 7. Recursively unsnap light DOM children
   [...el.children].forEach(unsnap);
 };

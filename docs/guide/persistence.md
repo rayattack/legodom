@@ -33,8 +33,7 @@ Creates a reactive connection to `localStorage` for the given key.
 2.  **Auto-Save:** Whenever you modify this property (e.g., `this.state.theme = 'dark'`), LegoDOM automatically saves the new value to `localStorage`.
 3.  **Two-Way Binding:** It behaves exactly like a normal variable, but it survives page reloads.
 
-:::{warning}
-**Namespacing is Critical!**
+::: warning Namespacing is Critical!
 `localStorage` is shared by all code on your domain.
 Avoid generic keys like `"theme"` or `"user"`.
 Always use a namespace prefix: `"my-app.theme"` or `"user.123.prefs"`.
@@ -57,8 +56,7 @@ Delays the *write to disk* operation.
 
 - **ms**: Milliseconds to wait after the last change.
 
-:::{danger}
-**Performance Warning**
+::: danger Performance Warning
 `localStorage` is synchronous and blocking. Writing to it on every frame (e.g., during a scroll event or slider drag) will cause **UI Jank** on mobile devices.
 **ALWAYS** use `.debounce(300)` or higher for values bound to high-frequency inputs like `<input type="range">` or text fields.
 :::

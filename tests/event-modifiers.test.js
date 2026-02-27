@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -24,7 +25,7 @@ describe('Event Modifiers', () => {
     global.Event = window.Event;
 
     // Load Lego
-    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
     window.eval(mainJs);
     Lego = window.Lego;
     Lego.init();
@@ -41,7 +42,7 @@ describe('Event Modifiers', () => {
     });
 
     document.body.innerHTML = '<prevent-test></prevent-test>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const btn = document.querySelector('prevent-test').shadowRoot.querySelector('button');
     const event = new window.Event('click', { bubbles: true, cancelable: true });
@@ -68,7 +69,7 @@ describe('Event Modifiers', () => {
     });
 
     document.body.innerHTML = '<stop-test></stop-test>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const btn = document.querySelector('stop-test').shadowRoot.querySelector('button');
 
@@ -89,7 +90,7 @@ describe('Event Modifiers', () => {
     });
 
     document.body.innerHTML = '<self-test></self-test>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const wrapper = document.querySelector('self-test').shadowRoot.querySelector('#wrapper');
     const btn = document.querySelector('self-test').shadowRoot.querySelector('button');
@@ -110,7 +111,7 @@ describe('Event Modifiers', () => {
     });
 
     document.body.innerHTML = '<key-test></key-test>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const input = document.querySelector('key-test').shadowRoot.querySelector('input');
 
@@ -130,7 +131,7 @@ describe('Event Modifiers', () => {
     });
 
     document.body.innerHTML = '<sys-test></sys-test>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const input = document.querySelector('sys-test').shadowRoot.querySelector('input');
 
@@ -150,7 +151,7 @@ describe('Event Modifiers', () => {
     });
 
     document.body.innerHTML = '<alpha-test></alpha-test>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const input = document.querySelector('alpha-test').shadowRoot.querySelector('input');
 

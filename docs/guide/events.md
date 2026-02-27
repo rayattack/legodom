@@ -4,7 +4,7 @@ LegoDOM provides a robust event handling system with support for modifiers, inli
 
 ## Listening to Events
 
-Use the `@` prefix (shorthand for `v-on`) to listen to DOM events.
+Use the `@` prefix to listen to DOM events.
 
 ### Method Handlers
 

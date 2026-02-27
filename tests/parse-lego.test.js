@@ -55,7 +55,7 @@ export default { mounted() { console.log('hi') } }
   });
 
   it('should validate lego block names', () => {
-    const validResult = validateLego({ blockName: 'valid-name', template: '<div></div>' });
+    const validResult = validateLego({ blockName: 'valid-name', hasTemplate: true, template: '<div></div>' });
     expect(validResult.valid).toBe(true);
 
     const invalidResult = validateLego({ blockName: 'badname' });

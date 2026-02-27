@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -24,7 +25,7 @@ global.Element = dom.window.Element;
 global.Event = dom.window.Event;
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('Expression Cache LRU Fix', () => {
@@ -39,12 +40,12 @@ describe('Expression Cache LRU Fix', () => {
     const el1 = document.createElement('cache-test');
     el1.setAttribute('b-data', '{ count: 1 }');
     document.body.appendChild(el1);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const el2 = document.createElement('cache-test');
     el2.setAttribute('b-data', '{ count: 2 }');
     document.body.appendChild(el2);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Both should render correctly (cache working)
     expect(el1.shadowRoot.textContent).toContain('1');
@@ -59,9 +60,9 @@ describe('Expression Cache LRU Fix', () => {
       const el = document.createElement('dynamic-test');
       el.setAttribute('b-data', `{ show: true, message: 'msg${i}' }`);
       document.body.appendChild(el);
-      await new Promise(r => setTimeout(r, 1));
+      await flush(1);
       el.remove();
-      await new Promise(r => setTimeout(r, 1));
+      await flush(1);
     }
 
     // Verify app didn't crash or run out of memory
@@ -74,16 +75,16 @@ describe('Expression Cache LRU Fix', () => {
     const elA = document.createElement('lru-test');
     elA.setAttribute('b-data', '{ value: "A" }');
     document.body.appendChild(elA);
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const elB = document.createElement('lru-test');
     elB.setAttribute('b-data', '{ value: "B" }');
     document.body.appendChild(elB);
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     // Access A again (making it more recently used)
     elA.state.value = "A2";
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
 
     expect(elA.shadowRoot.textContent).toContain('A2');
     expect(elB.shadowRoot.textContent).toContain('B');
@@ -95,13 +96,13 @@ describe('Expression Cache LRU Fix', () => {
     const el1 = document.createElement('hit-test');
     el1.setAttribute('b-data', '{ x: 1, y: 2 }');
     document.body.appendChild(el1);
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
     expect(el1.shadowRoot.textContent).toContain('3');
 
     const el2 = document.createElement('hit-test');
     el2.setAttribute('b-data', '{ x: 5, y: 10 }');
     document.body.appendChild(el2);
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
     expect(el2.shadowRoot.textContent).toContain('15');
   });
 
@@ -116,7 +117,7 @@ describe('Expression Cache LRU Fix', () => {
       elements.push(el);
     }
 
-    await new Promise(r => setTimeout(r, 200));
+    await flush(200);
 
     elements.forEach((el, i) => {
       expect(el.shadowRoot.textContent).toContain(String(i));

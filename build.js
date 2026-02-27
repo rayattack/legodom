@@ -31,7 +31,8 @@ async function build() {
     sourcemap: isDev,
   });
 
-
+  // 3. Copy TypeScript declarations
+  fs.copyFileSync('src/lego.d.ts', 'dist/lego.d.ts');
 
   console.log('Build complete! 🧱');
 }

@@ -20,5 +20,11 @@ export const bIf = {
     } else if (!condition && isAttached) {
       node.parentNode.replaceChild(anchor, node);
     }
+  },
+
+  destroy({ binding }) {
+    if (binding.anchor && binding.anchor.parentNode) {
+      binding.anchor.remove();
+    }
   }
 };

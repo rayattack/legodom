@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -24,7 +25,7 @@ global.Element = dom.window.Element;
 global.Event = dom.window.Event;
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('Batcher Race Condition Fix', () => {
@@ -49,14 +50,14 @@ describe('Batcher Race Condition Fix', () => {
 
     const el = document.createElement('race-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Initial state
     expect(el.state.count).toBe(0);
 
     // Trigger first update
     el.state.count = 1;
-    await new Promise(r => setTimeout(r, 200));
+    await flush(200);
 
     // Should have processed both updates (1 and 2), not dropped the second
     expect(el.state.count).toBe(2);
@@ -70,14 +71,14 @@ describe('Batcher Race Condition Fix', () => {
 
     const el = document.createElement('rapid-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
 
     // Fire 10 updates rapidly
     for (let i = 1; i <= 10; i++) {
       el.state.value = i;
     }
 
-    await new Promise(r => setTimeout(r, 200));
+    await flush(200);
 
     // Final value should be 10 (not dropped)
     expect(el.state.value).toBe(10);
@@ -91,14 +92,14 @@ describe('Batcher Race Condition Fix', () => {
 
     const el = document.createElement('order-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
 
     // Trigger rapid updates (batching will coalesce)
     el.state.step = 1;
     el.state.step = 2;
     el.state.step = 3;
 
-    await new Promise(r => setTimeout(r, 200));
+    await flush(200);
 
     // Final state should be preserved
     expect(el.state.step).toBe(3);
@@ -119,13 +120,13 @@ describe('Batcher Race Condition Fix', () => {
     el2.setAttribute('b-data', '{ id: 2, value: 0 }');
     document.body.appendChild(el2);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Update both simultaneously
     el1.state.value = 10;
     el2.state.value = 20;
 
-    await new Promise(r => setTimeout(r, 150));
+    await flush(150);
 
     // Both should be updated
     expect(el1.shadowRoot.textContent).toContain('1:10');

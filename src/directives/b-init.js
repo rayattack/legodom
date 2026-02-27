@@ -12,10 +12,10 @@ export const bInit = {
     }
   },
 
-  execute: ({ binding, state }) => {
+  execute: ({ binding, state, global }) => {
     if (!binding.initialized) {
       binding.initialized = true;
-      safeEval(binding.expr, { state });
+      safeEval(binding.expr, { state, global, self: binding.node });
     }
   }
 }

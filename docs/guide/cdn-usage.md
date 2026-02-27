@@ -17,7 +17,7 @@ Lego works perfectly without any build tools. Just include it via CDN and start 
   </template>
   
   <!-- Use it -->
-  <hello-world b-data="{ message: 'Hello from CDN!' }"></hello-world>
+  <hello-world b-logic="{ message: 'Hello from CDN!' }"></hello-world>
   
   <!-- Include Lego -->
   <script src="https://unpkg.com/lego-dom/main.js"></script>
@@ -78,7 +78,7 @@ Here's a full working application using only CDN:
   <h1>My Todo App</h1>
   <todo-app></todo-app>
 
-  <template b-id="todo-app" b-data="{
+  <template b-id="todo-app" b-logic="{
     newTodo: '',
     todos: [
       { text: 'Learn Lego', done: true },
@@ -182,7 +182,7 @@ Lego is perfect for progressively enhancing existing sites:
 <!-- Add interactive block -->
 <user-widget></user-widget>
 
-<template b-id="user-widget" b-data="{
+<template b-id="user-widget" b-logic="{
   username: 'Guest',
   async mounted() {
     const user = await fetch('/api/user').then(r => r.json());

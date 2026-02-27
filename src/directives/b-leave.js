@@ -3,16 +3,17 @@ import { scanForAttribute } from "../utils/helpers.js";
 
 
 export const bLeave = {
+  name: 'b-leave',
   scan: node => scanForAttribute('b-leave', node),
 
-  execute: ({ binding, state }) => {
+  execute: ({ binding, state, global }) => {
     if (binding.observer || binding.done) return;
 
     const observer = new IntersectionObserver((entries, io) => {
       const entry = entries[0];
       if (entry.isIntersecting) binding.activated = true;
       if (!entry.isIntersecting && binding.activated) {
-        safeEval(binding.expr, { state });
+        safeEval(binding.expr, { state, global, self: binding.node });
         if (binding.modifiers.includes('once')) {
           io.disconnect();
           binding.observer = null;

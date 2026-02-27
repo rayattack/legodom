@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -28,7 +29,7 @@ global.Element = dom.window.Element;
 global.Event = dom.window.Event;
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('LegoDOM Monitoring Plugin', () => {
@@ -45,7 +46,7 @@ describe('LegoDOM Monitoring Plugin', () => {
     el.setAttribute('b-data', "{ msg: 'hello' }");
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const metrics = window.Lego.metrics.get();
     expect(metrics.renders).toBeGreaterThan(0);
@@ -66,7 +67,7 @@ describe('LegoDOM Monitoring Plugin', () => {
     const el = document.createElement('monitor-error');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const metrics = window.Lego.metrics.get();
     expect(metrics.errors).toBe(1);

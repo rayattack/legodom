@@ -92,7 +92,6 @@ socket.on('block_update', (msg) => {
   Lego.defineLegoFile(msg.code, msg.name + '.lego');
 });
 ```
-```
 
 ## Production Considerations
 

@@ -42,14 +42,15 @@ export default defineConfig({
             { text: 'Topic 7 - Observer', link: '/contributing/07-observer' },
             { text: 'Topic 8 - Snap', link: '/contributing/08-snap' },
             { text: 'Topic 9 - Diffing', link: '/contributing/09-diffing' },
-            { text: 'Topic 10 - State', 'link': '/contributing/10-studs' },
-            { text: 'Topic 11 - Scanner', 'link': '/contributing/11-scanner' },
-            { text: 'Topic 12 - Render', 'link': '/contributing/12-render' },
-            { text: 'Topic 13 - Directives', 'link': '/contributing/13-directives' },
-            { text: 'Topic 14 - Events', 'link': '/contributing/14-events' },
-            { text: 'Topic 15 - Router', 'link': '/contributing/15-router' },
-            { text: 'Topic 16 - State', 'link': '/contributing/16-state' },
-            { text: 'Topic 17 - LegoDOM', 'link': '/contributing/17-legodom' },
+            { text: 'Topic 10 - Studs (Reactive State)', link: '/contributing/10-studs' },
+            { text: 'Topic 11 - Scanner', link: '/contributing/11-scanner' },
+            { text: 'Topic 12 - Render', link: '/contributing/12-render' },
+            { text: 'Topic 13 - Directives', link: '/contributing/13-directives' },
+            { text: 'Topic 14 - Events', link: '/contributing/14-events' },
+            { text: 'Topic 15 - Router', link: '/contributing/15-router' },
+            { text: 'Topic 16 - Global State & $db', link: '/contributing/16-state' },
+            { text: 'Topic 17 - LegoDOM', link: '/contributing/17-legodom' },
+            { text: 'Topic 18 - Directive Lifecycle', link: '/contributing/18-directive-lifecycle' },
           ]
         }
       ],
@@ -82,10 +83,13 @@ export default defineConfig({
             { text: 'The Lego Object', link: '/guide/the-lego-object' },
             { text: 'Blocks', link: '/guide/blocks' },
             { text: 'Templating', link: '/guide/templating' },
+            { text: 'Slots & Content Projection', link: '/guide/slots' },
             { text: 'Layouts & Composition', link: '/guide/layouts' },
             { text: 'Reactivity', link: '/guide/reactivity' },
             { text: 'Directives', link: '/guide/directives' },
             { text: 'Events', link: '/guide/events' },
+            { text: 'Routing', link: '/guide/routing' },
+            { text: 'Error Handling', link: '/guide/error-handling' },
             { text: 'Persistence ($db)', link: '/guide/persistence' },
             { text: 'Helper Utilities', link: '/guide/helpers' }
           ]
@@ -94,7 +98,7 @@ export default defineConfig({
           text: 'Advanced',
           items: [
             { text: 'Lego Files (.lego)', link: '/guide/lego-files' },
-            { text: 'Directives', link: '/guide/directives' },
+            { text: 'Authentication', link: '/guide/authentication' },
             { text: 'Lego Studio', link: '/guide/studio' },
             { text: 'CDN Usage', link: '/guide/cdn-usage' },
             { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
@@ -130,7 +134,8 @@ export default defineConfig({
             { text: 'Basic Routing', link: '/router/basic-routing' },
             { text: 'Surgical Swaps', link: '/router/surgical-swaps' },
             { text: 'Cold Entry', link: '/router/cold-entry' },
-            { text: 'History', link: '/router/history' }
+            { text: 'History', link: '/router/history' },
+            { text: 'Target Resolver', link: '/router/resolver' }
           ]
         }
       ],

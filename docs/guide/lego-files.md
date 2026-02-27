@@ -376,7 +376,7 @@ Pass data to blocks via the `b-logic` attribute:
 }"></user-card>
 ```
 
-Or define defaults in the script section and override as needed. (Legacy `b-data` is also supported).
+Or define defaults in the script section and override as needed.
 
 ## Best Practices
 

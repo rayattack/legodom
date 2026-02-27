@@ -55,8 +55,8 @@ export default function legoPlugin(options = {}) {
     if (module) {
       server.moduleGraph.invalidateModule(module);
       server.ws.send({
-        type: 'full-reload',
-        path: '*'
+        type: 'custom',
+        event: 'lego:blocks-changed'
       });
     }
   };
@@ -114,7 +114,14 @@ export default function legoPlugin(options = {}) {
 
         const exports = `export default function registerBlocks() {\n  // Blocks are auto-registered when imported\n}`;
 
-        return `${imports}\n\n${exports}`;
+        const hmrListener = `
+if (import.meta.hot) {
+  import.meta.hot.on('lego:blocks-changed', () => {
+    import.meta.hot.invalidate();
+  });
+}`;
+
+        return `${imports}\n\n${exports}\n${hmrListener}`;
       }
 
       // Handle individual .lego files
@@ -122,6 +129,10 @@ export default function legoPlugin(options = {}) {
         const filePath = id.split('?')[0];
         const fs = await import('fs');
         const content = fs.readFileSync(filePath, 'utf-8');
+
+        // [FIX] Return empty module for empty files to prevent validation error
+        if (!content.trim()) return 'export default "";';
+
         const filename = path.basename(filePath);
 
         const parsed = parseLego(content, filename);

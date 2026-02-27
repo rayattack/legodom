@@ -41,20 +41,26 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
       return val;
     },
     set: (t, k, v, receiver) => {
-      // FIX: Pass receiver to Reflect.set to ensure we set property on the correct object 
-      // (e.g. localScope inheriting from state) instead of forcing it onto state.
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        console.warn(`[Lego] Blocked setting dangerous property: "${k}"`);
+        return true;
+      }
       const old = t[k];
       if (config.debug && old !== v) console.log('[Lego Trace] Reactive SET:', k, 'Old:', old, 'New:', v, 'Target:', t);
-      const r = Reflect.set(t, k, v, receiver);
 
-      // Only trigger reactivity if the update was effectively on THIS proxy
-      // If receiver is a child object (like localScope in b-for), we don't want to trigger parent updates
       const isSelf = receiver === proxyCache.get(t);
-      if (isSelf) {
-        // Use previously captured 'old' value because 't[k]' is already updated by Reflect.set
+      const isOwnProp = Object.prototype.hasOwnProperty.call(t, k);
+
+      // When setting through a child scope (e.g., Object.create(state) in b-for)
+      // for a property owned by the target, write to the target directly so the
+      // actual state is modified (not just the ephemeral child scope).
+      const r = (!isSelf && isOwnProp)
+        ? Reflect.set(t, k, v)
+        : Reflect.set(t, k, v, receiver);
+
+      if (isSelf || isOwnProp) {
         if (old !== v) {
           batcher.add(el);
-          // Check for DB binding
           handleDbUpdate(t, k, v);
         }
       }

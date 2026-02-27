@@ -29,7 +29,7 @@ export default defineConfig({
 ### `blocksDir`
 
 - **Type**: `string`
-- **Default**: `'src/blocks'`
+- **Default**: `'./src'`
 
 Directory to search for `.lego` files.
 
