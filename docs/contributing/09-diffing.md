@@ -99,12 +99,12 @@ const templateLogic = parseJSObject(
 );
 ```
 
-Lego looks at the `<template>` tag itself in your HTML. If you added a `b-logic` or `b-logic` attribute there, it overrides the global definition.
+Lego looks at the `<template>` tag itself in your HTML. If you added a `b-logic` attribute there, it overrides the global definition.
 
 **Example:**
 ```html
 <template b-id="user-card" b-logic="{ role: 'admin' }">
-  <div>{{ name }} - {{ role }}</div>
+  <div>[[ name ]] - [[ role ]]</div>
 </template>
 ```
 

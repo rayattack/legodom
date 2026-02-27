@@ -24,7 +24,7 @@ global.MutationObserver = dom.window.MutationObserver;
 global.Node = dom.window.Node;
 global.NodeFilter = dom.window.NodeFilter;
 global.Element = dom.window.Element;
-global.ShadowRoot = dom.window.ShadowRoot; // Add this line
+global.ShadowRoot = dom.window.ShadowRoot;
 global.Event = dom.window.Event;
 global.FormData = dom.window.FormData;
 
@@ -74,13 +74,10 @@ describe('Lego Stylesheets Tests', () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url === 'styles.css') {
         return Promise.resolve({
+          ok: true,
           text: () => Promise.resolve(cssContent)
         });
       }
-      if (url === 's1.css') return Promise.resolve({ text: () => Promise.resolve('.one { color: red; }') });
-      if (url === 's2.css') return Promise.resolve({ text: () => Promise.resolve('.two { color: blue; }') });
-      if (url === 'red.css') return Promise.resolve({ text: () => Promise.resolve('h1 { color: red; }') });
-
       return Promise.reject(new Error('Not found'));
     });
 
@@ -91,12 +88,7 @@ describe('Lego Stylesheets Tests', () => {
       }
     });
 
-    // Define a block that uses the stylesheet using .lego file simulation
-    window.Lego.defineLegoFile(`
-      <template b-stylesheets="mystyle">
-        <p>Hello</p>
-      </template>
-    `, 'styled-block.lego');
+    window.Lego.block('styled-block', '<p>Hello</p>', {}, 'mystyle');
 
     const el = document.createElement('styled-block');
     document.body.appendChild(el);
@@ -120,8 +112,8 @@ describe('Lego Stylesheets Tests', () => {
     const css2 = '.two { color: blue; }';
 
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === 's1.css') return Promise.resolve({ text: () => Promise.resolve(css1) });
-      if (url === 's2.css') return Promise.resolve({ text: () => Promise.resolve(css2) });
+      if (url === 's1.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(css1) });
+      if (url === 's2.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(css2) });
       return Promise.reject(new Error('Not found'));
     });
 
@@ -132,11 +124,7 @@ describe('Lego Stylesheets Tests', () => {
       }
     });
 
-    window.Lego.defineLegoFile(`
-       <template b-stylesheets="base theme">
-         <p>Multi</p>
-       </template>
-     `, 'multi-styled.lego');
+    window.Lego.block('multi-styled', '<p>Multi</p>', {}, 'base theme');
 
     const el = document.createElement('multi-styled');
     document.body.appendChild(el);
@@ -155,7 +143,7 @@ describe('Lego Stylesheets Tests', () => {
 
     // Set up fetch mock for this test
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === 'red.css') return Promise.resolve({ text: () => Promise.resolve(cssRed) });
+      if (url === 'red.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(cssRed) });
       return Promise.reject(new Error('Not found'));
     });
 
@@ -165,11 +153,7 @@ describe('Lego Stylesheets Tests', () => {
       }
     });
 
-    window.Lego.defineLegoFile(`
-      <template b-stylesheets="make-it-red">
-        <h1>Header</h1>
-      </template>
-    `, 'red-block.lego');
+    window.Lego.block('red-block', '<h1>Header</h1>', {}, 'make-it-red');
 
     const el = document.createElement('red-block');
     document.body.appendChild(el);
@@ -187,8 +171,8 @@ describe('Lego Stylesheets Tests', () => {
       const themeCSS = ':host { background: #f0f0f0; }';
 
       global.fetch = vi.fn().mockImplementation((url) => {
-        if (url === 'global.css') return Promise.resolve({ text: () => Promise.resolve(globalCSS) });
-        if (url === 'theme.css') return Promise.resolve({ text: () => Promise.resolve(themeCSS) });
+        if (url === 'global.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(globalCSS) });
+        if (url === 'theme.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(themeCSS) });
         return Promise.reject(new Error('Not found'));
       });
 
@@ -200,18 +184,10 @@ describe('Lego Stylesheets Tests', () => {
       });
 
       // Parent with b-cascade
-      window.Lego.defineLegoFile(`
-        <template b-stylesheets="global theme" b-cascade="global">
-          <slot></slot>
-        </template>
-      `, 'cascade-parent.lego');
+      window.Lego.block('cascade-parent', '<slot></slot>', {}, 'global theme', 'global');
 
       // Child that should inherit
-      window.Lego.defineLegoFile(`
-        <template>
-          <h3>Child</h3>
-        </template>
-      `, 'cascade-child.lego');
+      window.Lego.block('cascade-child', '<h3>Child</h3>');
 
       const parent = document.createElement('cascade-parent');
       const child = document.createElement('cascade-child');
@@ -234,9 +210,9 @@ describe('Lego Stylesheets Tests', () => {
       const customCSS = '.custom { font-size: 16px; }';
 
       global.fetch = vi.fn().mockImplementation((url) => {
-        if (url === 'base.css') return Promise.resolve({ text: () => Promise.resolve(baseCSS) });
-        if (url === 'theme.css') return Promise.resolve({ text: () => Promise.resolve(themeCSS) });
-        if (url === 'custom.css') return Promise.resolve({ text: () => Promise.resolve(customCSS) });
+        if (url === 'base.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(baseCSS) });
+        if (url === 'theme.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(themeCSS) });
+        if (url === 'custom.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(customCSS) });
         return Promise.reject(new Error('Not found'));
       });
 
@@ -248,18 +224,10 @@ describe('Lego Stylesheets Tests', () => {
         }
       });
 
-      window.Lego.defineLegoFile(`
-        <template b-stylesheets="base theme" b-cascade="base theme">
-          <slot></slot>
-        </template>
-      `, 'merge-parent.lego');
+      window.Lego.block('merge-parent', '<slot></slot>', {}, 'base theme', 'base theme');
 
       // Child with explicit stylesheet - should MERGE (inherit base+theme AND add custom)
-      window.Lego.defineLegoFile(`
-        <template b-stylesheets="custom">
-          <p>Explicit child</p>
-        </template>
-      `, 'merge-child.lego');
+      window.Lego.block('merge-child', '<p>Explicit child</p>', {}, 'custom');
 
       const parent = document.createElement('merge-parent');
       const child = document.createElement('merge-child');
@@ -282,43 +250,28 @@ describe('Lego Stylesheets Tests', () => {
     it('should support multi-level cascade', async () => {
       const tokensCSS = ':host { --spacing: 8px; }';
       const layoutCSS = ':host { display: block; }';
-      const componCSS = ':host { padding: 1rem; }';
 
       global.fetch = vi.fn().mockImplementation((url) => {
-        if (url === 'tokens.css') return Promise.resolve({ text: () => Promise.resolve(tokensCSS) });
-        if (url === 'layout.css') return Promise.resolve({ text: () => Promise.resolve(layoutCSS) });
-        if (url === 'compon.css') return Promise.resolve({ text: () => Promise.resolve(componCSS) });
+        if (url === 'tokens.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(tokensCSS) });
+        if (url === 'layout.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(layoutCSS) });
         return Promise.reject(new Error('Not found'));
       });
 
       await window.Lego.init(document.body, {
         styles: {
           tokens: ['tokens.css'],
-          layout: ['layout.css'],
-          compon: ['compon.css']
+          layout: ['layout.css']
         }
       });
 
       // Level 1: Root cascades tokens
-      window.Lego.defineLegoFile(`
-        <template b-stylesheets="tokens" b-cascade="tokens">
-          <slot></slot>
-        </template>
-      `, 'level1-root.lego');
+      window.Lego.block('level1-root', '<slot></slot>', {}, 'tokens', 'tokens');
 
       // Level 2: Mid cascades layout
-      window.Lego.defineLegoFile(`
-        <template b-stylesheets="layout" b-cascade="layout">
-          <slot></slot>
-        </template>
-      `, 'level2-mid.lego');
+      window.Lego.block('level2-mid', '<slot></slot>', {}, 'layout', 'layout');
 
       // Level 3: Leaf (no explicit styles)
-      window.Lego.defineLegoFile(`
-        <template>
-          <p>Deep child</p>
-        </template>
-      `, 'level3-leaf.lego');
+      window.Lego.block('level3-leaf', '<p>Deep child</p>');
 
       const root = document.createElement('level1-root');
       const mid = document.createElement('level2-mid');
@@ -343,7 +296,7 @@ describe('Lego Stylesheets Tests', () => {
       const sharedCSS = ':host { margin: 0; }';
 
       global.fetch = vi.fn().mockImplementation((url) => {
-        if (url === 'shared.css') return Promise.resolve({ text: () => Promise.resolve(sharedCSS) });
+        if (url === 'shared.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(sharedCSS) });
         return Promise.reject(new Error('Not found'));
       });
 
@@ -353,23 +306,11 @@ describe('Lego Stylesheets Tests', () => {
         }
       });
 
-      window.Lego.defineLegoFile(`
-        <template b-stylesheets="shared" b-cascade="shared">
-          <slot></slot>
-        </template>
-      `, 'dedup-parent.lego');
+      window.Lego.block('dedup-parent', '<slot></slot>', {}, 'shared', 'shared');
 
-      window.Lego.defineLegoFile(`
-        <template b-stylesheets="shared" b-cascade="shared">
-          <slot></slot>
-        </template>
-      `, 'dedup-mid.lego');
+      window.Lego.block('dedup-mid', '<slot></slot>', {}, 'shared', 'shared');
 
-      window.Lego.defineLegoFile(`
-        <template>
-          <p>Should not have duplicate</p>
-        </template>
-      `, 'dedup-child.lego');
+      window.Lego.block('dedup-child', '<p>Should not have duplicate</p>');
 
       const parent = document.createElement('dedup-parent');
       const mid = document.createElement('dedup-mid');
@@ -392,8 +333,8 @@ describe('Lego Stylesheets Tests', () => {
       const explicitCSS = '.explicit { color: red; }';
 
       global.fetch = vi.fn().mockImplementation((url) => {
-        if (url === 'inherited.css') return Promise.resolve({ text: () => Promise.resolve(inheritedCSS) });
-        if (url === 'explicit.css') return Promise.resolve({ text: () => Promise.resolve(explicitCSS) });
+        if (url === 'inherited.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(inheritedCSS) });
+        if (url === 'explicit.css') return Promise.resolve({ ok: true, text: () => Promise.resolve(explicitCSS) });
         return Promise.reject(new Error('Not found'));
       });
 
@@ -404,17 +345,9 @@ describe('Lego Stylesheets Tests', () => {
         }
       });
 
-      window.Lego.defineLegoFile(`
-        <template b-stylesheets="inherited" b-cascade="inherited">
-          <slot></slot>
-        </template>
-      `, 'debug-parent.lego');
+      window.Lego.block('debug-parent', '<slot></slot>', {}, 'inherited', 'inherited');
 
-      window.Lego.defineLegoFile(`
-        <template b-stylesheets="explicit">
-          <p>Debug child</p>
-        </template>
-      `, 'debug-child.lego');
+      window.Lego.block('debug-child', '<p>Debug child</p>', {}, 'explicit');
 
       const parent = document.createElement('debug-parent');
       const child = document.createElement('debug-child');

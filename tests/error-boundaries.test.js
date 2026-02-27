@@ -43,24 +43,16 @@ describe('Error Boundaries (b-error)', () => {
   });
 
   describe('Template-Level Boundaries', () => {
-    it('should catch render errors and display error block (via defineLegoFile)', async () => {
+    it('should catch render errors and display error block', async () => {
       // Define error boundary block
       window.Lego.block('error-card', '<div class="error">ERROR: [[ $error ? $error.message : "unknown" ]]</div>', {});
 
-      // Use defineLegoFile for template-level b-error
-      const legoFile = `
-        <template b-error="error-card">
-          <div>[[ crash() ]]</div>
-        </template>
-        <script>
-          export default {
-            crash() {
-              throw new Error('Template crash');
-            }
-          }
-        </script>
-      `;
-      window.Lego.defineLegoFile(legoFile, 'crashy-block.lego');
+      // Define crashy block with template-level b-error
+      window.Lego.block('crashy-block', '<div>[[ crash() ]]</div>', {
+        crash() {
+          throw new Error('Template crash');
+        }
+      }, '', '', 'error-card');
 
       const el = document.createElement('crashy-block');
       document.body.appendChild(el);

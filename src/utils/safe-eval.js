@@ -1,4 +1,3 @@
-import { config } from './helpers.js';
 import { LRUCache } from './lru-cache.js';
 import { findAncestor } from './dom.js';
 import { sharedStates } from '../core/registry.js';
@@ -37,6 +36,7 @@ export const safeEval = (expr, context, throwError = true) => {
       $registry: (tag) => sharedStates.get(tag.toLowerCase()),
       $element: context.self,
       $route: globals.$route,
+      $params: globals.$route?.params || {},
       $go: (path, ...targets) => _go(path, ...targets)(context.self),
       $db: globals.$db,
       $emit: (name, detail) => {
@@ -53,8 +53,10 @@ export const safeEval = (expr, context, throwError = true) => {
     return result;
   } catch (e) {
     if (throwError) throw e;
-    config.onError(e, 'render-error', context.self);
-    return undefined;
+    // Gracefully degrade for undefined variables (ReferenceError),
+    // but re-throw other errors so error boundaries can catch them
+    if (e instanceof ReferenceError) return undefined;
+    throw e;
   }
 };
 

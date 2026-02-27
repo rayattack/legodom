@@ -36,8 +36,8 @@ export const snap = (el) => {
     const parentScope = parentBlock && parentBlock.state ? parentBlock.state : {};
 
     const scriptLogic = legoFileLogic.get(name) || {};
-    const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || '{}');
-    const instanceLogic = parseJSObject(el.getAttribute('b-logic') || '{}', parentScope);
+    const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || templateNode.getAttribute('b-data') || '{}');
+    const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}', parentScope);
 
     // Note: We need to access $go and $route. We assume they are attached to globals or we import them.
     // Since globals is the shared object, we should reference accessors there.
