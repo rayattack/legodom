@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -37,7 +38,7 @@ global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
 // 2. Load the library code
 // We read it as a string to execute it in our shimmed global environment
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('Lego JS Node Environment Tests', () => {
@@ -60,7 +61,7 @@ describe('Lego JS Node Environment Tests', () => {
     document.body.appendChild(el);
 
     // Wait for MutationObserver / snap to fire
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const span = el.shadowRoot.querySelector('span');
     expect(span.textContent).toBe('hello');
@@ -69,7 +70,7 @@ describe('Lego JS Node Environment Tests', () => {
     el._studs.msg = 'world';
 
     // Wait for batcher (requestAnimationFrame shim)
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
     expect(span.textContent).toBe('world');
   });
 
@@ -79,7 +80,7 @@ describe('Lego JS Node Environment Tests', () => {
     el.setAttribute('b-data', "{ code: '<script>alert(1)</script>' }");
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const div = el.shadowRoot.querySelector('div');
     // It should be escaped, not raw HTML
@@ -93,7 +94,7 @@ describe('Lego JS Node Environment Tests', () => {
     el.setAttribute('b-data', `{ handleClick: () => { window.clicked = true; } }`);
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const btn = el.shadowRoot.querySelector('button');
     btn.click();

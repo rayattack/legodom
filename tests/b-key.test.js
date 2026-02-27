@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -36,7 +37,7 @@ global.CSSStyleSheet = class {
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
 // Load the library code
-const libCode = fs.readFileSync(path.resolve(import.meta.dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(import.meta.dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('b-key Directive Tests', () => {
@@ -60,7 +61,7 @@ describe('b-key Directive Tests', () => {
 
     const el = document.createElement('key-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // b-for clones are now siblings in the shadowRoot, not children of a container
     const children = Array.from(el.shadowRoot.querySelectorAll('div'));
@@ -79,7 +80,7 @@ describe('b-key Directive Tests', () => {
       { name: 'Charlie', age: 36 }
     ];
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const newChildren = Array.from(el.shadowRoot.querySelectorAll('div'));
     expect(newChildren[0]).toBe(aliceNode);
@@ -101,7 +102,7 @@ describe('b-key Directive Tests', () => {
 
     const el = document.createElement('inline-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // b-for clones are now siblings in the shadowRoot
     const children = Array.from(el.shadowRoot.querySelectorAll('div'));
@@ -112,7 +113,7 @@ describe('b-key Directive Tests', () => {
       { icon: 'settings', name: 'Settings (Updated)' }
     ];
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const newChildren = Array.from(el.shadowRoot.querySelectorAll('div'));
     expect(newChildren[0]).toBe(firstChild);
@@ -133,7 +134,7 @@ describe('b-key Directive Tests', () => {
 
     const el = document.createElement('auto-id-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // b-for clones are now siblings in the shadowRoot
     const children = Array.from(el.shadowRoot.querySelectorAll('div'));
@@ -144,7 +145,7 @@ describe('b-key Directive Tests', () => {
       { id: 2, name: 'Item 2 Updated' }
     ];
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const newChildren = Array.from(el.shadowRoot.querySelectorAll('div'));
     expect(newChildren[0]).toBe(firstChild);
@@ -164,7 +165,7 @@ describe('b-key Directive Tests', () => {
 
     const el = document.createElement('uuid-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // b-for clones are now siblings in the shadowRoot
     const children = Array.from(el.shadowRoot.querySelectorAll('div'));
@@ -185,7 +186,7 @@ describe('b-key Directive Tests', () => {
 
     const el = document.createElement('key-removal-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // b-for clones are now siblings in the shadowRoot
     const child = el.shadowRoot.querySelector('div');
@@ -208,7 +209,7 @@ describe('b-key Directive Tests', () => {
 
     const el = document.createElement('nested-key-test');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // b-for clones are now siblings in the shadowRoot
     const children = Array.from(el.shadowRoot.querySelectorAll('div'));
@@ -219,7 +220,7 @@ describe('b-key Directive Tests', () => {
       { user: { id: 'u2', name: 'Bob Updated' } }
     ];
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const newChildren = Array.from(el.shadowRoot.querySelectorAll('div'));
     expect(newChildren[0]).toBe(firstChild);

@@ -8,8 +8,12 @@ export const bText = {
     }
   },
 
-  execute({ binding, state }) {
+  execute({ binding, state, global }) {
     const { node, path } = binding;
-    node.textContent = resolve(path, state);
+    if (path.startsWith('global.')) {
+      node.textContent = resolve(path.slice(7), global) ?? '';
+    } else {
+      node.textContent = resolve(path, state) ?? '';
+    }
   }
 };

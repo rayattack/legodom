@@ -8,6 +8,7 @@ export const globalSubscribers = new Set();
 export const legoFileLogic = new Map();
 export const sharedStates = new Map();
 export const styleRegistry = new Map();
+export const snapState = { locked: false };
 
 export const getPrivateData = (el) => {
   if (!privateData.has(el)) {

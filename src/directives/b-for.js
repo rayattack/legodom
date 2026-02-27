@@ -1,7 +1,7 @@
 import { forPools, itemIdMap } from '../core/registry.js';
 import { safeEval } from '../utils/safe-eval.js';
 import { resolve } from '../utils/helpers.js';
-import { syncModelValue } from '../utils/dom.js';
+import { syncModelValue, findSyncAttr } from '../utils/dom.js';
 
 export const bFor = {
   name: 'b-for',
@@ -56,8 +56,9 @@ export const bFor = {
       if (keyPath) {
         // User specified b-key="propertyName"
         key = resolve(keyPath, item);
-        if (key === undefined) {
-          console.warn(`[Lego] b-key="${keyPath}" resolved to undefined for item at index ${i}. Check for typos.`);
+        if (key == null || key === '') {
+          console.warn(`[Lego] b-key="${keyPath}" could not resolve a value for item at index ${i}. Falling back to index-based key.`);
+          key = `__bfor_${i}`;
         }
       } else if (item && typeof item === 'object') {
         // Auto-detect common ID fields
@@ -80,16 +81,21 @@ export const bFor = {
         child.removeAttribute('b-for');
         child.removeAttribute('b-key');
         pool.set(key, child);
-        bind(child, contextEl, { name: itemName, listName, index: i });
+        child._loopCtx = { name: itemName, listName, index: i };
+        bind(child, contextEl, child._loopCtx);
+      } else {
+        // Keep index current so event handlers and b-sync resolve the right item
+        child._loopCtx.index = i;
       }
       const localScope = Object.assign(Object.create(state), { [itemName]: item, $index: i });
       updateNodeBindings(child, localScope);
 
-      child.querySelectorAll('[b-sync]').forEach(input => {
-        const path = input.getAttribute('b-sync');
+      const syncInputs = [child, ...child.querySelectorAll('*')].filter(el => findSyncAttr(el));
+      syncInputs.forEach(input => {
+        const attr = findSyncAttr(input);
+        const path = attr.value;
         if (path.startsWith(`${itemName}.`)) {
-          const mainList = safeEval(listName, { state, global, self: contextEl });
-          syncModelValue(input, resolve(path.split('.').slice(1).join('.'), mainList[i]));
+          syncModelValue(input, resolve(path.split('.').slice(1).join('.'), list[i]));
         }
       });
       renderedChildren.push(child);
@@ -108,6 +114,19 @@ export const bFor = {
     // Remove stale nodes
     for (const [key, node] of pool.entries()) {
       if (!currentKeys.has(key)) { node.remove(); pool.delete(key); }
+    }
+  },
+
+  destroy({ binding }) {
+    const { anchor } = binding;
+    if (anchor && forPools.has(anchor)) {
+      const pool = forPools.get(anchor);
+      pool.forEach(node => node.remove());
+      pool.clear();
+      forPools.delete(anchor);
+    }
+    if (anchor && anchor.parentNode) {
+      anchor.remove();
     }
   }
 };

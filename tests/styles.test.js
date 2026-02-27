@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -55,7 +56,7 @@ global.CSSStyleSheet = class {
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
 // 2. Load the library code
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 // Evaluate library code in the mock environment
 eval(libCode);
 
@@ -94,7 +95,7 @@ describe('Lego Stylesheets Tests', () => {
     document.body.appendChild(el);
 
     // Wait for mutation observer and async rendering
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Verify shadow root has adoptedStyleSheets
     expect(el.shadowRoot).toBeDefined();
@@ -129,7 +130,7 @@ describe('Lego Stylesheets Tests', () => {
     const el = document.createElement('multi-styled');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const sheets = el.shadowRoot.adoptedStyleSheets;
     expect(sheets.length).toBe(2);
@@ -158,7 +159,7 @@ describe('Lego Stylesheets Tests', () => {
     const el = document.createElement('red-block');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const sheets = el.shadowRoot.adoptedStyleSheets;
     expect(sheets.length).toBeGreaterThan(0);
@@ -194,7 +195,7 @@ describe('Lego Stylesheets Tests', () => {
       parent.appendChild(child);
       document.body.appendChild(parent);
 
-      await new Promise(r => setTimeout(r, 100));
+      await flush();
 
       // Parent should have both global and theme
       expect(parent.shadowRoot.adoptedStyleSheets.length).toBe(2);
@@ -234,7 +235,7 @@ describe('Lego Stylesheets Tests', () => {
       parent.appendChild(child);
       document.body.appendChild(parent);
 
-      await new Promise(r => setTimeout(r, 100));
+      await flush();
 
       // Child should have all three: base (inherited), theme (inherited), custom (explicit)
       const childSheets = child.shadowRoot.adoptedStyleSheets;
@@ -281,7 +282,7 @@ describe('Lego Stylesheets Tests', () => {
       mid.appendChild(leaf);
       document.body.appendChild(root);
 
-      await new Promise(r => setTimeout(r, 100));
+      await flush();
 
       // Leaf should inherit tokens (from root) + layout (from mid)
       const leafSheets = leaf.shadowRoot.adoptedStyleSheets;
@@ -320,7 +321,7 @@ describe('Lego Stylesheets Tests', () => {
       mid.appendChild(child);
       document.body.appendChild(parent);
 
-      await new Promise(r => setTimeout(r, 100));
+      await flush();
 
       // Child inherits 'shared' from both parent and mid, but should be deduped
       const childSheets = child.shadowRoot.adoptedStyleSheets;
@@ -354,7 +355,7 @@ describe('Lego Stylesheets Tests', () => {
       parent.appendChild(child);
       document.body.appendChild(parent);
 
-      await new Promise(r => setTimeout(r, 100));
+      await flush();
 
       // Use the debug API
       const debugInfo = window.Lego.debug.stylesheets(child);

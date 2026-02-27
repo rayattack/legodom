@@ -8,13 +8,13 @@ export const bEnter = {
     return { modifiers }
   }),
 
-  execute: ({ binding, state }) => {
+  execute: ({ binding, state, global }) => {
     if (binding.observer || binding.done) return;
 
     const observer = new IntersectionObserver((entries, io) => {
       const entry = entries[0];
       if (entry.isIntersecting) {
-        safeEval(binding.expr, { state, self: binding.node });
+        safeEval(binding.expr, { state, global, self: binding.node });
         if (binding.modifiers.includes('once')) {
           io.disconnect();
           binding.observer = null;

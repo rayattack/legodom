@@ -55,8 +55,8 @@ export default function legoPlugin(options = {}) {
     if (module) {
       server.moduleGraph.invalidateModule(module);
       server.ws.send({
-        type: 'full-reload',
-        path: '*'
+        type: 'custom',
+        event: 'lego:blocks-changed'
       });
     }
   };
@@ -114,7 +114,14 @@ export default function legoPlugin(options = {}) {
 
         const exports = `export default function registerBlocks() {\n  // Blocks are auto-registered when imported\n}`;
 
-        return `${imports}\n\n${exports}`;
+        const hmrListener = `
+if (import.meta.hot) {
+  import.meta.hot.on('lego:blocks-changed', () => {
+    import.meta.hot.invalidate();
+  });
+}`;
+
+        return `${imports}\n\n${exports}\n${hmrListener}`;
       }
 
       // Handle individual .lego files

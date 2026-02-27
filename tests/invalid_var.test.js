@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -49,7 +50,7 @@ describe('Invalid Variable Rendering', () => {
     const el = document.createElement('invalid-var-test');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // 3. Check content
     const target = el.shadowRoot || el;

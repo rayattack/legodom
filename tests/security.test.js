@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -26,7 +27,7 @@ global.Event = dom.window.Event;
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
 // Load LegoDOM
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('LegoDOM Security', () => {
@@ -41,27 +42,37 @@ describe('LegoDOM Security', () => {
     const el = document.createElement('pwn-comp');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Should NOT have executed
     expect(window.pwned).toBeUndefined();
   });
 
   it('should block access to global sensitive objects', async () => {
-    // Try to access global 'process' or 'window' explicitly if possible
-    window.Lego.block('env-comp', '<div>[[ window.location.href ]]</div>');
+    // Accessing constructor through window should be blocked by safeEval's regex
+    window.Lego.block('env-comp', '<div>[[ window.constructor.name ]]</div>');
     const el = document.createElement('env-comp');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
-    // Ideally this should be blocked or restricted, 
-    // but for now we focus on preventing arbitrary code execution via constructors
-    // If strict mode is on, accessing window might be allowed but defining new functions should be bad.
+    const shadow = el.shadowRoot || el._legoShadow;
+    const div = shadow?.querySelector('div');
+    // "constructor" is blocked by safeEval — expression should not evaluate
+    expect(div?.textContent?.trim() || '').not.toBe('Window');
   });
 
-  it('should safely render HTML with b-html but potentially expose XSS if unchecked', async () => {
-    // b-html doesn't exist yet, but we will add it.
-    // If we add it, we want to ensure it works.
+  it('should render b-html with trusted content', async () => {
+    window.Lego.block('html-comp', '<div b-html="markup"></div>', {
+      markup: '<strong>hello</strong>'
+    });
+    const el = document.createElement('html-comp');
+    document.body.appendChild(el);
+
+    await flush();
+
+    const shadow = el.shadowRoot || el._legoShadow;
+    const div = shadow?.querySelector('div');
+    expect(div?.innerHTML).toBe('<strong>hello</strong>');
   });
 });

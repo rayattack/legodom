@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -35,7 +36,7 @@ describe('LocalStorage Quota Fix', () => {
     // Store original
     originalSetItem = window.localStorage.setItem.bind(window.localStorage);
 
-    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
     window.eval(mainJs);
     Lego = window.Lego;
     Lego.init();
@@ -70,13 +71,13 @@ describe('LocalStorage Quota Fix', () => {
     });
 
     document.body.innerHTML = '<quota-test></quota-test>';
-    await new Promise(r => setTimeout(r, 10));
+    await flush(10);
 
     const el = document.querySelector('quota-test');
 
     // This should trigger QuotaExceededError first, then retry
     el.state.value = 'large-data';
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // Should have recovered (value set on retry)
     const stored = window.localStorage.getItem('test.quota');
@@ -107,12 +108,12 @@ describe('LocalStorage Quota Fix', () => {
     });
 
     document.body.innerHTML = '<evict-test></evict-test>';
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
 
     const el = document.querySelector('evict-test');
     el.state.data = 'x'.repeat(1000); // Large update
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // New key should be saved
     const newData = window.localStorage.getItem('test.new');
@@ -141,11 +142,11 @@ describe('LocalStorage Quota Fix', () => {
     });
 
     document.body.innerHTML = '<protect-test></protect-test>';
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
 
     const el = document.querySelector('protect-test');
     el.state.val = 'new';
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // User preference should still exist
     expect(window.localStorage.getItem('user:preference')).toBe('keep-me');
@@ -165,7 +166,7 @@ describe('LocalStorage Quota Fix', () => {
       document.body.innerHTML = '<error-test></error-test>';
     }).not.toThrow();
 
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
     const el = document.querySelector('error-test');
 
     // Should not crash when updating

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -51,7 +52,7 @@ describe('b-enter directive $element access', () => {
     const el = document.createElement('test-enter');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
 
     const div = el.shadowRoot.querySelector('div');
     expect(div.classList.contains('seen')).toBe(true);
@@ -77,7 +78,7 @@ describe('b-enter directive $element access', () => {
     const el = document.createElement('test-leave');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     const div = el.shadowRoot.querySelector('div');
     expect(div.classList.contains('left')).toBe(true);

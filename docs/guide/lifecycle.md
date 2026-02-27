@@ -256,17 +256,6 @@ Lego.config.metrics = {
 };
 ```
 
-### `onAllSettled` (New in v2.0)
-
-Called when the entire block tree (including Shadow DOM children) has finished its initial render pass. This is perfect for removing loading spinners or measuring "Time to Interactive".
-
-```javascript
-/* main.js */
-Lego.init(document.body).then(() => {
-  document.getElementById('global-loader').remove();
-});
-```
-
 ## Lifecycle Flow
 
 ```

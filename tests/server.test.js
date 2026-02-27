@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -21,7 +22,7 @@ global.Event = dom.window.Event;
 global.fetch = vi.fn();
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('LegoDOM Server-Side Blocks', () => {
@@ -61,7 +62,7 @@ describe('LegoDOM Server-Side Blocks', () => {
     document.body.appendChild(el);
 
     // Wait for fetch + parse + render
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     // 4. Verify fetch called
     expect(global.fetch).toHaveBeenCalledWith('/blocks/remote-widget.lego');
@@ -83,7 +84,7 @@ describe('LegoDOM Server-Side Blocks', () => {
       loader: async (tag) => {
         if (tag === 'auth-widget') {
           // Simulate network delay
-          await new Promise(r => setTimeout(r, 10));
+          await flush(10);
           return mockSFC;
         }
       }
@@ -93,7 +94,7 @@ describe('LegoDOM Server-Side Blocks', () => {
     document.body.appendChild(el);
 
     // Wait for async loader
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     expect(el.shadowRoot).toBeDefined();
     expect(el.shadowRoot.textContent).toContain('Async Auth Content');
@@ -107,7 +108,7 @@ describe('LegoDOM Server-Side Blocks', () => {
     const el = document.createElement('unknown-widget');
     document.body.appendChild(el);
 
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
     expect(global.fetch).not.toHaveBeenCalled();
     expect(el.shadowRoot).toBeNull();
   });

@@ -24,7 +24,7 @@ describe('LegoDOM v2 New Features', () => {
     // Load Lego
     const fs = await import('fs');
     const path = await import('path');
-    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+    const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
     window.eval(mainJs);
     Lego = window.Lego;
     Lego.init();

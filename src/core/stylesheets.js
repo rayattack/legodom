@@ -73,7 +73,8 @@ export const applyStyles = (el) => {
       if (config.debug) console.log('[Lego Debug] Applying styles to', el.tagName, '- Names:', allStyleNames, '- Sheets:', sheetsToApply.length);
     }
     if (sheetsToApply.length > 0) {
-      shadow.adoptedStyleSheets = [...sheetsToApply];
+      const existing = shadow.adoptedStyleSheets.filter(s => !sheetsToApply.includes(s));
+      shadow.adoptedStyleSheets = [...existing, ...sheetsToApply];
     }
   }
 

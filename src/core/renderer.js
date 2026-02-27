@@ -4,6 +4,7 @@ import { config, resolve, createRegex, getDelimiters } from '../utils/helpers.js
 import { safeEval } from '../utils/safe-eval.js';
 import { findErrorBoundary, renderErrorBlock, handleError } from '../features/error.js';
 import { directives } from '../directives/index.js';
+import { findSyncAttr } from '../utils/dom.js';
 
 export const bind = (container, blockRoot, loopCtx = null) => {
   const state = blockRoot._studs;
@@ -80,12 +81,22 @@ export const bind = (container, blockRoot, loopCtx = null) => {
         }
       }
 
-      if (child.hasAttribute('b-sync')) {
-        const prop = child.getAttribute('b-sync');
+      const syncAttr = findSyncAttr(child);
+      if (syncAttr) {
+        const prop = syncAttr.value;
+        const modifiers = syncAttr.name.split('.').slice(1);
+        const isLazy = modifiers.includes('lazy');
+        const isNumber = modifiers.includes('number');
+        const isTrim = modifiers.includes('trim');
+
         const updateState = () => {
           try {
             let target, last;
-            if (loopCtx && prop.startsWith(`${loopCtx.name}.`)) {
+            if (prop.startsWith('global.')) {
+              const keys = prop.slice(7).split('.');
+              last = keys.pop();
+              target = keys.reduce((o, k) => o[k], globals);
+            } else if (loopCtx && prop.startsWith(`${loopCtx.name}.`)) {
               const list = safeEval(loopCtx.listName, { state, global: globals, self: blockRoot });
               const item = list[loopCtx.index];
               if (!item) return;
@@ -97,13 +108,19 @@ export const bind = (container, blockRoot, loopCtx = null) => {
               last = keys.pop();
               target = keys.reduce((o, k) => o[k], state);
             }
-            const newVal = child.type === 'checkbox' ? child.checked : child.value;
+            let newVal = child.type === 'checkbox' ? child.checked : child.value;
+            if (isTrim && typeof newVal === 'string') newVal = newVal.trim();
+            if (isNumber) {
+              const parsed = parseFloat(newVal);
+              if (!isNaN(parsed)) newVal = parsed;
+            }
             if (target && target[last] !== newVal) target[last] = newVal;
           } catch (err) {
             config.onError(err, 'sync-update', child);
           }
         };
-        child.addEventListener('input', updateState);
+        child._bSyncHandler = updateState;
+        if (!isLazy) child.addEventListener('input', updateState);
         child.addEventListener('change', updateState);
       }
 

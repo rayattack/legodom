@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -81,7 +82,7 @@ describe('b-for scope', () => {
     document.body.appendChild(el2);
 
     // Wait for render
-    await new Promise(r => setTimeout(r, 50));
+    await flush(50);
 
     const root = el2.shadowRoot;
     const items = root.querySelectorAll('.test-item');

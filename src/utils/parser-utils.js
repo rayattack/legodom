@@ -122,7 +122,8 @@ export function generateBlockCall(parsed) {
   let logicCode = '{}';
   if (script) {
     // Try to extract default export
-    const defaultExportMatch = script.match(/export\s+default\s+({[\s\S]*})/);
+    // Allow optional block/line comments between `default` and `{`
+    const defaultExportMatch = script.match(/export\s+default\s+(?:\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*({[\s\S]*})/);
     if (defaultExportMatch) {
       logicCode = defaultExportMatch[1];
     } else {

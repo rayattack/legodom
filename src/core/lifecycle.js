@@ -1,4 +1,4 @@
-import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, privateData, forPools } from './registry.js';
+import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, privateData, snapState } from './registry.js';
 import { globals } from './globals.js';
 import { directives } from '../directives/index.js';
 import { config, mergeDescriptors, resolve, isNode } from '../utils/helpers.js';
@@ -72,7 +72,11 @@ export const snap = (el) => {
       enumerable: false
     });
 
+    // Suppress child connectedCallbacks during appendChild so children
+    // don't snap before this parent's mounted() hook has run.
+    snapState.locked = true;
     shadow.appendChild(tpl);
+    snapState.locked = false;
 
     const style = shadow.querySelector('style');
     if (style) {
@@ -84,7 +88,20 @@ export const snap = (el) => {
     render(el);
     el.setAttribute('b-id', name);
 
-    // Deeply initialize all nested components
+    // Track this shadow root for later component registration
+    if (!el._legoShadow) el._legoShadow = shadow;
+
+    // Fire mounted() BEFORE snapping children so child components
+    // can read any state the parent sets during mounted().
+    if (typeof el._studs.mounted === 'function') {
+      try {
+        el._studs.mounted.call(el._studs);
+      } catch (e) {
+        handleError(e, el, 'mounted');
+      }
+    }
+
+    // Deeply initialize all nested components (after mounted)
     const nestedComponents = shadow.querySelectorAll('*');
     if (config.debug) console.log('[Lego Debug] Nested scan in', el.tagName, '- Found elements:', nestedComponents.length);
     nestedComponents.forEach(child => {
@@ -95,17 +112,6 @@ export const snap = (el) => {
       }
       if (isRegistered) snap(child);
     });
-
-    // Track this shadow root for later component registration
-    if (!el._legoShadow) el._legoShadow = shadow;
-
-    if (typeof el._studs.mounted === 'function') {
-      try {
-        el._studs.mounted.call(el._studs);
-      } catch (e) {
-        handleError(e, el, 'mounted');
-      }
-    }
   }
 
   let provider = el.parentElement;
@@ -181,18 +187,6 @@ export const unsnap = (el) => {
     privateData.delete(el);
   }
 
-  // 7. Clear from for-loop pools
-  if (forPools.has(el)) {
-    const pool = forPools.get(el);
-    pool.forEach((node, key) => {
-      if (node && node._studs) {
-        node._studs = null;
-      }
-    });
-    pool.clear();
-    forPools.delete(el);
-  }
-
-  // 9. Recursively unsnap light DOM children
+  // 7. Recursively unsnap light DOM children
   [...el.children].forEach(unsnap);
 };

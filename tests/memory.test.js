@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { flush } from './test-utils.js';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -24,7 +25,7 @@ global.Element = dom.window.Element;
 global.Event = dom.window.Event;
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 
-const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/main.js'), 'utf8');
+const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
 describe('LegoDOM Memory Management', () => {
@@ -39,13 +40,13 @@ describe('LegoDOM Memory Management', () => {
     // Mount
     const el = document.createElement('mem-comp');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100)); // Wait for observer
+    await flush(); // Wait for observer
 
     expect(window.Lego.getActiveBlocksCount()).toBe(1);
 
     // Unmount
     el.remove();
-    await new Promise(r => setTimeout(r, 100)); // Wait for observer
+    await flush(); // Wait for observer
 
     expect(window.Lego.getActiveBlocksCount()).toBe(0);
   });
@@ -56,12 +57,12 @@ describe('LegoDOM Memory Management', () => {
 
     const el = document.createElement('parent-comp');
     document.body.appendChild(el);
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     expect(window.Lego.getActiveBlocksCount()).toBe(2); // Parent + Child
 
     el.remove();
-    await new Promise(r => setTimeout(r, 100));
+    await flush();
 
     expect(window.Lego.getActiveBlocksCount()).toBe(0);
   });

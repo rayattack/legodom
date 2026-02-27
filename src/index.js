@@ -1,4 +1,4 @@
-import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData } from './core/registry.js';
+import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData, snapState } from './core/registry.js';
 import { snap, unsnap } from './core/lifecycle.js';
 import { render, bind } from './core/renderer.js';
 import { reactive } from './core/reactive.js';
@@ -64,7 +64,7 @@ const Lego = {
       try {
         customElements.define(tagName, class extends HTMLElement {
           connectedCallback() {
-            // Defer if not yet registered (shouldn't happen via Lego.block, but good safety)
+            if (snapState.locked) return;
             if (registry[tagName]) snap(this);
           }
           disconnectedCallback() {
@@ -148,6 +148,7 @@ const Lego = {
       if (!customElements.get(tagName)) {
         customElements.define(tagName, class extends HTMLElement {
           connectedCallback() {
+            if (snapState.locked) return;
             if (registry[tagName]) snap(this);
           }
           disconnectedCallback() {
@@ -186,12 +187,17 @@ const Lego = {
       customElements.define(tagName, class extends HTMLElement {
         async connectedCallback() {
           if (registry[tagName]) {
-            snap(this);
+            if (!snapState.locked) snap(this);
             return;
           }
 
           if (!Lego._fetching) Lego._fetching = new Set();
-          if (Lego._fetching.has(tagName)) return;
+          if (!Lego._pendingLazy) Lego._pendingLazy = {};
+          if (Lego._fetching.has(tagName)) {
+            if (!Lego._pendingLazy[tagName]) Lego._pendingLazy[tagName] = new Set();
+            Lego._pendingLazy[tagName].add(this);
+            return;
+          }
           Lego._fetching.add(tagName);
 
           try {
@@ -213,6 +219,17 @@ const Lego = {
             Lego.defineLegoFile(content, `${tagName}.lego`);
 
             if (registry[tagName]) snap(this);
+
+            // Snap all elements that connected while the fetch was in progress
+            const pending = Lego._pendingLazy[tagName];
+            if (pending) {
+              pending.forEach(el => {
+                if (el.isConnected && registry[tagName] && !getPrivateData(el).snapped) {
+                  snap(el);
+                }
+              });
+              delete Lego._pendingLazy[tagName];
+            }
           } catch (e) {
             console.error(`[Lego] Failed to load manifest block ${tagName}:`, e);
           } finally {
@@ -318,12 +335,15 @@ const Lego = {
         }
       };
 
-      const discoveryObserver = new MutationObserver(m => m.forEach(r => {
+      // Disconnect any previous discovery observer to avoid duplicates on re-init
+      if (Lego._discoveryObserver) Lego._discoveryObserver.disconnect();
+
+      Lego._discoveryObserver = new MutationObserver(m => m.forEach(r => {
         r.addedNodes.forEach(discover);
       }));
 
       // Observe with subtree to catch deep injections
-      discoveryObserver.observe(root, { childList: true, subtree: true });
+      Lego._discoveryObserver.observe(root, { childList: true, subtree: true });
 
       // Initial scan
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);

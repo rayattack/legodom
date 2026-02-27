@@ -38,6 +38,11 @@ export const resolveTargets = (query, contextEl) => {
   const scoped = contextEl?.querySelectorAll(query) || [];
   return scoped.length > 0 ? [...scoped] : [...document.querySelectorAll(query)];
 };
+export const findSyncAttr = (node) =>
+  node.attributes
+    ? [...node.attributes].find(a => a.name === 'b-sync' || a.name.startsWith('b-sync.'))
+    : null;
+
 export const syncModelValue = (el, val) => {
   if (el.type === 'checkbox') {
     if (el.checked !== !!val) el.checked = !!val;
