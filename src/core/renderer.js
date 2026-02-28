@@ -22,7 +22,7 @@ export const bind = (container, blockRoot, loopCtx = null) => {
           const eventName = parts[0];
           const modifiers = parts.slice(1);
 
-          child.addEventListener(eventName, (event) => {
+          const handler = (event) => {
             // Action Modifiers
             if (modifiers.includes('prevent')) event.preventDefault();
             if (modifiers.includes('stop')) event.stopPropagation();
@@ -77,7 +77,12 @@ export const bind = (container, blockRoot, loopCtx = null) => {
             } catch (err) {
               handleError(err, blockRoot, 'event-handler');
             }
-          });
+          };
+          child.addEventListener(eventName, handler);
+
+          // Store reference for cleanup during teardown
+          if (!childData.listeners) childData.listeners = [];
+          childData.listeners.push({ eventName, handler });
         }
       }
 
@@ -120,8 +125,13 @@ export const bind = (container, blockRoot, loopCtx = null) => {
           }
         };
         child._bSyncHandler = updateState;
-        if (!isLazy) child.addEventListener('input', updateState);
+        if (!childData.listeners) childData.listeners = [];
+        if (!isLazy) {
+          child.addEventListener('input', updateState);
+          childData.listeners.push({ eventName: 'input', handler: updateState });
+        }
         child.addEventListener('change', updateState);
+        childData.listeners.push({ eventName: 'change', handler: updateState });
       }
 
       // b-var: Register element reference

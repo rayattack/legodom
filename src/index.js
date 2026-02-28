@@ -218,6 +218,9 @@ const Lego = {
             };
 
             const req = await fetch(cleanUrl, fetchOpts);
+            if (!req.ok) {
+              throw new Error(`HTTP ${req.status} loading block "${tagName}" from ${cleanUrl}`);
+            }
             const content = await req.text();
 
             Lego.defineLegoFile(content, `${tagName}.lego`);
@@ -372,7 +375,9 @@ const Lego = {
       });
 
       document.addEventListener('submit', e => {
-        e.preventDefault();
+        if (e.target.hasAttribute('b-action')) {
+          e.preventDefault();
+        }
       })
 
       document.addEventListener('click', e => {

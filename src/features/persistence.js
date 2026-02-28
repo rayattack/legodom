@@ -189,6 +189,14 @@ export const handleDbUpdate = (target, prop, value) => {
   }
 };
 
+export const cleanupDbBindings = (el) => {
+  dbBindings.forEach((bindings) => {
+    bindings.forEach(entry => {
+      if (entry.el === el) bindings.delete(entry);
+    });
+  });
+};
+
 export const initCrossTabSync = () => {
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', (e) => {

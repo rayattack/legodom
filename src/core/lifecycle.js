@@ -3,6 +3,7 @@ import { globals } from './globals.js';
 import { directives } from '../directives/index.js';
 import { config, mergeDescriptors, resolve, isNode } from '../utils/helpers.js';
 import { findAncestor } from '../utils/dom.js';
+import { cleanupDbBindings } from '../features/persistence.js';
 import { parseJSObject } from '../utils/safe-eval.js';
 import { reactive } from './reactive.js';
 import { bind, render } from './renderer.js';
@@ -76,8 +77,11 @@ export const snap = (el) => {
     // Suppress child connectedCallbacks during appendChild so children
     // don't snap before this parent's mounted() hook has run.
     snapState.locked = true;
-    shadow.appendChild(tpl);
-    snapState.locked = false;
+    try {
+      shadow.appendChild(tpl);
+    } finally {
+      snapState.locked = false;
+    }
 
     const style = shadow.querySelector('style');
     if (style) {
@@ -132,12 +136,27 @@ export const unsnap = (el) => {
     }
   }
 
-  // 2. Recursively unsnap children in shadowRoot
+  // 2. Remove stored event listeners from shadow root elements
   if (el.shadowRoot) {
+    const walker = document.createTreeWalker(el.shadowRoot, NodeFilter.SHOW_ELEMENT);
+    let node;
+    while (node = walker.nextNode()) {
+      const nodeData = privateData.get(node);
+      if (nodeData && nodeData.listeners) {
+        nodeData.listeners.forEach(({ eventName, handler }) => {
+          node.removeEventListener(eventName, handler);
+        });
+        nodeData.listeners = null;
+      }
+    }
+    // Recursively unsnap children in shadowRoot
     [...el.shadowRoot.children].forEach(unsnap);
   }
 
-  // 3. Remove from active blocks tracking
+  // 3. Clean up persistence bindings
+  cleanupDbBindings(el);
+
+  // 4. Remove from active blocks tracking
   activeBlocks.delete(el);
   globalSubscribers.delete(el);
 

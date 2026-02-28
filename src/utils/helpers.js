@@ -43,7 +43,11 @@ const REGEX_CACHE = new Map();
 export const createRegex = () => {
   const [start, end] = getDelimiters();
   const key = start + end;
-  if (REGEX_CACHE.has(key)) return REGEX_CACHE.get(key);
+  if (REGEX_CACHE.has(key)) {
+    const cached = REGEX_CACHE.get(key);
+    cached.lastIndex = 0;
+    return cached;
+  }
 
   // Escape special regex characters
   const s = start.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
