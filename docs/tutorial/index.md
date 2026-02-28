@@ -1,60 +1,77 @@
-# LegoDOM is Simple to Learn
+# Tutorial: Build a Task Tracker
+
+In the next 20 minutes, you'll build a complete task tracker with a persistent sidebar, real-time search, data that survives page refreshes, and navigation that feels instant. No prior framework experience needed.
+
+## See What LegoDOM Can Do
+
+Here's a taste. This single `.lego` file gives you a reactive, styled, self-contained component:
 
 ```html
-<style>
-  self {}
-  button { background-color: #000; color: #fff; padding: 5px 10px; }
-</style>
-
-<template b-stylesheets="bulma">
-  <input type="text" b-sync="name">
-  <button @click="greet">[[ count > 0 ? `Greeted ${count} times` : 'Greet' ]]</button>
-  <h1>Hello [[ name ]]! You are on the [[ $route.url ]] page.</h1>
+<template>
+  <h2>[[ title ]]</h2>
+  <input b-sync="search" placeholder="Filter tasks...">
+  <ul>
+    <li b-for="task in filtered" @click="toggle(task)">
+      <span b-show="task.done" class="done">✓</span>
+      [[ task.name ]]
+    </li>
+  </ul>
+  <p b-if="filtered.length === 0">No tasks found.</p>
 </template>
 
 <script>
-  export default {
-    count: 0,
-    name: $db('username').default('World'),
-    greet() {
-      alert('Hello ' + this.name + '!');
-
-      //let's send it up the lego chain
-      this.$emit('greet', this.name);
-    }
+export default {
+  title: 'My Tasks',
+  search: '',
+  tasks: $db('tasks').default([
+    { name: 'Learn LegoDOM', done: false },
+    { name: 'Build something great', done: false }
+  ]),
+  get filtered() {
+    return this.tasks.filter(t =>
+      t.name.toLowerCase().includes(this.search.toLowerCase())
+    );
+  },
+  toggle(task) {
+    task.done = !task.done;
   }
+}
 </script>
 ```
 
-Welcome! In the next 15 minutes, you'll build a complete multi-page application with beautiful blocks, smooth navigation, and a login flow. No prior framework experience needed.
-
+That's a searchable, persistent, reactive task list in **30 lines**. No virtual DOM. No state management library. No build step required.
 
 ## What You'll Build
 
-A polished app with:
-- 🏠 **Landing Page** – Your app's front door
-- 🔐 **Login Page** – A form that validates and navigates
-- 🎉 **Welcome Page** – Personalized dashboard after login
+A real task tracker dashboard with:
 
-All using Single File Blocks (`.lego` files) and client-side routing.
+- **Reactive components** — state changes update the DOM automatically
+- **Surgical routing** — click a category in the sidebar, only the task list swaps. The sidebar, its scroll position, its state — all untouched
+- **Persistent data** — tasks survive page refresh, even across browser tabs
+- **Route guards** — protect pages with middleware
+- **Scoped styles** — CSS that never leaks between components
+
+## Why LegoDOM?
+
+Most frameworks re-render entire component trees when you navigate. LegoDOM lets you target exactly which part of the page to update. Your sidebar stays. Your scroll position stays. Your in-progress form stays. Only what needs to change, changes.
+
+This is called **surgical routing**, and it changes how you think about building web apps.
 
 ## Prerequisites
 
 - Node.js 18+ installed
 - A code editor (VS Code recommended)
-- Basic HTML/CSS/JavaScript knowledge
+- Basic HTML, CSS, and JavaScript
 
 ## Tutorial Path
 
-| Step | You'll Learn |
-|------|--------------|
-| [1. Project Setup](./01-project-setup) | Create a new project with Vite |
-| [2. Your First Block](./02-your-first-block) | Build a `.lego` file |
-| [3. Adding Routes](./03-adding-routes) | Navigate between pages |
-| [4. Multi-Page App](./04-multi-page-app) | Complete login flow |
-| [5. State & Globals](./05-state-and-globals) | Share data across pages |
-
-## Ready?
+| Step | What You'll Build |
+|------|-------------------|
+| [1. Project Setup](./01-project-setup) | Create a project, run the dev server |
+| [2. Your First Block](./02-your-first-block) | A reactive task list with search and filtering |
+| [3. Routing & Layouts](./03-adding-routes) | A dashboard shell with surgical navigation |
+| [4. Persistence & Forms](./04-multi-page-app) | Data that survives refresh with `$db` |
+| [5. State, Guards & Beyond](./05-state-and-globals) | Global state, auth middleware, and polish |
 
 <div style="text-align: center; margin: 2rem 0;">
   <a href="./01-project-setup" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1.2rem;">
@@ -63,5 +80,5 @@ All using Single File Blocks (`.lego` files) and client-side routing.
 </div>
 
 ::: tip No Build Tools? No Problem!
-If you want to skip the Vite setup and use LegoDOM via CDN, check out the [CDN Quick Start](/guide/cdn-usage). You can always come back to this tutorial later.
+If you want to skip the Vite setup and use LegoDOM via CDN, check out the [CDN Quick Start](/guide/cdn-usage). Everything in this tutorial works with plain HTML too.
 :::

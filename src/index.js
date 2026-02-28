@@ -10,11 +10,13 @@ import { defineLegoFile } from './core/parser.js';
 import { dbFactory, initCrossTabSync, handleDbUpdate } from './features/persistence.js';
 import { _go, routes, setSnap as setRouterSnap, _matchRoute, setSnap, findRoute } from './features/router.js';
 import { setErrorHandlers, findErrorBoundary } from './features/error.js';
+import { mount, setMountHandlers } from './features/mount.js';
 
 // Dependency Injection Setup
 globalBatcher.setHandler(render);
 setErrorHandlers(snap, render);
 setRouterSnap(snap);
+setMountHandlers(snap, unsnap);
 
 // Initialize Globals
 const browserRoute = {
@@ -29,6 +31,7 @@ const browserRoute = {
 const globalState = reactive({
   $route: browserRoute,
   $go: (path, ...targets) => _go(path, ...targets)(document.body),
+  $mount: (tagName, target, props) => mount(tagName, target, props),
   $db: dbFactory
 }, typeof document !== 'undefined' ? document.body : null);
 
@@ -38,6 +41,7 @@ const Lego = {
   db: dbFactory,
   snap,
   unsnap,
+  mount,
   defineLegoFile: (content, filename) => defineLegoFile(Lego, content, filename),
   block: (tagName, templateHTML, logic = {}, styles = "", cascade = "", error = "") => {
     const t = document.createElement('template');

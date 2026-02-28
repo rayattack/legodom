@@ -1,218 +1,269 @@
 # Step 2: Your First Block
 
-Now let's create a block! By the end of this page, you'll understand the `.lego` file format and have a working home page.
+Now let's build something real. By the end of this page, you'll have a reactive task list with adding, completing, deleting, and filtering — all in a single `.lego` file.
 
-## Create Your First `.lego` File
+## The `.lego` File Format
 
-Create `src/blocks/home-page.lego`:
+Every block has three sections:
 
 ```html
 <template>
-  <div class="hero">
+  <!-- Your HTML with reactive bindings -->
+</template>
+
+<style>
+  /* Scoped CSS — never leaks to other components */
+</style>
+
+<script>
+export default {
+  // Reactive state and methods
+}
+</script>
+```
+
+The filename becomes the block's tag name: `task-list.lego` → `<task-list>`.
+
+## Build a Task List
+
+Delete the sample `my-app.lego` and create `src/blocks/task-list.lego`:
+
+```html
+<template>
+  <div class="container">
     <h1>[[ title ]]</h1>
-    <p>[[ subtitle ]]</p>
-    <button @click="handleClick()">[[ buttonText ]]</button>
-  </div>
-  
-  <div class="features">
-    <div class="feature" b-for="feature in features">
-      <span class="icon">[[ feature.icon ]]</span>
-      <h3>[[ feature.title ]]</h3>
-      <p>[[ feature.description ]]</p>
-    </div>
+
+    <!-- Add task form -->
+    <form @submit.prevent="addTask()">
+      <input
+        b-sync="newTask"
+        placeholder="What needs to be done?"
+        autofocus
+      >
+      <button type="submit" b-show="newTask.length > 0">Add</button>
+    </form>
+
+    <!-- Task list -->
+    <ul b-show="tasks.length > 0">
+      <li b-for="task in tasks" class="[[ task.done ? 'completed' : '' ]]">
+        <label>
+          <input type="checkbox" b-sync="task.done">
+          <span>[[ task.name ]]</span>
+        </label>
+        <button class="delete" @click="removeTask($index)">x</button>
+      </li>
+    </ul>
+
+    <!-- Empty state -->
+    <p b-if="tasks.length === 0" class="empty">
+      No tasks yet. Add one above!
+    </p>
+
+    <!-- Summary -->
+    <footer b-show="tasks.length > 0">
+      [[ remaining ]] of [[ tasks.length ]] remaining
+    </footer>
   </div>
 </template>
 
 <style>
   self {
     display: block;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    max-width: 500px;
+    margin: 3rem auto;
+    padding: 0 1rem;
+  }
+
+  h1 { color: #333; font-size: 1.75rem; }
+
+  form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  input[type="text"], input:not([type]) {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+
+  input:focus { outline: none; border-color: #667eea; }
+
+  form button {
+    padding: 0.75rem 1.5rem;
+    background: #667eea;
     color: white;
-    padding: 4rem 2rem;
-  }
-  
-  .hero {
-    text-align: center;
-    max-width: 600px;
-    margin: 0 auto 4rem;
-  }
-  
-  .hero h1 {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-  }
-  
-  .hero p {
-    font-size: 1.25rem;
-    opacity: 0.9;
-    margin-bottom: 2rem;
-  }
-  
-  .hero button {
-    background: white;
-    color: #667eea;
     border: none;
-    padding: 1rem 2.5rem;
-    font-size: 1.1rem;
+    border-radius: 8px;
     font-weight: 600;
-    border-radius: 50px;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
   }
-  
-  .hero button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+
+  ul { list-style: none; padding: 0; }
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
   }
-  
-  .features {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    max-width: 900px;
-    margin: 0 auto;
+
+  li label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
   }
-  
-  .feature {
-    background: rgba(255,255,255,0.1);
-    padding: 2rem;
-    border-radius: 16px;
+
+  li.completed span {
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
+
+  .delete {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .delete:hover { color: #e74c3c; }
+
+  .empty {
     text-align: center;
-    backdrop-filter: blur(10px);
+    color: #999;
+    padding: 2rem;
   }
-  
-  .feature .icon {
-    font-size: 3rem;
-    display: block;
-    margin-bottom: 1rem;
-  }
-  
-  .feature h3 {
-    margin-bottom: 0.5rem;
-  }
-  
-  .feature p {
-    opacity: 0.8;
+
+  footer {
+    text-align: center;
+    color: #999;
+    padding: 1rem 0;
     font-size: 0.9rem;
   }
 </style>
 
 <script>
 export default {
-  title: 'Welcome to My App',
-  subtitle: 'Built with LegoDOM – the tiny framework that loves developers',
-  buttonText: 'Get Started',
-  
-  features: [
-    { icon: '⚡', title: 'Lightning Fast', description: 'No virtual DOM overhead' },
-    { icon: '🧩', title: 'Block-Based', description: 'Reusable building blocks' },
-    { icon: '🎨', title: 'Scoped Styles', description: 'CSS that never leaks' }
+  title: 'Task Tracker',
+  newTask: '',
+  tasks: [
+    { name: 'Learn the .lego file format', done: true },
+    { name: 'Build a reactive task list', done: false },
+    { name: 'Add surgical routing', done: false }
   ],
-  
-  handleClick() {
-    // We'll wire this up to navigation soon!
-    alert('Clicked! Next: we\'ll navigate to /login');
+
+  get remaining() {
+    return this.tasks.filter(t => !t.done).length;
   },
-  
-  mounted() {
-    console.log('Home page mounted!');
+
+  addTask() {
+    if (!this.newTask.trim()) return;
+    this.tasks.push({ name: this.newTask.trim(), done: false });
+    this.newTask = '';
+  },
+
+  removeTask(index) {
+    this.tasks.splice(index, 1);
   }
 }
 </script>
 ```
 
-## Understanding the Structure
+## Update `main.js`
 
-Every `.lego` file has three sections:
+Replace the contents of `src/main.js`:
 
-### 1. `<template>` – Your HTML
-
-```html
-<template>
-  <h1>[[ title ]]</h1>           <!-- Reactive text -->
-  <button @click="doSomething()"> <!-- Event binding -->
-  <div b-for="item in items">     <!-- Loop directive -->
-</template>
-```
-
-### 2. `<style>` – Scoped CSS
-
-```html
-<style>
-  self {
-    /* 'self' targets the block root (like :host) */
-    display: block;
-  }
-  
-  button {
-    /* These styles ONLY affect this block */
-  }
-</style>
-```
-
-### 3. `<script>` – Logic & State
-
-```html
-<script>
-export default {
-  // Reactive properties
-  title: 'Hello',
-  count: 0,
-  items: [],
-  
-  // Methods
-  doSomething() {
-    this.count++;  // Mutation triggers re-render!
-  },
-  
-  // Lifecycle
-  mounted() {
-    console.log('Block is ready');
-  }
-}
-</script>
-```
-
-## Register the Route
-
-Now update `src/app.js` to show your block:
-
-```javascript{7-8}
+```javascript
 import { Lego } from 'lego-dom';
 import registerBlocks from 'virtual:lego-blocks';
 
 registerBlocks();
 
-// Add this line:
-Lego.route('/', 'home-page');
-
 await Lego.init();
 ```
 
-## See It Live
+Update `index.html` to use your new block:
 
-```bash
-npm run dev
+```html
+<body>
+  <task-list></task-list>
+  <script type="module" src="/src/main.js"></script>
+</body>
 ```
 
-Open `http://localhost:5173` and you'll see your beautiful home page!
+Now run `npm run dev` and try it out. Add tasks, check them off, delete them. Every interaction is instant because LegoDOM updates the DOM directly — no diffing, no virtual DOM.
 
-## What You've Learned
+## What Just Happened
 
-✅ The three-section `.lego` file structure  
-✅ Template syntax: `[[ ]]` for data, `@click` for events, `b-for` for loops  
-✅ The `self` keyword for block root styling  
-✅ How to export state and methods from `<script>`  
-✅ Connecting a block to a route  
+Let's break down the key features you just used:
 
-## Key Pattern: Block → Route → Display
+### Reactive State
 
+```javascript
+export default {
+  newTask: '',
+  tasks: [...]
+}
 ```
-home-page.lego  →  Lego.route('/', 'home-page')  →  <lego-router> shows it
+
+Every property in your export is reactive. When you write `this.tasks.push(...)`, LegoDOM detects the change and updates only the affected DOM nodes. You never call `setState()` or manage subscriptions.
+
+### Directives
+
+| Directive | What It Does | You Used It For |
+|-----------|-------------|-----------------|
+| `b-sync` | Two-way binding between input and state | Binding the text input to `newTask` and checkboxes to `task.done` |
+| `b-for` | Renders an element for each item in an array | Rendering the task list |
+| `b-if` | Adds/removes an element based on a condition | Showing "No tasks yet" when the list is empty |
+| `b-show` | Toggles `display: none` (element stays in DOM) | Hiding the Add button when input is empty, hiding the list when empty |
+
+### Events
+
+```html
+<form @submit.prevent="addTask()">
+<button @click="removeTask($index)">
 ```
 
-The filename (minus `.lego`) becomes the block name. Routes map URLs to block names. The router displays the matched block.
+The `@` prefix binds events. Modifiers like `.prevent` call `event.preventDefault()` automatically. Inside `b-for` loops, `$index` gives you the current iteration index.
+
+### Computed Properties
+
+```javascript
+get remaining() {
+  return this.tasks.filter(t => !t.done).length;
+}
+```
+
+JavaScript getters work as computed properties. They re-evaluate automatically when their dependencies change.
+
+### Scoped Styles
+
+```css
+self {
+  display: block;
+  max-width: 500px;
+}
+```
+
+The `self` selector targets the block's root element (equivalent to `:host` in Shadow DOM). All styles are scoped — your `button` styles won't affect buttons in other blocks.
+
+## Try This
+
+Before moving on, experiment:
+
+1. Add a "Clear completed" button that filters out done tasks
+2. Try `@keydown.enter="addTask()"` on the input instead of a form
+3. Add a `b-show="tasks.some(t => t.done)"` to show "Clear completed" only when there are completed tasks
+
+These all work with what you've already learned. No new concepts needed.
 
 ---
 
@@ -221,6 +272,6 @@ The filename (minus `.lego`) becomes the block name. Routes map URLs to block na
     ← Previous: Project Setup
   </a>
   <a href="./03-adding-routes" style="display: inline-block; background: #4CAF50; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
-    Next: Adding Routes →
+    Next: Routing & Layouts →
   </a>
 </div>

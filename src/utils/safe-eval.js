@@ -3,6 +3,7 @@ import { findAncestor } from './dom.js';
 import { sharedStates } from '../core/registry.js';
 import { globals } from '../core/globals.js';
 import { _go } from '../features/router.js';
+import { mount } from '../features/mount.js';
 
 const expressionCache = new LRUCache(1000);
 
@@ -39,6 +40,7 @@ export const safeEval = (expr, context, throwError = true) => {
       $params: globals.$route?.params || {},
       $go: (path, ...targets) => _go(path, ...targets)(context.self),
       $db: globals.$db,
+      $mount: (tagName, target, props) => mount(tagName, target, props),
       $emit: (name, detail) => {
         context.self.dispatchEvent(new CustomEvent(name, {
           detail,

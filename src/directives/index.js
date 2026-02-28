@@ -7,6 +7,7 @@ import { bFor } from './b-for.js';
 import { bInit } from './b-init.js';
 import { bEnter } from './b-enter.js';
 import { bLeave } from './b-leave.js';
+import { bMount } from './b-mount.js';
 
 
 export const directives = {
@@ -18,5 +19,6 @@ export const directives = {
   'b-for': bFor,
   'b-init': bInit,
   'b-enter': bEnter,
-  'b-leave': bLeave
+  'b-leave': bLeave,
+  'b-mount': bMount
 };

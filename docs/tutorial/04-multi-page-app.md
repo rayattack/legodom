@@ -1,329 +1,314 @@
-# Step 4: Building a Multi-Page App
+# Step 4: Persistence & Forms
 
-Let's bring it all together! In this step, we'll complete the **index → login → welcome** flow that every real app needs. You'll see exactly how data flows between pages.
+Right now, your tasks disappear when you refresh the page. Let's fix that. LegoDOM has a built-in persistence API called `$db` that saves data to the browser and syncs it across tabs — no setup, no database, no backend needed.
 
-## The Complete App Structure
+## Meet `$db`
 
-By the end of this page, you'll have:
+`$db` wraps browser storage with reactive bindings. When state changes, it saves automatically. When the page reloads, it restores automatically.
 
+Replace the `<script>` section of `src/blocks/task-list.lego`:
+
+```javascript
+<script>
+export default {
+  title: 'All Tasks',
+  newTask: '',
+  tasks: $db('all-tasks').default([
+    { name: 'Learn the .lego file format', done: true },
+    { name: 'Build a reactive task list', done: false },
+    { name: 'Add surgical routing', done: false }
+  ]).debounce(300),
+
+  get remaining() {
+    return this.tasks.filter(t => !t.done).length;
+  },
+
+  addTask() {
+    if (!this.newTask.trim()) return;
+    this.tasks.push({ name: this.newTask.trim(), done: false });
+    this.newTask = '';
+  },
+
+  removeTask(index) {
+    this.tasks.splice(index, 1);
+  }
+}
+</script>
 ```
-src/blocks/
-├── home-page.lego      ← Landing page (/)
-├── login-page.lego     ← Login form (/login)
-└── welcome-page.lego   ← Dashboard (/welcome)
+
+The only line that changed:
+
+```javascript
+// Before:
+tasks: [...]
+
+// After:
+tasks: $db('all-tasks').default([...]).debounce(300)
 ```
 
-## Step 1: Create the Welcome Page
+That's it. Your tasks now survive page refresh.
 
-Create `src/blocks/welcome-page.lego`:
+### What `$db` Does
+
+| Method | Purpose |
+|--------|---------|
+| `$db('key')` | Create a persistent binding with this storage key |
+| `.default(value)` | Use this value if nothing is stored yet |
+| `.debounce(ms)` | Wait this many milliseconds before saving (prevents rapid writes) |
+
+## Try It
+
+1. Add a few tasks in your app
+2. Refresh the page — your tasks are still there
+3. Open a second browser tab to the same URL — changes sync between tabs
+
+The cross-tab sync is automatic. `$db` listens for storage events and updates all connected components.
+
+## Add Persistence to Category Pages
+
+Update `src/blocks/work-tasks.lego`'s script:
+
+```javascript
+<script>
+export default {
+  tasks: $db('work-tasks').default([
+    { name: 'Finish quarterly report', done: false },
+    { name: 'Review pull requests', done: true },
+    { name: 'Update project roadmap', done: false }
+  ]).debounce(300)
+}
+</script>
+```
+
+And `src/blocks/personal-tasks.lego`:
+
+```javascript
+<script>
+export default {
+  tasks: $db('personal-tasks').default([
+    { name: 'Grocery shopping', done: false },
+    { name: 'Call dentist', done: false },
+    { name: 'Read new book', done: true }
+  ]).debounce(300)
+}
+</script>
+```
+
+Each block gets its own storage key. Work tasks and personal tasks persist independently.
+
+## Build an Add Task Form
+
+Let's create a dedicated form block that demonstrates `b-sync` modifiers and form handling. Create `src/blocks/add-task-form.lego`:
 
 ```html
 <template>
-  <div class="dashboard">
-    <header>
-      <h1>Welcome, [[ username ]]! 🎉</h1>
-      <button @click="handleLogout()">Logout</button>
-    </header>
-    
-    <main>
-      <div class="card">
-        <h2>You're In!</h2>
-        <p>You've successfully navigated through a complete authentication flow built with LegoDOM.</p>
-        <p>This page received your username from the login form using global state.</p>
+  <div class="form-card">
+    <h2>New Task</h2>
+
+    <form @submit.prevent="submit()">
+      <div class="field">
+        <label>Task name</label>
+        <input b-sync="name" placeholder="What needs to be done?" required>
       </div>
-      
-      <div class="stats">
-        <div class="stat">
-          <span class="value">[[ visitCount ]]</span>
-          <span class="label">Page Views</span>
-        </div>
-        <div class="stat">
-          <span class="value">[[ formatTime() ]]</span>
-          <span class="label">Current Time</span>
-        </div>
-        <div class="stat">
-          <span class="value">✓</span>
-          <span class="label">Logged In</span>
-        </div>
+
+      <div class="field">
+        <label>Category</label>
+        <select b-sync="category">
+          <option value="all">All</option>
+          <option value="work">Work</option>
+          <option value="personal">Personal</option>
+        </select>
       </div>
-      
+
+      <div class="field">
+        <label>Priority (1-5)</label>
+        <input type="number" b-sync.number="priority" min="1" max="5">
+      </div>
+
+      <div class="field">
+        <label>Notes</label>
+        <textarea b-sync.trim="notes" placeholder="Optional details..."></textarea>
+      </div>
+
       <div class="actions">
-        <a href="/" b-link class="btn">← Back to Home</a>
+        <button type="submit" b-show="name.length > 0">Add Task</button>
+        <p b-show="added" class="success">Task added!</p>
       </div>
-    </main>
+    </form>
   </div>
 </template>
 
 <style>
-  self {
-    display: block;
-    min-height: 100vh;
-    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-    color: white;
+  self { display: block; }
+
+  .form-card {
+    background: white;
     padding: 2rem;
-  }
-  
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 800px;
-    margin: 0 auto 3rem;
-  }
-  
-  header h1 {
-    font-size: 1.75rem;
-  }
-  
-  header button {
-    background: rgba(255,255,255,0.1);
-    color: white;
-    border: 1px solid rgba(255,255,255,0.2);
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  
-  header button:hover {
-    background: rgba(255,255,255,0.2);
-  }
-  
-  main {
-    max-width: 800px;
-    margin: 0 auto;
-  }
-  
-  .card {
-    background: rgba(255,255,255,0.05);
-    padding: 2rem;
-    border-radius: 16px;
-    margin-bottom: 2rem;
-    border: 1px solid rgba(255,255,255,0.1);
-  }
-  
-  .card h2 {
-    color: #4ecca3;
-    margin-bottom: 1rem;
-  }
-  
-  .card p {
-    opacity: 0.8;
-    line-height: 1.6;
-    margin-bottom: 0.5rem;
-  }
-  
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-  
-  .stat {
-    background: rgba(255,255,255,0.05);
-    padding: 1.5rem;
     border-radius: 12px;
-    text-align: center;
-    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    max-width: 500px;
   }
-  
-  .stat .value {
+
+  h2 { color: #333; margin-bottom: 1.5rem; }
+
+  .field {
+    margin-bottom: 1.25rem;
+  }
+
+  label {
     display: block;
-    font-size: 2rem;
-    font-weight: bold;
-    color: #4ecca3;
-    margin-bottom: 0.5rem;
-  }
-  
-  .stat .label {
     font-size: 0.85rem;
-    opacity: 0.7;
-  }
-  
-  .actions {
-    text-align: center;
-  }
-  
-  .btn {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    background: #4ecca3;
-    color: #1a1a2e;
-    text-decoration: none;
-    border-radius: 8px;
     font-weight: 600;
+    color: #555;
+    margin-bottom: 0.4rem;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+
+  textarea { min-height: 80px; resize: vertical; }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  button {
+    padding: 0.7rem 1.5rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .success {
+    color: #27ae60;
+    font-weight: 600;
+    font-size: 0.9rem;
   }
 </style>
 
 <script>
 export default {
-  visitCount: 0,
-  
-  get username() {
-    // Get username from global state (set by login page)
-    return Lego.globals.user?.name || 'Guest';
-  },
-  
-  mounted() {
-    this.visitCount++;
-    
-    // Redirect to login if not authenticated
-    if (!Lego.globals.user) {
-      console.log('Not logged in, redirecting...');
-      this.$go('/login').get();
-    }
-  },
-  
-  formatTime() {
-    return new Date().toLocaleTimeString();
-  },
-  
-  handleLogout() {
-    // Clear global user state
-    Lego.globals.user = null;
-    this.$go('/').get();
+  name: '',
+  category: 'all',
+  priority: 3,
+  notes: '',
+  added: false,
+
+  submit() {
+    // Get the right storage key based on category
+    const key = this.category === 'all' ? 'all-tasks'
+      : this.category + '-tasks';
+
+    // Read current tasks, add the new one, save
+    const tasks = $db(key).get() || [];
+    tasks.push({
+      name: this.name,
+      done: false,
+      priority: this.priority,
+      notes: this.notes
+    });
+    $db(key).set(tasks);
+
+    // Reset form
+    this.name = '';
+    this.notes = '';
+    this.priority = 3;
+    this.added = true;
+
+    setTimeout(() => { this.added = false; }, 2000);
   }
 }
 </script>
 ```
 
-## Step 2: Update Login to Set Global State
+### `b-sync` Modifiers
 
-The login page needs to store the user in global state. Update `src/blocks/login-page.lego`'s script section:
+Notice the modifiers on the inputs:
 
-```javascript
-<script>
-export default {
-  email: '',
-  password: '',
-  
-  handleSubmit(event) {
-    event.preventDefault();
-    
-    // Store user in GLOBAL state (accessible from any block!)
-    Lego.globals.user = {
-      name: this.email.split('@')[0],  // Use email prefix as name
-      email: this.email,
-      loggedInAt: new Date()
-    };
-    
-    console.log('User logged in:', Lego.globals.user);
-    
-    // Navigate to welcome page
-    this.$go('/welcome').get();
-  }
-}
-</script>
+```html
+<input type="number" b-sync.number="priority">  <!-- Parses as number -->
+<textarea b-sync.trim="notes">                   <!-- Trims whitespace -->
 ```
 
-## Step 3: Update Home Page Navigation
+| Modifier | Effect |
+|----------|--------|
+| `.number` | Parses the value as a float |
+| `.trim` | Strips leading/trailing whitespace |
+| `.lazy` | Updates on `change` instead of `input` (less frequent) |
 
-Update `src/blocks/home-page.lego`'s `handleClick` method:
+## Add the Form to Your App
 
-```javascript
-handleClick() {
-  this.$go('/login').get();
-}
-```
-
-## Step 4: Complete `app.js`
-
-Here's the final `src/app.js`:
+Add a route and a sidebar link. Update `src/main.js`:
 
 ```javascript
 import { Lego } from 'lego-dom';
 import registerBlocks from 'virtual:lego-blocks';
 
-// Register all .lego blocks
 registerBlocks();
 
-// Define routes
-Lego.route('/', 'home-page');
-Lego.route('/login', 'login-page');
-Lego.route('/welcome', 'welcome-page');
+Lego.route('/', 'app-shell');
+Lego.route('/work', 'app-shell');
+Lego.route('/personal', 'app-shell');
+Lego.route('/add', 'app-shell');       // New!
 
-// Initialize with default user state
-Lego.globals.user = null;
-
-// Start the engine
 await Lego.init();
 ```
 
-## Test the Complete Flow
+Add a link in `src/blocks/app-shell.lego`'s sidebar nav:
 
-```bash
-npm run dev
+```html
+<nav>
+  <a href="/" b-target="#content">All Tasks</a>
+  <a href="/work" b-target="#content">Work</a>
+  <a href="/personal" b-target="#content">Personal</a>
+  <a href="/add" b-target="#content" class="add-link">+ Add Task</a>
+</nav>
 ```
 
-1. **Home Page** (`/`) – Click "Get Started"
-2. **Login Page** (`/login`) – Enter an email, click "Sign In"
-3. **Welcome Page** (`/welcome`) – See your username displayed!
-4. Click "Logout" – Clears state, returns to home
-5. Try navigating directly to `/welcome` – Redirects to login!
-
-## The Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Lego.globals                          │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  user: { name: 'john', email: 'john@test.com' }    │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-         ▲                                    │
-         │ writes                             │ reads
-         │                                    ▼
-   ┌──────────┐                        ┌──────────────┐
-   │  login   │                        │   welcome    │
-   │  page    │                        │    page      │
-   └──────────┘                        └──────────────┘
-```
-
-## Auth Guard Pattern
-
-Want to protect routes? Add middleware:
+And register the route→block mapping. When `/add` loads inside the shell, we want it to show `add-task-form`. Add a route for that:
 
 ```javascript
-// In app.js
-
-const requireAuth = (params, globals) => {
-  if (!globals.user) {
-    globals.$go('/login').get();
-    return false;  // Block navigation
-  }
-  return true;  // Allow navigation
-};
-
-Lego.route('/welcome', 'welcome-page', requireAuth);
-Lego.route('/dashboard', 'dashboard-page', requireAuth);
-Lego.route('/settings', 'settings-page', requireAuth);
+Lego.route('/add', 'app-shell');
 ```
 
-## What You've Built
+Since the shell is already mounted and `b-target` handles fragment swaps, the form will load into `#content` when you click "+ Add Task".
 
-✅ A complete login flow: home → login → welcome  
-✅ Global state shared across blocks  
-✅ Logout functionality that clears state  
-✅ Automatic redirect when not authenticated  
-✅ Route protection with middleware  
+## The `$db` API at a Glance
 
-## The Full Picture
+```javascript
+// In state declarations (reactive binding)
+tasks: $db('my-key').default([]).debounce(500)
 
-| File | Purpose |
-|------|---------|
-| `index.html` | Entry HTML with `<lego-router>` |
-| `src/app.js` | Routes, globals, initialization |
-| `src/blocks/*.lego` | Your page blocks |
-| `vite.config.js` | Vite + LegoDOM plugin setup |
+// In methods (direct read/write)
+$db('my-key').get()          // Read from storage
+$db('my-key').set(value)     // Write to storage
+$db('my-key').delete()       // Remove from storage
+```
+
+Data is JSON-serialized to `localStorage`. If storage fills up, `$db` automatically evicts the oldest entries to make room.
 
 ---
 
 <div style="display: flex; justify-content: space-between; margin-top: 3rem;">
   <a href="./03-adding-routes" style="display: inline-block; background: #eee; color: #333; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
-    ← Previous: Adding Routes
+    ← Previous: Routing & Layouts
   </a>
   <a href="./05-state-and-globals" style="display: inline-block; background: #4CAF50; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
-    Next: State & Globals →
+    Next: State, Guards & Beyond →
   </a>
 </div>

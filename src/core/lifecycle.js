@@ -50,7 +50,8 @@ export const snap = (el) => {
         el.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
       },
       get $route() { return globals.$route },
-      get $go() { return globals.$go }
+      get $go() { return globals.$go },
+      get $mount() { return globals.$mount }
     };
 
     mergeDescriptors(scriptLogic, baseState);
@@ -158,6 +159,7 @@ export const unsnap = (el) => {
     delete el._studs.$parent;
     delete el._studs.$route;
     delete el._studs.$go;
+    delete el._studs.$mount;
 
     // Break the proxy -> element reference
     el._studs = null;

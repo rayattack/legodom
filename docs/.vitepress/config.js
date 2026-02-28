@@ -56,14 +56,15 @@ export default defineConfig({
       ],
       '/tutorial/': [
         {
-          text: 'Tutorial: Your First App',
+          text: 'Tutorial: Build a Task Tracker',
           items: [
             { text: 'Overview', link: '/tutorial/' },
             { text: '1. Project Setup', link: '/tutorial/01-project-setup' },
             { text: '2. Your First Block', link: '/tutorial/02-your-first-block' },
-            { text: '3. Adding Routes', link: '/tutorial/03-adding-routes' },
-            { text: '4. Multi-Page App', link: '/tutorial/04-multi-page-app' },
-            { text: '5. State & Globals', link: '/tutorial/05-state-and-globals' }
+            { text: '3. Routing & Layouts', link: '/tutorial/03-adding-routes' },
+            { text: '4. Persistence & Forms', link: '/tutorial/04-multi-page-app' },
+            { text: '5. State, Guards & Beyond', link: '/tutorial/05-state-and-globals' },
+            { text: '6. Dynamic Mounting', link: '/tutorial/06-dynamic-mounting' }
           ]
         }
       ],
