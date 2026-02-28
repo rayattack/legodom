@@ -1,0 +1,30 @@
+import { safeEval } from '../utils/safe-eval.js';
+import { scanForAttribute } from '../utils/helpers.js';
+import { mount } from '../features/mount.js';
+
+export const bMount = {
+  name: 'b-mount',
+
+  scan: (node, { checkGlobal }) => scanForAttribute('b-mount', node, (attr) => {
+    checkGlobal(attr.value);
+    return { _lastTag: null };
+  }),
+
+  execute({ binding, state, global }) {
+    const { node, expr } = binding;
+    const result = safeEval(expr, { state, global, self: node }, false);
+    const tagName = result ? String(result).toLowerCase() : null;
+
+    if (tagName === binding._lastTag) return;
+    binding._lastTag = tagName;
+
+    mount(tagName, node);
+  },
+
+  destroy({ binding }) {
+    if (binding.node) {
+      mount(null, binding.node);
+    }
+    binding._lastTag = null;
+  }
+};
