@@ -1,4 +1,4 @@
-import { forPools, itemIdMap } from '../core/registry.js';
+import { forPools, itemIdMap, privateData } from '../core/registry.js';
 import { safeEval } from '../utils/safe-eval.js';
 import { resolve } from '../utils/helpers.js';
 import { syncModelValue, findSyncAttr } from '../utils/dom.js';
@@ -121,7 +121,30 @@ export const bFor = {
     const { anchor } = binding;
     if (anchor && forPools.has(anchor)) {
       const pool = forPools.get(anchor);
-      pool.forEach(node => node.remove());
+      pool.forEach(node => {
+        // Clean up listeners and directive bindings on each pool child and its descendants
+        const nodes = [node, ...node.querySelectorAll('*')];
+        nodes.forEach(n => {
+          const data = privateData.get(n);
+          if (!data) return;
+          if (data.listeners) {
+            data.listeners.forEach(({ eventName, handler }) => {
+              n.removeEventListener(eventName, handler);
+            });
+            data.listeners = null;
+          }
+          if (data.bindings) {
+            data.bindings.forEach(b => {
+              if (b.observer) {
+                b.observer.disconnect();
+                b.observer = null;
+              }
+            });
+            data.bindings = null;
+          }
+        });
+        node.remove();
+      });
       pool.clear();
       forPools.delete(anchor);
     }

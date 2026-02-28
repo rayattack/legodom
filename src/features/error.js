@@ -85,10 +85,23 @@ export const renderErrorBlock = (errorTag, crashedEl, err) => {
   }
 };
 
+let _errorDepth = 0;
+const MAX_ERROR_DEPTH = 3;
+
 export const handleError = (err, contextEl, contextType) => {
+  if (_errorDepth >= MAX_ERROR_DEPTH) {
+    console.error('[Lego] Error boundary recursion limit reached:', err);
+    config.onError(err, contextType, contextEl);
+    return;
+  }
   const boundary = findErrorBoundary(contextEl);
   if (boundary) {
-    renderErrorBlock(boundary.errorTag, boundary.targetElement, err);
+    _errorDepth++;
+    try {
+      renderErrorBlock(boundary.errorTag, boundary.targetElement, err);
+    } finally {
+      _errorDepth--;
+    }
   } else {
     config.onError(err, contextType, contextEl);
   }

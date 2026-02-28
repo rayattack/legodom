@@ -3,10 +3,11 @@ import { syncModelValue, findSyncAttr } from '../utils/dom.js';
 
 export const bSync = {
   name: 'b-sync',
-  scan(node) {
+  scan(node, { checkGlobal }) {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const attr = findSyncAttr(node);
     if (!attr) return;
+    checkGlobal(attr.value);
     const modifiers = attr.name.split('.').slice(1);
     return { type: 'b-sync', node, expr: attr.value, modifiers };
   },

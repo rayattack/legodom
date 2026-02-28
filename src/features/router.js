@@ -1,5 +1,6 @@
 import { config } from '../utils/helpers.js';
 import { resolveTargets } from '../utils/dom.js';
+import { globals } from '../core/globals.js';
 
 let snapFn = null;
 export const setSnap = (fn) => { snapFn = fn; };
@@ -24,6 +25,13 @@ export const _matchRoute = async (targetQueries = null, contextEl = null) => {
   if (!routeData) return;
 
   const { match, params } = routeData;
+  const search = window.location.search;
+
+  // Update $route so components see current route data
+  globals.$route.url = path + search;
+  globals.$route.route = match.path;
+  globals.$route.params = params;
+  globals.$route.query = Object.fromEntries(new URLSearchParams(search));
 
   // Middleware check
   if (match.middleware) {
@@ -38,8 +46,10 @@ export const _matchRoute = async (targetQueries = null, contextEl = null) => {
     const targets = targetsToResolve.flatMap(q => resolveTargets(q, context));
     targets.forEach(t => {
       if (!t) return;
-      t.innerHTML = `<${match.tagName}></${match.tagName}>`;
-      if (snapFn) snapFn(t.firstElementChild);
+      t.innerHTML = '';
+      const child = document.createElement(match.tagName);
+      t.appendChild(child);
+      if (snapFn) snapFn(child);
     });
   }
 };
