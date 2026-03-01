@@ -1,4 +1,4 @@
-import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData, snapState } from './core/registry.js';
+import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData, snapState, globalSubscribers } from './core/registry.js';
 import { snap, unsnap } from './core/lifecycle.js';
 import { render, bind } from './core/renderer.js';
 import { reactive } from './core/reactive.js';
@@ -28,12 +28,20 @@ const browserRoute = {
   body: null
 };
 
+// Custom batcher for globals: when a global mutates, batch all
+// components that reference globals in their templates.
+const globalsBatcher = {
+  add() {
+    globalSubscribers.forEach(block => globalBatcher.add(block));
+  }
+};
+
 const globalState = reactive({
   $route: browserRoute,
   $go: (path, ...targets) => _go(path, ...targets)(document.body),
   $mount: (tagName, target, props) => mount(tagName, target, props),
   $db: dbFactory
-}, typeof document !== 'undefined' ? document.body : null);
+}, typeof document !== 'undefined' ? document.body : null, globalsBatcher);
 
 setGlobals(globalState);
 

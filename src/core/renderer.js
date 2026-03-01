@@ -290,11 +290,6 @@ export const render = (el) => {
         }
       }
     });
-
-    // Global Broadcast: Only notify blocks that depend on globals
-    if (state === globals) {
-      globalSubscribers.forEach(block => render(block));
-    }
   } catch (err) {
     handleError(err, el, 'render');
   } finally {
