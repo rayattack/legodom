@@ -1,14 +1,158 @@
 {
+  "name": "LegoDOM",
   "scopeName": "source.lego",
+  "fileTypes": ["lego"],
   "patterns": [
-    {
-      "include": "text.html.basic"
+    { "include": "#lego-style-block" },
+    { "include": "#lego-script-block" },
+    { "include": "#lego-template-block" },
+    { "include": "#comment" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.block.html.lego",
+      "begin": "<!--",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.comment.begin.html.lego" }
+      },
+      "end": "-->",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.comment.end.html.lego" }
+      }
     },
-    {
-      "comment": "Lego Delimiters",
+
+    "lego-style-block": {
+      "begin": "(?i)(<)(style)\\b([^>]*)(>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.style.html" },
+        "3": { "patterns": [{ "include": "#sfc-tag-attributes" }] },
+        "4": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "end": "(?i)(</)(style)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.style.html" },
+        "3": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "contentName": "meta.embedded.block.css",
+      "patterns": [
+        { "include": "#lego-self-selector" },
+        { "include": "source.css" }
+      ]
+    },
+
+    "lego-self-selector": {
+      "match": "\\bself\\b",
+      "name": "entity.name.tag.custom.css.lego"
+    },
+
+    "lego-script-block": {
+      "begin": "(?i)(<)(script)\\b([^>]*)(>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.script.html" },
+        "3": { "patterns": [{ "include": "#sfc-tag-attributes" }] },
+        "4": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "end": "(?i)(</)(script)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.script.html" },
+        "3": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "contentName": "meta.embedded.block.js",
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+
+    "lego-template-block": {
+      "begin": "(?i)(<)(template)\\b([^>]*)(>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.template.html" },
+        "3": {
+          "patterns": [
+            { "include": "#lego-directive-attribute" },
+            { "include": "#sfc-tag-attributes" }
+          ]
+        },
+        "4": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "end": "(?i)(</)(template)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.template.html" },
+        "3": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "contentName": "meta.embedded.block.html",
+      "patterns": [
+        { "include": "#lego-interpolation-bracket" },
+        { "include": "#lego-interpolation-mustache" },
+        { "include": "text.html.derivative" }
+      ]
+    },
+
+    "lego-interpolation-bracket": {
+      "name": "meta.interpolation.lego",
       "begin": "\\[\\[",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.interpolation.begin.lego" }
+      },
       "end": "\\]\\]",
-      "name": "constant.character.escape.lego"
+      "endCaptures": {
+        "0": { "name": "punctuation.section.interpolation.end.lego" }
+      },
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+
+    "lego-interpolation-mustache": {
+      "name": "meta.interpolation.lego",
+      "begin": "\\{\\{",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.interpolation.begin.lego" }
+      },
+      "end": "\\}\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.section.interpolation.end.lego" }
+      },
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+
+    "lego-directive-attribute": {
+      "match": "(b-(?:if|show|for|text|html|sync|init|enter|leave|mount|key|var|logic|stylesheets|cascade|error|id))((?:\\.\\w+)*)",
+      "captures": {
+        "1": { "name": "entity.other.attribute-name.directive.lego" },
+        "2": { "name": "keyword.other.modifier.lego" }
+      }
+    },
+
+    "sfc-tag-attributes": {
+      "patterns": [
+        {
+          "match": "(=)\\s*(\"[^\"]*\")",
+          "captures": {
+            "1": { "name": "punctuation.separator.key-value.html" },
+            "2": { "name": "string.quoted.double.html" }
+          }
+        },
+        {
+          "match": "(=)\\s*('[^']*')",
+          "captures": {
+            "1": { "name": "punctuation.separator.key-value.html" },
+            "2": { "name": "string.quoted.single.html" }
+          }
+        },
+        {
+          "match": "\\b([a-zA-Z\\-:]+)",
+          "name": "entity.other.attribute-name.html"
+        }
+      ]
     }
-  ]
+  }
 }

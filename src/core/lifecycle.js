@@ -85,7 +85,7 @@ export const snap = (el) => {
 
     const style = shadow.querySelector('style');
     if (style) {
-      style.textContent = style.textContent.replace(/\bself\b/g, ':host');
+      style.textContent = style.textContent.replace(/(?<![-\w])self(?![-\w])/g, ':host');
     }
 
     bind(shadow, el);

@@ -7,33 +7,48 @@
 
 In LegoDOM, everything is a Block. But not all Blocks are created equal. Some are microscopic "bricks", others are entire page layouts.
 
-To keep sanity, we categorize Blocks into **three tiers**.
+To keep sanity, we categorize Blocks into **four tiers**.
 
-## The Three Tiers
+## The Four Tiers
 
 | Type | Role | Knows About | Example |
 | :--- | :--- | :--- | :--- |
-| **Atomic Block** | Reusable UI | Its own visuals & interactions | `<block-avatar>`, `<block-dropdown>`, `<block-modal>` |
-| **Logic Block** | Business Logic | Data & API calls | `<block-profile-settings>`, `<block-checkout>` |
-| **Page Block** | Coordination | Layout & Routing | `<page-dashboard>`, `<page-login>` |
+| **Core** | Reusable UI primitives | Its own visuals & interactions | `block-avatar`, `block-dropdown`, `block-button` |
+| **Widget** | Core aggregator | Combines core blocks, local state | `widget-user-card`, `widget-search-bar` |
+| **Page** | Business logic & layout | Data, APIs, domain state | `page-dashboard`, `page-login` |
+| **Shell** | Top-level container | Layout, routing, slotting | `app-shell`, `admin-shell` |
 
 ## The Key Distinction
 
-**Atomic Blocks** are generic and reusable. They don't know about your business domain.
+**Core Blocks** are generic and reusable. They don't know about your business domain.
 
-**Logic Blocks** are feature-specific. They know about your APIs, data models, and workflows.
+**Widgets** combine core blocks into richer UI. They may have local state but stay reusable.
+
+**Pages** are feature-specific. They know about your APIs, data models, and workflows.
+
+**Shells** are layout containers. They define where routed content appears.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Atomic Blocks              │  Logic Blocks                 │
-│  ─────────────              │  ────────────                 │
-│  "How does a dropdown       │  "When the user selects       │
-│   work?"                    │   'Premium', call /api/upgrade│
-│                             │   and show the confetti."     │
-│  ✅ Reusable anywhere       │  ✅ Feature-specific          │
-│  ❌ No API calls            │  ✅ Makes API calls           │
-│  ❌ No domain knowledge     │  ✅ Owns domain state         │
-└─────────────────────────────────────────────────────────────┘
+│  Core Blocks                │  Widgets                      │
+│  ───────────                │  ───────                      │
+│  "How does a dropdown       │  "How does a user card        │
+│   work?"                    │   display an avatar and       │
+│                             │   a name together?"           │
+│  ✅ Reusable anywhere       │  ✅ Reusable across pages     │
+│  ❌ No API calls            │  ❌ No API calls              │
+│  ❌ No domain knowledge     │  ❌ No domain knowledge       │
+├─────────────────────────────┼───────────────────────────────┤
+│  Pages                      │  Shells                       │
+│  ─────                      │  ──────                       │
+│  "When the user selects     │  "Where does the sidebar go?  │
+│   'Premium', call           │   Where does <lego-router>    │
+│   /api/upgrade."            │   render?"                    │
+│                             │                               │
+│  ✅ Feature-specific        │  ✅ Layout & slotting          │
+│  ✅ Makes API calls         │  ✅ Routing targets            │
+│  ✅ Owns domain state       │  ❌ No business logic          │
+└─────────────────────────────┴───────────────────────────────┘
 ```
 
 ## The Litmus Test: The Avatar Upload
@@ -42,9 +57,9 @@ To keep sanity, we categorize Blocks into **three tiers**.
 > I have an avatar. When I click it, it opens a file picker. When the file changes, it POSTs to `/v1/avatars`. What is it?
 
 **The "Lego Way" Solution:**
-Split this into atomic and logic blocks.
+Split this into core blocks and a page.
 
-### 1. Atomic Block: The Avatar
+### 1. Core Block: The Avatar
 **Role:** Just the visuals. Circular crop, fallback, size classes.
 
 ```html
@@ -54,7 +69,7 @@ Split this into atomic and logic blocks.
 </template>
 ```
 
-### 2. Atomic Block: The File Trigger
+### 2. Core Block: The File Trigger
 **Role:** Generic interaction. Wraps content and makes it clickable to open a file dialog.
 
 ```html
@@ -67,11 +82,11 @@ Split this into atomic and logic blocks.
 </template>
 ```
 
-### 3. Logic Block: Profile Settings
-**Role:** The feature. Assembles the atomic blocks and owns the API call.
+### 3. Page: Profile Settings
+**Role:** The feature. Assembles the core blocks and owns the API call.
 
 ```html
-<!-- block-profile-settings.lego -->
+<!-- page-profile-settings.lego -->
 <template>
   <h2>Your Profile</h2>
   <block-file-trigger @file-selected="uploadAvatar">
@@ -81,7 +96,7 @@ Split this into atomic and logic blocks.
 
 <script>
 export default {
-  // Only this block knows about /v1/avatars
+  // Only this page knows about /v1/avatars
   async uploadAvatar(file) {
     const form = new FormData();
     form.append('avatar', file);
@@ -93,45 +108,59 @@ export default {
 
 ## The Definitions
 
-### Atomic Blocks
+### Core Blocks
 Reusable UI primitives. They handle visuals and generic interactions.
 
 - **State:** Visual/UI only. "Is dropdown open?", "Is button hovered?"
 - **Communication:** Uses `$emit()` to broadcast events. **Never makes API calls.**
 - **Examples:** `block-avatar`, `block-button`, `block-dropdown`, `block-modal`, `block-file-trigger`
 
-### Logic Blocks
-Feature-specific blocks. They orchestrate atomic blocks and own business logic.
+### Widgets
+Combinations of core blocks into richer, reusable UI units.
+
+- **State:** Local/presentational. Combines core blocks with some coordination logic.
+- **Communication:** Uses `$emit()` and props via `b-data`. **No API calls.**
+- **Examples:** `widget-user-card`, `widget-search-bar`, `widget-toolbar`
+
+### Pages
+Feature-specific blocks. They orchestrate widgets and core blocks, own business logic.
 
 - **State:** Domain-specific. Owns data fetched from APIs.
 - **Responsibility:** Knows *what* data it owns and *what* outcome it must produce.
-- **Examples:** `block-profile-settings`, `block-checkout`, `block-order-history`
+- **Examples:** `page-dashboard`, `page-login`, `page-profile-settings`
 
-### Page Blocks
-Top-level layout blocks. They coordinate the screen.
+### Shells
+Top-level layout containers. They define the page structure and routing slots.
 
-- **Role:** Define the grid. Orchestrate Logic Blocks.
-- **Routing:** Pages are the *only* blocks directly known to `<lego-router>`.
-- **Examples:** `page-dashboard`, `page-login`, `page-settings`
+- **Role:** Define the grid. Provide `<lego-router>` targets. Handle navigation chrome.
+- **Routing:** Shells are the *only* blocks directly known to `<lego-router>`.
+- **Examples:** `app-shell`, `admin-shell`, `auth-shell`
 
 ## Recommended Directory Structure
 
 ```text
 src/
-├── blocks/
-│   ├── atoms/
-│   │   ├── block-avatar.lego
-│   │   ├── block-button.lego
-│   │   ├── block-dropdown.lego
-│   │   ├── block-modal.lego
-│   │   └── block-file-trigger.lego
-│   └── logic/
-│       ├── block-profile-settings.lego
-│       ├── block-checkout.lego
-│       └── block-order-history.lego
+├── core/
+│   ├── block-avatar.lego
+│   ├── block-button.lego
+│   ├── block-dropdown.lego
+│   ├── block-modal.lego
+│   └── block-file-trigger.lego
+├── widgets/
+│   ├── widget-user-card.lego
+│   ├── widget-search-bar.lego
+│   └── widget-toolbar.lego
 ├── pages/
-│   ├── page-dashboard.lego
-│   └── page-login.lego
+│   ├── auth/
+│   │   ├── page-login.lego
+│   │   └── page-register.lego
+│   ├── hris/
+│   │   ├── page-employees.lego
+│   │   └── page-payroll.lego
+│   └── page-dashboard.lego
+├── shells/
+│   ├── app-shell.lego
+│   └── admin-shell.lego
 └── main.js
 ```
 
@@ -139,6 +168,7 @@ src/
 
 | Question | Answer |
 | :--- | :--- |
-| Does it make API calls? | **Logic Block** |
-| Is it reusable across features? | **Atomic Block** |
-| Is it a full page layout? | **Page Block** |
+| Is it a reusable UI primitive? | **Core Block** |
+| Does it combine core blocks into a richer unit? | **Widget** |
+| Does it make API calls or own domain state? | **Page** |
+| Is it a top-level layout with routing? | **Shell** |

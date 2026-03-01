@@ -14,7 +14,7 @@ export const bHtml = {
 
   execute: ({ binding, state, global }) => {
     const { node, expr } = binding;
-    const value = safeEval(expr, { state, global, self: node }) || '';
+    const value = safeEval(expr, { state, global, self: node }) ?? '';
     if (node._bHtmlPrev !== value) {
       node._bHtmlPrev = value;
       node.innerHTML = value;

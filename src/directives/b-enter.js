@@ -14,7 +14,11 @@ export const bEnter = {
     const observer = new IntersectionObserver((entries, io) => {
       const entry = entries[0];
       if (entry.isIntersecting) {
-        safeEval(binding.expr, { state, global, self: binding.node });
+        try {
+          safeEval(binding.expr, { state, global, self: binding.node });
+        } catch (err) {
+          console.error('[Lego] Error in b-enter handler:', err);
+        }
         if (binding.modifiers.includes('once')) {
           io.disconnect();
           binding.observer = null;

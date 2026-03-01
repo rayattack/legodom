@@ -1,12 +1,17 @@
 {
   "name": "vscode-lego",
   "displayName": "LegoDOM Support",
-  "description": "Language support for LegoDOM (.lego) files",
-  "icon": "logo.svg",
-  "version": "0.0.1",
+  "description": "Syntax highlighting, snippets, and language support for LegoDOM (.lego) single-file components",
+  "icon": "logo.png",
+  "version": "0.1.0",
   "publisher": "legodom",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rayattack/legodom"
+  },
   "engines": {
-    "vscode": "^1.60.0"
+    "vscode": "^1.75.0"
   },
   "categories": [
     "Programming Languages",
@@ -17,20 +22,47 @@
       {
         "id": "lego",
         "aliases": [
+          "LegoDOM",
           "Lego",
           "lego"
         ],
         "extensions": [
           ".lego"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./logo.svg",
+          "dark": "./logo.svg"
+        }
       }
     ],
     "grammars": [
       {
         "language": "lego",
         "scopeName": "source.lego",
-        "path": "./syntaxes/lego.tmLanguage.json"
+        "path": "./syntaxes/lego.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.css": "css",
+          "meta.embedded.block.js": "javascript",
+          "meta.embedded.block.html": "html",
+          "meta.embedded.expression.lego": "javascript"
+        }
+      },
+      {
+        "scopeName": "lego.injection",
+        "path": "./syntaxes/lego-injection.tmLanguage.json",
+        "injectTo": [
+          "source.lego"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.expression.lego": "javascript"
+        }
+      }
+    ],
+    "snippets": [
+      {
+        "language": "lego",
+        "path": "./snippets/lego.json"
       }
     ]
   }
