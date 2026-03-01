@@ -1,0 +1,102 @@
+{
+  "scopeName": "lego.injection",
+  "injectionSelector": "L:source.lego -meta.embedded.block.css -meta.embedded.block.js -comment",
+  "patterns": [
+    { "include": "#lego-directive-full" },
+    { "include": "#lego-event-full" },
+    { "include": "#lego-interpolation-bracket" },
+    { "include": "#lego-interpolation-mustache" }
+  ],
+  "repository": {
+    "lego-directive-full": {
+      "name": "meta.attribute.directive.lego",
+      "begin": "\\b(b-(?:if|show|for|text|html|sync|init|enter|leave|mount|key|var|logic|stylesheets|cascade|error|id))((?:\\.\\w+)*)",
+      "beginCaptures": {
+        "1": { "name": "entity.other.attribute-name.directive.lego" },
+        "2": { "name": "keyword.other.modifier.lego" }
+      },
+      "end": "(?=\\s+[^=]|\\s*/?>|[\"']\\s|>)",
+      "patterns": [
+        { "include": "#directive-value-double" },
+        { "include": "#directive-value-single" }
+      ]
+    },
+
+    "lego-event-full": {
+      "name": "meta.attribute.event.lego",
+      "begin": "(@)(\\w+)((?:\\.\\w+)*)",
+      "beginCaptures": {
+        "1": { "name": "keyword.operator.event.lego" },
+        "2": { "name": "entity.other.attribute-name.event.lego" },
+        "3": { "name": "keyword.other.modifier.lego" }
+      },
+      "end": "(?=\\s+[^=]|\\s*/?>|[\"']\\s|>)",
+      "patterns": [
+        { "include": "#directive-value-double" },
+        { "include": "#directive-value-single" }
+      ]
+    },
+
+    "directive-value-double": {
+      "begin": "(=)\\s*(\")",
+      "beginCaptures": {
+        "1": { "name": "punctuation.separator.key-value.html" },
+        "2": { "name": "punctuation.definition.string.begin.html" }
+      },
+      "end": "(\")",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.string.end.html" }
+      },
+      "contentName": "meta.embedded.expression.lego",
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+
+    "directive-value-single": {
+      "begin": "(=)\\s*(')",
+      "beginCaptures": {
+        "1": { "name": "punctuation.separator.key-value.html" },
+        "2": { "name": "punctuation.definition.string.begin.html" }
+      },
+      "end": "(')",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.string.end.html" }
+      },
+      "contentName": "meta.embedded.expression.lego",
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+
+    "lego-interpolation-bracket": {
+      "name": "meta.interpolation.lego",
+      "begin": "\\[\\[",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.interpolation.begin.lego" }
+      },
+      "end": "\\]\\]",
+      "endCaptures": {
+        "0": { "name": "punctuation.section.interpolation.end.lego" }
+      },
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    },
+
+    "lego-interpolation-mustache": {
+      "name": "meta.interpolation.lego",
+      "begin": "\\{\\{",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.interpolation.begin.lego" }
+      },
+      "end": "\\}\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.section.interpolation.end.lego" }
+      },
+      "patterns": [
+        { "include": "source.js" }
+      ]
+    }
+  }
+}

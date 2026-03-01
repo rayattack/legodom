@@ -1,0 +1,206 @@
+{
+  "LegoDOM Component": {
+    "prefix": "lego",
+    "description": "Create a new .lego single-file component",
+    "body": [
+      "<style>",
+      "  self {",
+      "    display: block;",
+      "    $1",
+      "  }",
+      "</style>",
+      "",
+      "<template>",
+      "  $2",
+      "</template>",
+      "",
+      "<script>",
+      "  export default {",
+      "    $3",
+      "    mounted() {",
+      "      $4",
+      "    }",
+      "  }",
+      "</script>"
+    ]
+  },
+  "b-for Loop": {
+    "prefix": "b-for",
+    "description": "LegoDOM for-loop directive",
+    "body": [
+      "<${1:div} b-for=\"${2:item} in ${3:items}\" b-key=\"${4:id}\">",
+      "  [[ ${2:item}.${5:name} ]]",
+      "</${1:div}>"
+    ]
+  },
+  "b-if Conditional": {
+    "prefix": "b-if",
+    "description": "LegoDOM conditional rendering directive",
+    "body": [
+      "<${1:div} b-if=\"${2:condition}\">",
+      "  $3",
+      "</${1:div}>"
+    ]
+  },
+  "b-show Toggle": {
+    "prefix": "b-show",
+    "description": "LegoDOM visibility toggle directive",
+    "body": [
+      "<${1:div} b-show=\"${2:condition}\">",
+      "  $3",
+      "</${1:div}>"
+    ]
+  },
+  "b-sync Two-way Binding": {
+    "prefix": "b-sync",
+    "description": "LegoDOM two-way data binding",
+    "body": [
+      "<input type=\"${1:text}\" b-sync=\"${2:property}\" placeholder=\"${3:Enter value}\">"
+    ]
+  },
+  "b-text Content": {
+    "prefix": "b-text",
+    "description": "LegoDOM safe text content binding",
+    "body": [
+      "<${1:span} b-text=\"${2:expression}\"></${1:span}>"
+    ]
+  },
+  "b-html Content": {
+    "prefix": "b-html",
+    "description": "LegoDOM raw HTML insertion",
+    "body": [
+      "<${1:div} b-html=\"${2:expression}\"></${1:div}>"
+    ]
+  },
+  "b-init": {
+    "prefix": "b-init",
+    "description": "LegoDOM run expression once on mount",
+    "body": [
+      "<${1:div} b-init=\"${2:expression()}\">$3</${1:div}>"
+    ]
+  },
+  "b-enter Viewport": {
+    "prefix": "b-enter",
+    "description": "LegoDOM IntersectionObserver enter viewport",
+    "body": [
+      "<${1:div} b-enter${2:.once}=\"${3:onEnter()}\">$4</${1:div}>"
+    ]
+  },
+  "b-leave Viewport": {
+    "prefix": "b-leave",
+    "description": "LegoDOM IntersectionObserver leave viewport",
+    "body": [
+      "<${1:div} b-leave${2:.once}=\"${3:onLeave()}\">$4</${1:div}>"
+    ]
+  },
+  "b-mount Dynamic": {
+    "prefix": "b-mount",
+    "description": "LegoDOM dynamic component mounting",
+    "body": [
+      "<${1:div} b-mount=\"${2:componentTag}\"></${1:div}>"
+    ]
+  },
+  "Event Handler": {
+    "prefix": "@",
+    "description": "LegoDOM event binding",
+    "body": [
+      "@${1:click}=\"${2:handler()}\""
+    ]
+  },
+  "Click Handler": {
+    "prefix": "@click",
+    "description": "LegoDOM click event handler",
+    "body": [
+      "@click=\"${1:handler()}\""
+    ]
+  },
+  "Keydown Handler": {
+    "prefix": "@keydown",
+    "description": "LegoDOM keydown event handler with modifier",
+    "body": [
+      "@keydown.${1:enter}=\"${2:handler()}\""
+    ]
+  },
+  "Submit Handler": {
+    "prefix": "@submit",
+    "description": "LegoDOM form submit handler",
+    "body": [
+      "@submit.prevent=\"${1:handleSubmit()}\""
+    ]
+  },
+  "Interpolation Bracket": {
+    "prefix": "[[",
+    "description": "LegoDOM bracket interpolation",
+    "body": [
+      "[[ ${1:expression} ]]"
+    ]
+  },
+  "Interpolation Mustache": {
+    "prefix": "{{",
+    "description": "LegoDOM mustache interpolation",
+    "body": [
+      "{{ ${1:expression} }}"
+    ]
+  },
+  "$db Persistence": {
+    "prefix": "$db",
+    "description": "LegoDOM IndexedDB persistence descriptor",
+    "body": [
+      "${1:property}: \\$db('${2:key}', ${3:defaultValue})"
+    ]
+  },
+  "$go Navigation": {
+    "prefix": "$go",
+    "description": "LegoDOM router navigation",
+    "body": [
+      "\\$go('${1:/path}')"
+    ]
+  },
+  "Mounted Lifecycle": {
+    "prefix": "mounted",
+    "description": "LegoDOM mounted lifecycle hook",
+    "body": [
+      "mounted() {",
+      "  $1",
+      "}"
+    ]
+  },
+  "Updated Lifecycle": {
+    "prefix": "updated",
+    "description": "LegoDOM updated lifecycle hook",
+    "body": [
+      "updated() {",
+      "  $1",
+      "}"
+    ]
+  },
+  "Unmounted Lifecycle": {
+    "prefix": "unmounted",
+    "description": "LegoDOM unmounted lifecycle hook",
+    "body": [
+      "unmounted() {",
+      "  $1",
+      "}"
+    ]
+  },
+  "Error Boundary": {
+    "prefix": "b-error",
+    "description": "LegoDOM error boundary template",
+    "body": [
+      "<template b-error=\"${1:error-fallback}\">",
+      "  $2",
+      "</template>"
+    ]
+  },
+  "Lego Block Registration": {
+    "prefix": "lego-block",
+    "description": "Register a LegoDOM block via JavaScript",
+    "body": [
+      "Lego.block('${1:my-component}', `",
+      "  $2",
+      "`, {",
+      "  $3",
+      "});"
+    ]
+  }
+}
