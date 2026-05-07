@@ -245,7 +245,7 @@ This ensures a smooth fade-in for your application.
 Yes! Use the CDN approach:
 
 ```html
-<script src="https://unpkg.com/lego-dom/main.js"></script>
+<script src="https://unpkg.com/lego-dom"></script>
 <template b-id="my-block">...</template>
 <my-block></my-block>
 <script>Lego.init();</script>

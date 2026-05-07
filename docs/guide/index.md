@@ -64,18 +64,11 @@ No proprietary APIs. Everything is built on web standards.
 LegoDOM supports **SSC (Server-Side Blocks)** - you can render blocks on the server and hydrate them on the client. This is simpler and more efficient than traditional SSR frameworks that require complex hydration strategies.
 :::
 
-## How Small Is It?
+## How small is it?
 
-The core library (`main.js`) is **under 500 lines** of well-commented JavaScript.
+The runtime is split across `src/core/`, `src/directives/`, `src/features/`, and `src/utils/` — each module focused, well-commented, and readable in one sitting. Zero runtime dependencies. The Vite plugin is the only optional `peerDependency` (`fast-glob` is the lone dev-time dependency for block discovery).
 
-- **No dependencies** - Zero `node_modules` bloat
-- **~25KB** - Unminified, human-readable code
-- **~9KB** - Minified and gzipped
-
-Compare that to:
-- Vue 3: ~33KB (minified + gzipped)
-- React + ReactDOM: ~40KB (minified + gzipped)
-- Angular: ~100KB+ (minified + gzipped)
+Reading the source end-to-end is a feasible weekend project — and a great way to internalize how reactivity and surgical routing actually work.
 
 ## What Makes It Different?
 

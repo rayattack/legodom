@@ -1,209 +1,139 @@
-# Event Handling
+# Events
 
-LegoDOM provides a robust event handling system with support for modifiers, inline expressions, and automatic scope management.
-
-## Listening to Events
-
-Use the `@` prefix to listen to DOM events.
-
-### Method Handlers
-
-Calls a method defined in your block's logic.
+`@event="…"` attaches a listener. The expression has access to your state, the globals, every `$`-helper, and the DOM event itself.
 
 ```html
-<style>
-  self {
-  }
-  button { background-color: #000; color: #fff; padding: 5px 10px; }
-</style>
+<button @click="count++">+1</button>
+<input @input="search = event.target.value">
+<form @submit.prevent="save()">…</form>
+```
 
-<template>
-  <input type="text" b-sync="name">
-  <button @click="greet">Greet</button>
-</template>
+## Three handler styles
 
-<script>
-export default {
-  name: '',
-  greet(event) {
-    alert('Hello ' + this.name + '!');
-    // `event` is the native DOM event
-    if (event) {
-      alert(event.target.tagName);
-    }
-  }
+### 1. Method reference
+
+```html
+<button @click="greet">Greet</button>
+```
+
+```js
+greet(event) {
+  alert(`Hello ${this.name}!`);
 }
-</script>
 ```
 
-### Inline Handlers
+If the expression evaluates to a function, the runtime calls it with the event automatically. Use this when the handler is a simple method dispatch with no arguments.
 
-Execute inline JavaScript statements.
+### 2. Inline expression
 
 ```html
-<button @click="count++">Add 1</button>
-<p>Count is: [[ count ]]</p>
+<button @click="count++">+1</button>
+<input @input="name = event.target.value">
 ```
 
-You can pass arguments to methods:
+The expression is executed directly. The DOM event is available as `event` (and `$event`, when needed for clarity in templates that already use `event` for something else).
+
+### 3. Method call
 
 ```html
 <button @click="say('hello')">Say Hello</button>
-<button @click="warn('Form cannot be submitted yet.', $event)">
-  Submit
-</button>
+<a @click="warn('cannot submit', event)">Submit</a>
 ```
 
-Special variables available in inline handlers:
-- `$event`: The original DOM event.
+A method call lets you pass arguments. Pass `event` explicitly if the method needs it.
 
-### Method Handlers vs Inline Handlers
+::: tip Reference vs call
+`@click="ask"` auto-passes the event. `@click="ask()"` does **not** — it calls `ask` with no arguments. Pass `event` yourself when you need it: `@click="ask(event)"`.
+:::
 
-LegoDOM distinguishes between referencing a method and calling it inline.
+## Action modifiers
 
-#### 1. Method Reference (`@click="ask"`)
-- The event object is passed **automatically** as the first argument.
+| Modifier | Effect |
+|---|---|
+| `.prevent` | `event.preventDefault()` |
+| `.stop` | `event.stopPropagation()` |
+| `.self` | Fires only when `event.target === event.currentTarget` |
 
 ```html
-<button @click="ask">Ask</button>
+<form @submit.prevent="save()">…</form>
+<a @click.stop.prevent="open()">…</a>
+<div @click.self="onlyMe()">…</div>
 ```
 
-```javascript
-ask(event) {
-  console.log(event.type); // "click"
-}
-```
+Modifiers stack — order doesn't matter for these three.
 
-#### 2. Inline Call (`@click="ask()"`)
-- No arguments are passed unless you specify them.
-- `$event` is **NOT** available inside `ask()` unless passed explicitly.
+## System modifier keys (KeyboardEvent + MouseEvent)
+
+| Modifier | Required state |
+|---|---|
+| `.ctrl`  | `event.ctrlKey` is `true` |
+| `.alt`   | `event.altKey` is `true` |
+| `.shift` | `event.shiftKey` is `true` |
+| `.meta`  | `event.metaKey` is `true` (Cmd on macOS, Win key on Windows) |
+
+System modifiers are AND-combined: `@keydown.ctrl.shift.k` requires Ctrl **and** Shift held with the K key.
 
 ```html
-<button @click="ask()">Ask</button>
+<input @keydown.ctrl.s.prevent="save()">
+<div   @click.shift="multiSelect(item)">…</div>
 ```
 
-```javascript
-ask(event) {
-  // event is UNDEFINED
-}
-```
+## Key matchers (KeyboardEvent only)
 
-#### 3. Explicit Event (`@click="ask($event)"`)
-- Pass `$event` explicitly to receive it.
+Named key aliases:
+
+| Modifier | Key |
+|---|---|
+| `.enter` | `Enter` |
+| `.esc` / `.escape` | `Escape` |
+| `.space` | `Space` (matches `' '`) |
+| `.tab` | `Tab` |
+| `.delete` | `Delete` |
+| `.backspace` | `Backspace` |
+| `.up` `.down` `.left` `.right` | Arrow keys |
+
+Categories:
+
+| Modifier | Matches |
+|---|---|
+| `.alpha` | Any single letter `a-z` (case-insensitive) |
+| `.numbers` | Any digit `0-9` |
+
+Anything else is matched directly (case-insensitive) against `event.key` — so `@keydown.k`, `@keydown.f1`, `@keydown.pageup` all work.
+
+Multiple key matchers in the same handler are OR-combined — `@keydown.up.down="step()"` fires for either arrow key.
 
 ```html
-<button @click="ask($event)">Ask</button>
+<input @keydown.enter="submit()">
+<input @keydown.esc="cancel()">
+<input @keydown.numbers="onlyDigits()">
+<input @keydown.up.down.prevent="step($event)">
 ```
 
-```javascript
-ask(event) {
-  console.log(event); // MouseEvent
-}
-```
+## Why modifiers
 
+Without them, every handler reimplements the same boilerplate:
 
-## Event Modifiers
-
-Event modifiers allow you to handle common event details (like preventing default behavior or listening for specific keys) directly in the template, keeping your JavaScript logic clean.
-
-Modifiers are dot-delimited suffixes to the event name.
-
-### Action Modifiers
-
-| Modifier | Description | Equivalent JS |
-| :--- | :--- | :--- |
-| `.prevent` | Prevents default behavior | `event.preventDefault()` |
-| `.stop` | Stops propagation | `event.stopPropagation()` |
-| `.self` | Triggers only if event.target is the element itself | `if (event.target !== event.currentTarget) return` |
-
-```html
-<!-- Prevent page reload on submit -->
-<form @submit.prevent="onSubmit"></form>
-
-<!-- Stop click propagation -->
-<a @click.stop="doThis"></a>
-
-<!-- Chain modifiers -->
-<a @click.stop.prevent="doThat"></a>
-```
-
-### Key Modifiers
-
-Listen for specific keys on keyboard events.
-
-```html
-<!-- Only call vm.submit() when the `key` is `Enter` -->
-<input @keydown.enter="submit">
-```
-
-#### Key Aliases
-
-LegoDOM provides aliases for the most common keys:
-
-- `.enter`
-- `.tab`
-- `.delete` (captures both "Delete" and "Backspace")
-- `.esc`
-- `.space`
-- `.up`
-- `.down`
-- `.left`
-- `.right`
-
-#### System Modifier Keys
-
-Trigger mouse or keyboard event listeners only when the corresponding modifier key is pressed.
-
-- `.ctrl`
-- `.alt`
-- `.shift`
-- `.meta` (Command on Mac, Windows key on Windows)
-
-```html
-<!-- Alt + Enter -->
-<input @keydown.alt.enter="clear">
-
-<!-- Ctrl + Click -->
-<div @click.ctrl="doSomething">Do something</div>
-```
-
-#### Key Categories
-
-- `.alpha`: Matches any letter (a-z, case insensitive)
-- `.numbers`: Matches any digit (0-9)
-
-```html
-<!-- Only allow numbers -->
-<input @keydown.numbers="validateNumber">
-```
-
-#### Exact Key Match
-
-You can use any valid `KeyboardEvent.key` name (case-insensitive) as a modifier efficiently.
-
-```html
-<input @keydown.page-down="onPageDown">
-<input @keydown.m="onMKey">
-```
-
-## Why use modifiers?
-
-Without modifiers, your methods would be cluttered with DOM event details:
-
-```javascript
-// WITHOUT MODIFIERS
+```js
 onEnter(event) {
-    if (event.key !== 'Enter') return; // Clutter
-    event.preventDefault(); // Clutter
-    this.submit();
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  this.submit();
 }
 ```
 
-With modifiers, your method focuses purely on logic:
+With modifiers, the template carries the routing rules and the handler stays focused:
 
-```javascript
-// WITH MODIFIERS (@keydown.enter.prevent="submit")
-submit() {
-    // Pure business logic!
-}
+```html
+<input @keydown.enter.prevent="submit()">
 ```
+
+```js
+submit() { /* pure */ }
+```
+
+## Cleanup
+
+You don't need to remove listeners attached via `@event`. The runtime tracks them and removes them automatically when the block unmounts. Same for `b-sync`.
+
+If you attach a listener manually (e.g. `window.addEventListener('resize', …)` from `mounted()`), you do need to remove it from `unmounted()`.

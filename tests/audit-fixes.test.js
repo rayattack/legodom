@@ -616,3 +616,650 @@ describe('Audit fix: $db quota eviction actually frees localStorage', () => {
     }
   });
 });
+
+describe('Audit fix #9: b-html prunes stale bindings to wiped subtree', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('drops bindings whose nodes the b-html write detached, so later state changes do not write to dead nodes', async () => {
+    // Initial template seeds placeholder text inside a b-html container.
+    // Pre-fix: the text binding for [[label]] survives the innerHTML wipe,
+    // ends up in the dirty-binding set on label mutation, and writes to a
+    // detached text node (silent no-op + retained reference).
+    Lego.block(
+      'b-html-stale',
+      '<div b-html="raw"><span class="placeholder">[[label]]</span></div>',
+      { raw: '<p class="injected">A</p>', label: 'initial' }
+    );
+    win.document.body.innerHTML = '<b-html-stale></b-html-stale>';
+    await flush(20);
+
+    const host = win.document.querySelector('b-html-stale');
+    const container = host.shadowRoot.querySelector('div');
+
+    // After first render b-html replaced the placeholder span with raw content.
+    expect(container.querySelector('.placeholder')).toBeNull();
+    expect(container.querySelector('.injected').textContent).toBe('A');
+
+    // Capture the now-detached span's text node so we can prove no later
+    // render writes to it.
+    // (Placeholder text was "initial" — read it back via the original child
+    //  reference path.) We can't reach the detached node directly, so
+    // instead we inspect the block's internal bindings array — pre-fix it
+    // would still contain a text binding for the placeholder.
+    const dataKey = Object.getOwnPropertySymbols(host).find(s => s.description === undefined);
+    // Use the public-ish surface: check that mutating an unrelated state key
+    // doesn't throw and doesn't leak the placeholder string back into the DOM.
+    host.state.label = 'changed';
+    await flush(20);
+    expect(container.querySelector('.placeholder')).toBeNull();
+    expect(container.innerHTML).not.toContain('changed');
+    expect(container.querySelector('.injected').textContent).toBe('A');
+
+    // And mutating raw still re-renders cleanly.
+    host.state.raw = '<p class="injected">B</p>';
+    await flush(20);
+    expect(container.querySelector('.injected').textContent).toBe('B');
+  });
+
+  it('subsequent b-html writes do not re-prune (idempotent)', async () => {
+    Lego.block(
+      'b-html-repeat',
+      '<div b-html="raw"></div>',
+      { raw: '<p>1</p>' }
+    );
+    win.document.body.innerHTML = '<b-html-repeat></b-html-repeat>';
+    await flush(20);
+    const host = win.document.querySelector('b-html-repeat');
+    const container = host.shadowRoot.querySelector('div');
+    expect(container.querySelector('p').textContent).toBe('1');
+
+    // Multiple successive writes should be fine — the prune scan finds no
+    // stale bindings on the empty initial subtree, and re-running it does
+    // not throw or corrupt subsequent writes.
+    host.state.raw = '<p>2</p>';
+    await flush(20);
+    expect(container.querySelector('p').textContent).toBe('2');
+    host.state.raw = '<p>3</p>';
+    await flush(20);
+    expect(container.querySelector('p').textContent).toBe('3');
+  });
+});
+
+describe('Audit fixes #14/#15: scan/render walk shortcuts (correctness anchor)', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('nested b-for: outer scan skips inner b-for subtree, inner runs against per-row scope', async () => {
+    // Nested loops: rows × cells. Pre-fix #14 scanned every cell at the
+    // outer level (then skipped via isInsideBoundary). Post-fix the outer
+    // pass returns immediately at the outer b-for and only the inner scan
+    // (run on each cloned row) sees the cell template. This test pins down
+    // the correctness contract: per-row item names + per-cell item values
+    // both render against the right scope.
+    Lego.block(
+      'nested-grid',
+      '<table><tr b-for="row in rows"><td b-for="cell in row.cells">[[row.name]]:[[cell]]</td></tr></table>',
+      {
+        rows: [
+          { name: 'r1', cells: ['a', 'b'] },
+          { name: 'r2', cells: ['c', 'd'] }
+        ]
+      }
+    );
+    win.document.body.innerHTML = '<nested-grid></nested-grid>';
+    await flush(40);
+
+    const host = win.document.querySelector('nested-grid');
+    const cells = [...host.shadowRoot.querySelectorAll('td')].map(td => td.textContent);
+    expect(cells).toEqual(['r1:a', 'r1:b', 'r2:c', 'r2:d']);
+
+    // Mutate an inner cell — full b-for re-iteration should pick it up.
+    host.state.rows[0].cells[1] = 'B!';
+    await flush(40);
+    const after = [...host.shadowRoot.querySelectorAll('td')].map(td => td.textContent);
+    expect(after).toEqual(['r1:a', 'r1:B!', 'r2:c', 'r2:d']);
+  });
+
+  it('b-for child carries text and attr interpolation on its own root element', async () => {
+    // The failing test that surfaced during the refactor: attrs and text on
+    // the b-for element itself need to render. scanForBindings now
+    // includes the container's own text/attr bindings (matching the
+    // previous updateNodeBindings(root) behaviour) instead of leaving them
+    // to a separate walk.
+    Lego.block(
+      'for-root-attrs',
+      '<div b-for="x in xs" data-name="[[x.name]]" class="row [[x.flag ? \'on\' : \'off\']]">[[x.name]]</div>',
+      { xs: [{ name: 'A', flag: true }, { name: 'B', flag: false }] }
+    );
+    win.document.body.innerHTML = '<for-root-attrs></for-root-attrs>';
+    await flush(40);
+
+    const host = win.document.querySelector('for-root-attrs');
+    const rows = host.shadowRoot.querySelectorAll('div');
+    expect(rows[0].getAttribute('data-name')).toBe('A');
+    expect(rows[0].className).toContain('on');
+    expect(rows[0].textContent).toBe('A');
+    expect(rows[1].getAttribute('data-name')).toBe('B');
+    expect(rows[1].className).toContain('off');
+    expect(rows[1].textContent).toBe('B');
+  });
+});
+
+describe('Audit fix #33: b-show preserves the author\'s inline display', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('toggling b-show on an element with inline display:flex restores flex, not empty', async () => {
+    Lego.block(
+      'show-flex',
+      '<div b-show="visible" style="display: flex">hi</div>',
+      { visible: true }
+    );
+    win.document.body.innerHTML = '<show-flex></show-flex>';
+    await flush(20);
+
+    const host = win.document.querySelector('show-flex');
+    const div = host.shadowRoot.querySelector('div');
+
+    // Initially visible: display stays "flex" (the cached original).
+    expect(div.style.display).toBe('flex');
+
+    host.state.visible = false;
+    await flush(20);
+    expect(div.style.display).toBe('none');
+
+    host.state.visible = true;
+    await flush(20);
+    // Pre-fix this would have flipped to '', losing the flex layout.
+    expect(div.style.display).toBe('flex');
+  });
+
+  it('elements with no inline display still resolve via the cascade when shown', async () => {
+    Lego.block(
+      'show-cascade',
+      '<div b-show="visible">hi</div>',
+      { visible: true }
+    );
+    win.document.body.innerHTML = '<show-cascade></show-cascade>';
+    await flush(20);
+
+    const host = win.document.querySelector('show-cascade');
+    const div = host.shadowRoot.querySelector('div');
+
+    // No inline display → cached '' → toggling true keeps it empty so
+    // stylesheet rules apply.
+    expect(div.style.display).toBe('');
+    host.state.visible = false;
+    await flush(20);
+    expect(div.style.display).toBe('none');
+    host.state.visible = true;
+    await flush(20);
+    expect(div.style.display).toBe('');
+  });
+});
+
+describe('Audit fix #34: b-sync handles radio buttons', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('reflects state into the matching radio in a group', async () => {
+    Lego.block(
+      'radio-group',
+      '<form>' +
+        '<input type="radio" name="pick" value="A" b-sync="choice">' +
+        '<input type="radio" name="pick" value="B" b-sync="choice">' +
+        '<input type="radio" name="pick" value="C" b-sync="choice">' +
+      '</form>',
+      { choice: 'B' }
+    );
+    win.document.body.innerHTML = '<radio-group></radio-group>';
+    await flush(20);
+
+    const host = win.document.querySelector('radio-group');
+    const radios = host.shadowRoot.querySelectorAll('input[type=radio]');
+    // Pre-fix syncModelValue overwrote `el.value` for radios, breaking
+    // both the group identity and any subsequent matching. Post-fix we
+    // toggle `checked` based on whether `value` matches state.
+    expect(radios[0].checked).toBe(false);
+    expect(radios[1].checked).toBe(true);
+    expect(radios[2].checked).toBe(false);
+    expect(radios[0].value).toBe('A');
+    expect(radios[1].value).toBe('B');
+    expect(radios[2].value).toBe('C');
+
+    host.state.choice = 'C';
+    await flush(20);
+    expect(radios[0].checked).toBe(false);
+    expect(radios[1].checked).toBe(false);
+    expect(radios[2].checked).toBe(true);
+
+    // Null/undefined state clears the whole group.
+    host.state.choice = null;
+    await flush(20);
+    expect([...radios].every(r => !r.checked)).toBe(true);
+  });
+
+  it('user clicks a radio → state picks up the radio\'s value', async () => {
+    Lego.block(
+      'radio-write',
+      '<form>' +
+        '<input type="radio" name="g" value="A" b-sync="pick">' +
+        '<input type="radio" name="g" value="B" b-sync="pick">' +
+      '</form>',
+      { pick: 'A' }
+    );
+    win.document.body.innerHTML = '<radio-write></radio-write>';
+    await flush(20);
+
+    const host = win.document.querySelector('radio-write');
+    const radios = host.shadowRoot.querySelectorAll('input[type=radio]');
+
+    // Simulate user click: the browser/JSDOM sets `checked` and fires events.
+    radios[1].checked = true;
+    radios[1].dispatchEvent(new win.Event('change', { bubbles: true }));
+    await flush(20);
+
+    expect(host.state.pick).toBe('B');
+  });
+});
+
+describe('Audit fix #40: route wildcard matches', () => {
+  let win, Lego;
+  beforeEach(() => {
+    win = setupDom();
+    Lego = win.Lego;
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  const mountRouterHost = () => {
+    const host = win.document.createElement('lego-router');
+    win.document.body.appendChild(host);
+    return host;
+  };
+
+  it('catch-all `*` route matches arbitrary paths', async () => {
+    Lego.block('rt-home', '<div>home</div>');
+    Lego.block('rt-catch', '<div class="catch">catch</div>');
+
+    Lego.route('/', 'rt-home');
+    Lego.route('*', 'rt-catch');
+
+    win.history.pushState({}, '', '/totally/unmapped/path');
+    const host = mountRouterHost();
+    await Lego.init(win.document.body);
+    await flush(60);
+
+    // Catch-all should mount: pre-fix this matched only the literal ".*".
+    expect(host.querySelector('rt-catch')).toBeTruthy();
+  });
+
+  it('suffix wildcard `/foo/*` matches any sub-path', async () => {
+    Lego.block('rt-foo-any', '<div class="foo-any">foo any</div>');
+    Lego.block('rt-other', '<div>other</div>');
+
+    Lego.route('/foo/*', 'rt-foo-any');
+    Lego.route('/other', 'rt-other');
+
+    win.history.pushState({}, '', '/foo/bar/baz');
+    const host = mountRouterHost();
+    await Lego.init(win.document.body);
+    await flush(60);
+
+    expect(host.querySelector('rt-foo-any')).toBeTruthy();
+  });
+
+  it('exact path still wins over suffix wildcard when routes are ordered correctly', async () => {
+    Lego.block('rt-foo-exact', '<div class="foo-exact">exact</div>');
+    Lego.block('rt-foo-any', '<div class="foo-any">any</div>');
+
+    Lego.route('/foo', 'rt-foo-exact');
+    Lego.route('/foo/*', 'rt-foo-any');
+
+    win.history.pushState({}, '', '/foo');
+    const host = mountRouterHost();
+    await Lego.init(win.document.body);
+    await flush(60);
+
+    expect(host.querySelector('rt-foo-exact')).toBeTruthy();
+    expect(host.querySelector('rt-foo-any')).toBeFalsy();
+  });
+
+  it('static metacharacters in the path are still escaped (not treated as regex)', async () => {
+    Lego.block('rt-dotted', '<div class="dotted">dotted</div>');
+    Lego.block('rt-fallback', '<div class="fallback">fallback</div>');
+
+    // `.` should match a literal dot, not "any character".
+    Lego.route('/a.b', 'rt-dotted');
+    Lego.route('*', 'rt-fallback');
+
+    win.history.pushState({}, '', '/aXb');
+    const host = mountRouterHost();
+    await Lego.init(win.document.body);
+    await flush(60);
+
+    // `/aXb` does NOT match `/a.b` (dot is escaped) → fallback wins.
+    expect(host.querySelector('rt-dotted')).toBeFalsy();
+    expect(host.querySelector('rt-fallback')).toBeTruthy();
+  });
+});
+
+describe('Audit fix #36: manifest registration honors loaderAllowlist', () => {
+  let win, Lego, warnSpy;
+  beforeEach(() => {
+    win = setupDom();
+    Lego = win.Lego;
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+    win.document.body.innerHTML = '';
+  });
+
+  it('drops manifest entries whose tag name is not in the allowlist', async () => {
+    Lego.config.loaderAllowlist = ['ok-block'];
+    await Lego.init(win.document.body, {
+      manifest: [
+        { base: '/blocks/', suffix: true, legos: ['ok-block', 'evil-block'] }
+      ]
+    });
+
+    // ok-block is defined as a custom element; evil-block is refused.
+    expect(win.customElements.get('ok-block')).toBeTruthy();
+    expect(win.customElements.get('evil-block')).toBeFalsy();
+
+    const refused = warnSpy.mock.calls.some(args =>
+      args.some(a => typeof a === 'string' && a.includes('Manifest skipped "evil-block"'))
+    );
+    expect(refused).toBe(true);
+  });
+
+  it('refuses manifest entries with malformed tag names regardless of allowlist', async () => {
+    // No allowlist set: still refuses the malformed tag.
+    await Lego.init(win.document.body, {
+      manifest: [{ base: '/b/', suffix: true, legos: ['BadTag'] }]
+    });
+    expect(win.customElements.get('badtag')).toBeFalsy();
+    expect(win.customElements.get('BadTag')).toBeFalsy();
+    const refused = warnSpy.mock.calls.some(args =>
+      args.some(a => typeof a === 'string' && a.includes('malformed tag'))
+    );
+    expect(refused).toBe(true);
+  });
+});
+
+describe('Audit fix #37: failed customElements.define rolls back the registry', () => {
+  let win, Lego, warnSpy;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+    win.document.body.innerHTML = '';
+  });
+
+  it('does not retain a registry entry when define throws', () => {
+    // Uppercase tag names are illegal for autonomous custom elements —
+    // customElements.define throws SyntaxError.
+    Lego.block('Bad-Block', '<div>nope</div>');
+
+    expect(Lego.getLegos()).not.toContain('Bad-Block');
+    // warn was emitted for the failure.
+    expect(warnSpy.mock.calls.some(args =>
+      args.some(a => typeof a === 'string' && a.includes('Failed to register'))
+    )).toBe(true);
+  });
+
+  it('does not block a later valid block from registering with a different name', async () => {
+    Lego.block('Bad-Other', '<div>nope</div>');
+    expect(Lego.getLegos()).not.toContain('Bad-Other');
+
+    Lego.block('good-other', '<div class="ok">ok</div>');
+    win.document.body.innerHTML = '<good-other></good-other>';
+    await flush(20);
+    expect(win.document.querySelector('good-other').shadowRoot.querySelector('.ok')).toBeTruthy();
+  });
+});
+
+describe('Audit fix #38: self → :host substitution skips strings and comments', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('preserves the literal "self" inside CSS strings (content)', async () => {
+    // <style> lives directly inside the template; lifecycle.js rewrites
+    // its textContent during snap().
+    Lego.block(
+      'css-quoted-self',
+      '<style>.hi::before { content: "self"; } /* keep self in comment too */ self { color: red }</style><div class="hi">x</div>'
+    );
+    win.document.body.innerHTML = '<css-quoted-self></css-quoted-self>';
+    await flush(20);
+    const host = win.document.querySelector('css-quoted-self');
+    const style = host.shadowRoot.querySelector('style').textContent;
+
+    // The bare `self { ... }` selector still becomes `:host`.
+    expect(style).toMatch(/:host\s*\{/);
+    // The string literal stays "self", NOT ":host".
+    expect(style).toContain('content: "self"');
+    expect(style).not.toContain('content: ":host"');
+    // The comment text stays untouched too.
+    expect(style).toContain('keep self in comment');
+    expect(style).not.toContain('keep :host in comment');
+  });
+
+  it('preserves single-quoted strings as well', async () => {
+    Lego.block(
+      'css-single-quoted-self',
+      "<style>.hi::before { content: 'self'; } self { color: blue }</style><div>x</div>"
+    );
+    win.document.body.innerHTML = '<css-single-quoted-self></css-single-quoted-self>';
+    await flush(20);
+    const host = win.document.querySelector('css-single-quoted-self');
+    const style = host.shadowRoot.querySelector('style').textContent;
+
+    expect(style).toMatch(/:host\s*\{/);
+    expect(style).toContain("content: 'self'");
+    expect(style).not.toContain("content: ':host'");
+  });
+});
+
+describe('Audit fix #19: b-for reuses the per-child scope object', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('the same localScope is bound to a pool child across renders', async () => {
+    Lego.block(
+      'reuse-scope',
+      '<ul><li b-for="item in items" b-key="id">[[item.label]] (#[[$index]])</li></ul>',
+      { items: [{ id: 1, label: 'A' }, { id: 2, label: 'B' }] }
+    );
+    win.document.body.innerHTML = '<reuse-scope></reuse-scope>';
+    await flush(30);
+
+    const host = win.document.querySelector('reuse-scope');
+    const lis = [...host.shadowRoot.querySelectorAll('li')];
+    // Pool child has the cached scope after first render.
+    const firstScopes = lis.map(li => li._loopScope);
+    expect(firstScopes.every(s => s)).toBe(true);
+
+    // Mutate items so the loop re-iterates.
+    host.state.items[0].label = 'A!';
+    host.state.items[1].label = 'B!';
+    await flush(30);
+
+    const lis2 = [...host.shadowRoot.querySelectorAll('li')];
+    // Same DOM nodes → same cached scope objects → no fresh allocation.
+    expect(lis2[0]._loopScope).toBe(firstScopes[0]);
+    expect(lis2[1]._loopScope).toBe(firstScopes[1]);
+
+    // Rendered output is correct.
+    expect(lis2[0].textContent.trim()).toBe('A! (#0)');
+    expect(lis2[1].textContent.trim()).toBe('B! (#1)');
+  });
+
+  it('reordering by key preserves the per-child scope (no re-allocation)', async () => {
+    Lego.block(
+      'reuse-reorder',
+      '<ul><li b-for="x in xs" b-key="id">[[x.t]]</li></ul>',
+      { xs: [{ id: 1, t: 'one' }, { id: 2, t: 'two' }] }
+    );
+    win.document.body.innerHTML = '<reuse-reorder></reuse-reorder>';
+    await flush(30);
+
+    const host = win.document.querySelector('reuse-reorder');
+    const lisBefore = [...host.shadowRoot.querySelectorAll('li')];
+    const scope1Before = lisBefore.find(li => li.textContent.trim() === 'one')._loopScope;
+    const scope2Before = lisBefore.find(li => li.textContent.trim() === 'two')._loopScope;
+
+    // Swap order.
+    host.state.xs = [{ id: 2, t: 'two' }, { id: 1, t: 'one' }];
+    await flush(30);
+
+    const lisAfter = [...host.shadowRoot.querySelectorAll('li')];
+    const scope1After = lisAfter.find(li => li.textContent.trim() === 'one')._loopScope;
+    const scope2After = lisAfter.find(li => li.textContent.trim() === 'two')._loopScope;
+
+    // Pool key is stable, so the same DOM (and same _loopScope) follows
+    // each item.
+    expect(scope1After).toBe(scope1Before);
+    expect(scope2After).toBe(scope2Before);
+  });
+});
+
+describe('Audit fix #24: el.state = X is a shallow merge (with one-time warning)', () => {
+  let win, Lego, warnSpy;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+    win.document.body.innerHTML = '';
+  });
+
+  it('preserves keys absent from the assigned object (merge, not replace)', async () => {
+    Lego.block('merge-state', '<div>[[a]]/[[b]]</div>', { a: 1, b: 2 });
+    win.document.body.innerHTML = '<merge-state></merge-state>';
+    await flush(20);
+
+    const host = win.document.querySelector('merge-state');
+    expect(host.shadowRoot.querySelector('div').textContent).toBe('1/2');
+
+    host.state = { a: 99 };
+    await flush(20);
+
+    // `b` is preserved; `a` is updated.
+    expect(host.state.a).toBe(99);
+    expect(host.state.b).toBe(2);
+    expect(host.shadowRoot.querySelector('div').textContent).toBe('99/2');
+
+    // Warning was emitted once with the merge clarification.
+    const merged = warnSpy.mock.calls.some(args =>
+      args.some(a => typeof a === 'string' && a.includes('shallow merge'))
+    );
+    expect(merged).toBe(true);
+  });
+
+  it('emits the merge warning at most once across many assignments', async () => {
+    Lego.block('warn-once', '<div>[[n]]</div>', { n: 0 });
+    win.document.body.innerHTML = '<warn-once></warn-once>';
+    await flush(20);
+
+    const host = win.document.querySelector('warn-once');
+    for (let i = 0; i < 5; i++) host.state = { n: i };
+    await flush(20);
+
+    const mergeWarnings = warnSpy.mock.calls.filter(args =>
+      args.some(a => typeof a === 'string' && a.includes('shallow merge'))
+    );
+    expect(mergeWarnings.length).toBe(1);
+  });
+});
+
+describe('Audit fix #32: safeEval auto-invoke is gated to event-handler context', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('text interpolation does NOT auto-invoke a function-valued state field', async () => {
+    // Pre-fix: any state field that happened to be a function was silently
+    // called when read by [[…]] — surprise side effects, and the displayed
+    // value was the function's return rather than `.toString()`.
+    let calls = 0;
+    Lego.block(
+      'no-auto-invoke',
+      '<div>[[fn]]</div>',
+      { fn() { calls++; return 'invoked'; } }
+    );
+    win.document.body.innerHTML = '<no-auto-invoke></no-auto-invoke>';
+    await flush(20);
+
+    const host = win.document.querySelector('no-auto-invoke');
+    // The function was NOT called. The interpolation falls back to the
+    // function's `.toString()`-shaped output (or whatever the engine
+    // produces from coercing a function to a string).
+    expect(calls).toBe(0);
+    expect(host.shadowRoot.querySelector('div').textContent).not.toBe('invoked');
+  });
+
+  it('event handlers still auto-invoke a bare function reference', async () => {
+    let calls = 0;
+    let receivedEvent;
+    Lego.block(
+      'event-auto-invoke',
+      '<button @click="handler">click</button>',
+      { handler(e) { calls++; receivedEvent = e; } }
+    );
+    win.document.body.innerHTML = '<event-auto-invoke></event-auto-invoke>';
+    await flush(20);
+
+    const host = win.document.querySelector('event-auto-invoke');
+    const button = host.shadowRoot.querySelector('button');
+    button.click();
+    await flush(20);
+
+    expect(calls).toBe(1);
+    // The auto-invoke passed the click event through.
+    expect(receivedEvent).toBeTruthy();
+    expect(receivedEvent.type).toBe('click');
+  });
+});

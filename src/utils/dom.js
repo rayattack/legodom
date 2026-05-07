@@ -95,6 +95,13 @@ export const defaultSanitize = (html) => {
 export const syncModelValue = (el, val) => {
   if (el.type === 'checkbox') {
     if (el.checked !== !!val) el.checked = !!val;
+  } else if (el.type === 'radio') {
+    // Audit fix #34: a radio's `value` is fixed (the option's value); state
+    // toggles `checked` based on whether the state matches this radio's
+    // value. Treat null/undefined as "no selection" — every radio in the
+    // group becomes unchecked.
+    const should = (val !== undefined && val !== null) && String(val) === el.value;
+    if (el.checked !== should) el.checked = should;
   } else {
     const normalized = (val === undefined || val === null) ? '' : String(val);
     if (el.value !== normalized) el.value = normalized;

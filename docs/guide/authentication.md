@@ -296,7 +296,7 @@ Lego.init(document.body);
 ```
 
 ```html
-<!-- src/blocks/nav-bar.lego -->
+<!-- src/nav-bar.lego -->
 <template>
   <nav>
     <a href="/dashboard" b-link>Dashboard</a>

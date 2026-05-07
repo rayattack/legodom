@@ -53,7 +53,17 @@ export const safeEval = (expr, context, throwError = true) => {
     };
 
     const result = func.call(scope, context.global, context.self, context.event, helpers);
-    if (typeof result === 'function') return result.call(scope, context.event);
+    // Audit fix #32: only auto-invoke a function-typed result when we're
+    // evaluating in event-handler context (renderer.js bind() is the only
+    // call site that passes `event`). Previously a state field that
+    // happened to be a function was silently called by every text/attr
+    // interpolation that read it — surprise side effects + a `.toString()`-
+    // shaped output was never observable. Bare-name patterns like
+    // `b-init="setup"` (relying on auto-call) now need explicit parens:
+    // `b-init="setup()"`. Tests cover the new gate.
+    if (typeof result === 'function' && context.event !== undefined) {
+      return result.call(scope, context.event);
+    }
     return result;
   } catch (e) {
     if (throwError) throw e;

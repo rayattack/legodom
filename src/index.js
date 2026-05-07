@@ -88,6 +88,14 @@ const Lego = {
         });
       } catch (e) {
         console.warn(`[Lego] Failed to register web component ${tagName}:`, e);
+        // Audit fix #37: roll back the registry / supporting maps so a failed
+        // define doesn't leave a stale template that getLegos() reports as
+        // registered and that future re-define attempts collide with.
+        delete registry[tagName];
+        legoFileLogic.delete(tagName);
+        bProps.unregister(tagName);
+        sharedStates.delete(tagName.toLowerCase());
+        return;
       }
     } else {
       // HMR or Re-definition: manually upgrade existing instances
@@ -112,13 +120,20 @@ const Lego = {
   globals: globalState,
   route: (path, tagName, middleware = null) => {
     const paramNames = [];
-    let regexPath = path === '*' ? '.*' : path;
-    // Escape regex metacharacters in static segments, then replace param placeholders
-    regexPath = regexPath.replace(/:([^\/]+)|[.*+?^${}()|[\]\\]/g, (match, name) => {
+    // Audit fix #40: handle `*` as a wildcard wherever it appears, not only
+    // when the entire path is exactly `*`. The previous special case set
+    // `regexPath = '.*'` then ran the metachar-escape pass which escaped
+    // both `.` and `*`, producing `\.\*` — a regex that matched only the
+    // literal string ".*", so the catch-all route never matched anything.
+    // The replacer below substitutes `*` with `.*` directly and escapes
+    // every other metachar, so `'*'` matches any path and `'/foo/*'`
+    // matches `/foo/anything/here`.
+    const regexPath = path.replace(/:([^\/]+)|\*|[.+?^${}()|[\]\\]/g, (match, name) => {
       if (name) {
         paramNames.push(name);
         return '([^/]+)';
       }
+      if (match === '*') return '.*';
       return '\\' + match;
     });
     routes.push({ path, regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
@@ -174,6 +189,27 @@ const Lego = {
       }
     });
 
+    // Audit fix #36: shared allowlist gate. Lazy-loaded blocks (whether
+    // discovered via config.loader or pre-registered from a manifest) all
+    // run as JS via `new Function` once their .lego is fetched, so the
+    // tag-name allowlist applies equally to both paths. Previously only
+    // auto-discovery checked it; a compromised manifest URL could
+    // introduce arbitrary tag names that would each become a code-loading
+    // endpoint.
+    const VALID_TAG = /^[a-z][a-z0-9]*(-[a-z0-9]+)+$/;
+    const allowlist = config.loaderAllowlist;
+    const matchesAllowlist = (tagName) => {
+      if (!allowlist) return true;
+      const list = Array.isArray(allowlist) ? allowlist : [allowlist];
+      return list.some(p => {
+        if (typeof p === 'string') return p === tagName;
+        if (typeof p === 'function') return !!p(tagName);
+        // Duck-type RegExp (cross-realm safe).
+        if (p && typeof p.test === 'function') return !!p.test(tagName);
+        return false;
+      });
+    };
+
     // 6. Process Manifest (Pre-registration for Shadow DOM support)
     const resolveHeaders = (headers) => {
       if (!headers) return {};
@@ -199,6 +235,19 @@ const Lego = {
 
     const registerLazy = (tagName, url, config = {}) => {
       if (customElements.get(tagName)) return;
+
+      // Audit fix #36: gate manifest-registered lazy blocks through the
+      // same shape + allowlist checks as auto-discovery. A lazy block's
+      // .lego is fetched and run as JS via `new Function` on first
+      // mount, so the same trust profile applies.
+      if (!VALID_TAG.test(tagName)) {
+        console.warn(`[Lego] Manifest skipped malformed tag "${tagName}"`);
+        return;
+      }
+      if (!matchesAllowlist(tagName)) {
+        console.warn(`[Lego] Manifest skipped "${tagName}": not in loaderAllowlist`);
+        return;
+      }
 
       customElements.define(tagName, class extends HTMLElement {
         async connectedCallback() {
@@ -315,28 +364,10 @@ const Lego = {
     }
 
     // Auto-Discovery: Watch for unknown tags to lazy-load (HTMX-style / Server Blocks)
+    // VALID_TAG and matchesAllowlist are hoisted above (shared with the
+    // manifest path — see audit fix #36).
     if (config.loader) {
-      // Strict custom-element shape: lowercase, must contain at least one
-      // hyphen-separated segment, no dots/colons/slashes/quotes/whitespace.
-      // Custom elements legally allow more (digits, certain unicode), but
-      // anything beyond this is almost always an injection attempt rather
-      // than a real component — refusing them keeps the loader safe.
-      const VALID_TAG = /^[a-z][a-z0-9]*(-[a-z0-9]+)+$/;
-      const allowlist = config.loaderAllowlist;
       let warnedNoAllowlist = false;
-      const matchesAllowlist = (tagName) => {
-        if (!allowlist) return true;
-        const list = Array.isArray(allowlist) ? allowlist : [allowlist];
-        return list.some(p => {
-          if (typeof p === 'string') return p === tagName;
-          if (typeof p === 'function') return !!p(tagName);
-          // Duck-type RegExp (cross-realm safe — RegExps from a different
-          // global won't pass `instanceof RegExp` here).
-          if (p && typeof p.test === 'function') return !!p.test(tagName);
-          return false;
-        });
-      };
-
       const discover = (n) => {
         if (n.nodeType !== Node.ELEMENT_NODE) return;
         const tagName = n.tagName.toLowerCase();

@@ -1,84 +1,49 @@
 # Tutorial: Build a Task Tracker
 
-In the next 20 minutes, you'll build a complete task tracker with a persistent sidebar, real-time search, data that survives page refreshes, and navigation that feels instant. No prior framework experience needed.
+Six chapters. By the end, you'll have a single-page task tracker with reactive blocks, surgical routing, persistent storage that survives refresh, an auth-guarded admin route, and lazy-loaded blocks.
 
-## See What LegoDOM Can Do
+Every snippet on this track runs against the current LegoDOM source. There are no skipped steps and no hidden setup — copy what you see and it will run.
 
-Here's a taste. This single `.lego` file gives you a reactive, styled, self-contained component:
+## What you'll build
 
-```html
-<template>
-  <h2>[[ title ]]</h2>
-  <input b-sync="search" placeholder="Filter tasks...">
-  <ul>
-    <li b-for="task in filtered" @click="toggle(task)">
-      <span b-show="task.done" class="done">✓</span>
-      [[ task.name ]]
-    </li>
-  </ul>
-  <p b-if="filtered.length === 0">No tasks found.</p>
-</template>
+A real task-tracker app:
 
-<script>
-export default {
-  title: 'My Tasks',
-  search: '',
-  tasks: $db('tasks').default([
-    { name: 'Learn LegoDOM', done: false },
-    { name: 'Build something great', done: false }
-  ]),
-  get filtered() {
-    return this.tasks.filter(t =>
-      t.name.toLowerCase().includes(this.search.toLowerCase())
-    );
-  },
-  toggle(task) {
-    task.done = !task.done;
-  }
-}
-</script>
+```
+┌─────────────────────────────────────────────┐
+│  Tracker         All  Work  Personal  Admin │
+├──────────┬──────────────────────────────────┤
+│  search  │  ☐  Finish quarterly report     │
+│   ↓      │  ☑  Review pull requests        │
+│  filter  │  ☐  Update project roadmap      │
+│   ↓      │                                  │
+│  add     │  3 of 5 remaining               │
+└──────────┴──────────────────────────────────┘
 ```
 
-That's a searchable, persistent, reactive task list in **30 lines**. No virtual DOM. No state management library. No build step required.
+- A persistent shell — the sidebar and search bar never reload between page changes.
+- Routes (`/`, `/work`, `/personal`, `/admin`) that swap only the content area.
+- Tasks stored in `localStorage` with cross-tab sync.
+- An `/admin` route protected by middleware.
+- A "task editor" block that loads on demand the first time you click a task.
 
-## What You'll Build
+## What you should already know
 
-A real task tracker dashboard with:
+- HTML, CSS, and modern JavaScript (`async`/`await`, getters, the spread operator).
+- The shape of a `package.json` and how to run an `npm` script.
 
-- **Reactive components** — state changes update the DOM automatically
-- **Surgical routing** — click a category in the sidebar, only the task list swaps. The sidebar, its scroll position, its state — all untouched
-- **Persistent data** — tasks survive page refresh, even across browser tabs
-- **Route guards** — protect pages with middleware
-- **Scoped styles** — CSS that never leaks between components
+You do **not** need prior experience with React, Vue, Svelte, or Web Components.
 
-## Why LegoDOM?
+## Chapters
 
-Most frameworks re-render entire component trees when you navigate. LegoDOM lets you target exactly which part of the page to update. Your sidebar stays. Your scroll position stays. Your in-progress form stays. Only what needs to change, changes.
+| # | Page | Topic |
+|---|---|---|
+| 1 | [Project setup](./01-project-setup) | Scaffold, file layout, dev server |
+| 2 | [Your first block](./02-your-first-block) | `.lego` files, reactivity, directives |
+| 3 | [Routing & layouts](./03-adding-routes) | `Lego.route`, `b-target`, the persistent shell |
+| 4 | [Persistence & forms](./04-multi-page-app) | `$db`, two-way binding, cross-tab sync |
+| 5 | [State & guards](./05-state-and-globals) | `Lego.globals`, route middleware |
+| 6 | [Dynamic mounting](./06-dynamic-mounting) | `b-mount`, `$mount`, lazy `manifest` |
 
-This is called **surgical routing**, and it changes how you think about building web apps.
-
-## Prerequisites
-
-- Node.js 18+ installed
-- A code editor (VS Code recommended)
-- Basic HTML, CSS, and JavaScript
-
-## Tutorial Path
-
-| Step | What You'll Build |
-|------|-------------------|
-| [1. Project Setup](./01-project-setup) | Create a project, run the dev server |
-| [2. Your First Block](./02-your-first-block) | A reactive task list with search and filtering |
-| [3. Routing & Layouts](./03-adding-routes) | A dashboard shell with surgical navigation |
-| [4. Persistence & Forms](./04-multi-page-app) | Data that survives refresh with `$db` |
-| [5. State, Guards & Beyond](./05-state-and-globals) | Global state, auth middleware, and polish |
-
-<div style="text-align: center; margin: 2rem 0;">
-  <a href="./01-project-setup" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1.2rem;">
-    Start Building →
-  </a>
-</div>
-
-::: tip No Build Tools? No Problem!
-If you want to skip the Vite setup and use LegoDOM via CDN, check out the [CDN Quick Start](/guide/cdn-usage). Everything in this tutorial works with plain HTML too.
+::: tip CDN-only path
+Prefer to work without a build step? Skim [CDN Usage](/guide/cdn-usage) — every concept here applies, you just declare blocks with `<template b-id>` instead of `.lego` files.
 :::

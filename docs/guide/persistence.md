@@ -1,150 +1,175 @@
-# Reactive Persistence ($db)
+# Persistence (`$db`)
 
-LegoDOM provides a powerful `$db` helper to make persisting state to `localStorage` redundant-free and reactive.
+`$db` treats `localStorage` as first-class reactive state. Declare a `$db` descriptor on a state property and the runtime hydrates from disk on mount, writes back on every mutation, and broadcasts changes to other tabs — for free.
 
-Unlike manually reading/writing to `localStorage` in lifecycle hooks, `$db` treats persistent data as first-class reactive state. It also adds robust features like debouncing and cross-tab synchronization automatically.
-
-## Quick Example
-
-Use the `$db` helper in your `b-logic`:
+## Quick example
 
 ```html
-<user-prefs b-logic="{
-  theme: $db('app.theme').default('light'),
-  volume: $db('app.vol').default(50).debounce(300)
-}"></user-prefs>
-
+<!-- user-prefs.lego -->
 <template>
-  <h1>Current Theme: [[ theme ]]</h1>
+  <h1>Theme: [[ theme ]]</h1>
   <input type="range" b-sync="volume">
-</template>
-```
-
-When you drag the slider, the value is updated in memory instantly, but written to disk only after you stop dragging (300ms debounce). If you open the app in another tab, the theme update will sync instantly!
-
-## API Reference
-
-### `$db(key: string)`
-
-Creates a reactive connection to `localStorage` for the given key.
-
-**What does "Reactive Connection" mean?**
-1.  **Auto-Load:** When the block is created, it checks `localStorage`. If the key exists, it initializes your state with that value (parsing JSON automatically).
-2.  **Auto-Save:** Whenever you modify this property (e.g., `this.state.theme = 'dark'`), LegoDOM automatically saves the new value to `localStorage`.
-3.  **Two-Way Binding:** It behaves exactly like a normal variable, but it survives page reloads.
-
-::: warning Namespacing is Critical!
-`localStorage` is shared by all code on your domain.
-Avoid generic keys like `"theme"` or `"user"`.
-Always use a namespace prefix: `"my-app.theme"` or `"user.123.prefs"`.
-:::
-
-### `.default(value: any)`
-
-Sets the initial value if the key does not exist in storage.
-
-- **value**: Can be a string, number, boolean, object, or array. (Automatically JSON serialized/parsed).
-
-```javascript
-$db('app.counter').default(0)
-$db('app.settings').default({ notifications: true })
-```
-
-### `.debounce(ms: number)`
-
-Delays the *write to disk* operation.
-
-- **ms**: Milliseconds to wait after the last change.
-
-::: danger Performance Warning
-`localStorage` is synchronous and blocking. Writing to it on every frame (e.g., during a scroll event or slider drag) will cause **UI Jank** on mobile devices.
-**ALWAYS** use `.debounce(300)` or higher for values bound to high-frequency inputs like `<input type="range">` or text fields.
-:::
-
-## Runtime Methods
-
-In addition to reactive persistence (using `.default()` and `.debounce()`), you can perform one-off operations directly from methods or templates:
-
-### `.set(value: any, debounce?: number)`
-
-Writes a value to localStorage and triggers reactivity for all components using this key.
-
-```javascript
-// In a method
-logout() {
-  $db('auth-token').set(null);
-}
-
-// In a template
-<button @click="$db('theme').set('dark')">Dark Mode</button>
-```
-
-**Parameters:**
-- `value`: The data to save (automatically JSON serialized)
-- `debounce` (optional): Milliseconds to wait before writing to disk (default: 0)
-
-**Returns:** The saved value
-
-### `.get()`
-
-Reads the current value from localStorage.
-
-```javascript
-mounted() {
-  const token = $db('auth-token').get();
-  if (token) this.authenticate(token);
-}
-```
-
-**Returns:** The parsed value, or `null` if the key doesn't exist
-
-### `.delete()`
-
-Removes the key from localStorage and notifies all reactive bindings.
-
-```javascript
-clearCache() {
-  $db('user-cache').delete();
-}
-```
-
-**Returns:** `true` if successful, `false` on error
-
-> **Note:** Unlike reactive properties (which require declaring `myProp: $db('key').default(val)` in your component), these runtime methods can be called anywhere without prior declaration.
-
-## Cross-Tab Synchronization
-
-One of the "magic" features of `$db` is automatic synchronization.
-
-1.  Open your app in **Tab A**.
-2.  Open your app in **Tab B**.
-3.  Change a `$db` value in Tab A.
-4.  Tab B will **instantly update** and re-render.
-
-This uses the browser's native `storage` event. We filter these events efficiently (O(1) complexity), so there is negligible performance cost to having this active.
-
-## Usage in .lego Files
-
-In your `.lego` files, use `$db` directly in your exported object:
-
-```html
-<!-- user-card.lego -->
-<template>
-  <div>History: [[ history.length ]] items</div>
 </template>
 
 <script>
 export default {
-  history: $db('app.history').default([]),
-  tempValue: 0,
-  
-  mounted() {
-    console.log(this.state.history); // Already loaded from disk!
-  },
-
-  addToHistory(item) {
-    this.state.history.push(item); 
-  }
+  theme:  $db('prefs.theme').default('light'),
+  volume: $db('prefs.volume').default(50).debounce(300)
 }
 </script>
+```
+
+Drag the slider — the in-memory value updates instantly. The localStorage write is debounced 300 ms, so dragging won't hammer disk. Open the same URL in another tab — both tabs sync.
+
+## How it works
+
+When the proxy spots a `$db` descriptor as a property value at mount time, it:
+
+1. Reads `localStorage[key]`. If present, parses it as JSON; otherwise uses `default(v)`.
+2. Replaces the descriptor with the resolved value, so the property behaves like any other reactive value.
+3. Records the binding so future writes flow through `scheduleSave` (with optional debounce).
+4. Subscribes the binding to a single shared `storage` listener for cross-tab sync.
+
+A re-entrancy guard prevents the obvious feedback loop: an incoming cross-tab value is applied without re-firing a save.
+
+## Initialization API (fluent)
+
+```js
+$db('key')                  // descriptor
+  .default(initial)         // value to use if storage is empty
+  .debounce(ms)             // delay between mutation and disk write
+```
+
+Both methods are optional and chainable; both return the descriptor.
+
+```js
+{
+  cart:   $db('cart').default([]),
+  search: $db('search').default('').debounce(250),
+  size:   $db('size').default('M')
+}
+```
+
+::: tip Namespace your keys
+`localStorage` is shared by every script on the origin. Use prefixes like `myapp.theme`, not bare `theme`. The runtime's quota-eviction logic only evicts keys this app wrote, but reading bare keys can still collide with third-party storage.
+:::
+
+## Runtime API
+
+You can use the descriptor directly without binding it to state:
+
+```js
+$db('user').set({ name: 'Alice' });          // immediate write
+$db('user').set({ name: 'Bob' }, 200);       // debounced write
+const u = $db('user').get();                 // synchronous read
+$db('user').delete();                        // remove + notify bindings
+```
+
+`set` and `delete` notify every block currently bound to that key, in addition to writing to disk.
+
+In JS contexts outside a block, use `Lego.db` (or `Lego.globals.$db`):
+
+```js
+import { Lego } from 'lego-dom';
+Lego.db('auth.token').set(token);
+```
+
+## Debouncing high-frequency writes
+
+`localStorage` is synchronous and blocking. Hammering it during a scroll, drag, or every-keystroke binding will cause UI jank on slower devices. Debounce inputs that mutate often:
+
+```js
+{
+  draft: $db('post.draft').default('').debounce(500)
+}
+```
+
+The first mutation arms a timer. Each subsequent mutation within the window pushes the deadline back. The user pauses → the save fires.
+
+## Cross-tab sync
+
+Bindings to the same key in different tabs stay in sync via the browser's `storage` event:
+
+1. Open the app in tab A and tab B.
+2. Change a `$db` value in tab A.
+3. Tab B re-renders with the new value.
+
+A single `storage` listener handles every key — there's no per-binding overhead.
+
+## Quota and eviction
+
+Browsers cap `localStorage` (typically ~5 MB). When a write exceeds the quota:
+
+1. The runtime catches `QuotaExceededError`.
+2. It evicts the **oldest** keys this app wrote (FIFO) until 2× the needed space is free.
+3. The write is retried.
+
+If retry still fails, `Lego.config.onError` fires with `type: 'quota-critical'`. Eviction never touches keys this app didn't write — third-party `localStorage` usage is left alone.
+
+## Patterns
+
+### Auth token
+
+```js
+{
+  token: $db('auth.token').default(null),
+
+  async login(creds) {
+    const { token } = await fetch('/login', { method: 'POST', body: JSON.stringify(creds) }).then(r => r.json());
+    this.token = token;     // saved to disk + broadcast across tabs
+  },
+
+  logout() {
+    this.token = null;      // saved as null
+  }
+}
+```
+
+### Form draft auto-save
+
+```js
+{
+  draft: $db('post.draft').default('').debounce(500),
+
+  publish() {
+    fetch('/posts', { method: 'POST', body: this.draft });
+    this.draft = '';        // clears in-memory and on disk
+  }
+}
+```
+
+### Computed reads
+
+```js
+{
+  user: $db('user').default(null),
+  get displayName() {
+    return this.user?.name ?? 'Guest';
+  }
+}
+```
+
+The getter reads `this.user` — the runtime tracks that read, so any cross-tab update of the user re-runs the binding that displayed `displayName`.
+
+## Use in `.lego` script vs `b-logic`
+
+Both work. `$db` is exposed as a top-level identifier in both contexts.
+
+```html
+<!-- script -->
+<script>
+export default {
+  theme: $db('theme').default('light')
+}
+</script>
+```
+
+```html
+<!-- template-level b-logic -->
+<template b-id="user-prefs" b-logic="{ theme: $db('theme').default('light') }">…</template>
+```
+
+```html
+<!-- instance-level b-logic -->
+<user-prefs b-logic="{ theme: $db('user-99.theme').default('light') }"></user-prefs>
 ```

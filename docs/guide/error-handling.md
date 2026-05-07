@@ -112,33 +112,46 @@ app-shell (b-error="global-error")
 ```
 
 Key rules:
-- **Instance-level checked first**, then template-level at each ancestor
-- **Crosses Shadow DOM boundaries** — errors bubble through shadow roots
-- **Self-reference prevention** — if a block's `b-error` points to itself, it's skipped (prevents infinite loops)
+
+- **Instance-level checked first**, then template-level at each ancestor.
+- **Crosses Shadow DOM boundaries** — errors bubble through shadow roots.
+- **Self-reference prevention** — a `b-error` whose target tag equals the crashing block's tag is skipped, so the boundary can't relaunch the same crashing block.
+- **Recursion limit** — each boundary tracks recovery depth and refuses to re-render its fallback more than 3 times deep. If the fallback itself is consistently broken, the runtime gives up and routes to `Lego.config.onError`.
 
 ## What Gets Caught
 
 Error boundaries catch errors in:
 
-- **Rendering** — errors during template expression evaluation (`[[ badExpression ]]`)
-- **Lifecycle hooks** — errors in `mounted()` and `unmounted()`
-- **Event handlers** — errors in `@click`, `@input`, and other event handlers
+- **Rendering** — template expression evaluation (`[[ badExpression ]]`) and directive execution.
+- **Lifecycle hooks** — `mounted()` and `unmounted()`.
+- **Event handlers** — `@click`, `@input`, and the rest.
 
-## Global Error Handler
+Errors that escape the rendering pipeline (a `setTimeout` callback throwing, a fetch promise rejection, a manually attached `addEventListener` handler) are **not** caught by `b-error` — handle those yourself, typically by routing to `Lego.config.onError`.
 
-If no `b-error` boundary is found anywhere in the ancestor chain, LegoDOM falls back to `config.onError`:
+## Global error handler
+
+If no `b-error` boundary is found anywhere in the ancestor chain, the runtime falls back to `Lego.config.onError`:
 
 ```js
-Lego.init(document.body, {
-  onError: (err, type, el) => {
-    console.error(`[LegoDOM Error] [${type}]`, err, el);
-    // Send to error tracking
-    // Sentry.captureException(err);
-  }
-});
+Lego.config.onError = (err, type, el) => {
+  console.error(`[Lego] [${type}]`, err, el);
+  Sentry.captureException(err, { tags: { lego_type: type, tag: el?.tagName } });
+};
 ```
 
-The `type` parameter indicates where the error occurred: `"render"`, `"mounted"`, `"unmounted"`, or `"event"`.
+`Lego.init({ onError })` is **not** an option — set the handler on `Lego.config` directly, before or after `Lego.init`.
+
+The `type` argument tells you where the error happened:
+
+| `type` | Source |
+|---|---|
+| `'render'` | Template/binding evaluation |
+| `'event-handler'` | An `@event="…"` handler |
+| `'mounted'` / `'unmounted'` | Lifecycle hooks |
+| `'sync-update'` | A `b-sync` write |
+| `'define'` | `Lego.block()` registration |
+| `'script'` | `<script>` evaluation in a `.lego` file |
+| `'quota'` / `'quota-critical'` | `$db` storage exhaustion |
 
 ## Complete Example
 
@@ -196,12 +209,12 @@ Here's a full error boundary setup:
 **3. Set up a global fallback in your entry file:**
 
 ```js
-Lego.init(document.body, {
-  onError: (err, type, el) => {
-    // Last resort — log errors that no boundary caught
-    console.error(`Uncaught [${type}] error in <${el?.tagName?.toLowerCase()}>:`, err);
-  }
-});
+Lego.config.onError = (err, type, el) => {
+  // Last resort — log errors that no boundary caught
+  console.error(`Uncaught [${type}] in <${el?.tagName?.toLowerCase()}>:`, err);
+};
+
+Lego.init();
 ```
 
 ## Best Practices

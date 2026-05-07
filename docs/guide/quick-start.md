@@ -49,7 +49,7 @@ In HTML `<style>` goes inside `<template></template>` tags but in Lego Files the
 <!-- Overrides message, keeps count=0 -->
 <click-counter b-logic="{ message: 'Bienvenido!' }"></click-counter>
 
-<script src="https://unpkg.com/lego-dom/main.js"></script>
+<script src="https://unpkg.com/lego-dom"></script>
 ```
 
 
@@ -87,7 +87,7 @@ Then use it in your HTML:
 
 ### Using .lego Files (with Vite)
 
-Create `src/blocks/click-counter.lego`:
+Create `src/click-counter.lego` (the Vite plugin discovers anything matching `**/*.lego` under `src/`):
 
 ```html
 <style>

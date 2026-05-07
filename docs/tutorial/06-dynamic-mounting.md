@@ -1,313 +1,165 @@
-# Step 6: Dynamic Mounting
+# 6. Dynamic mounting
 
-Your task tracker has routing, persistence, global state, and guards. But every view swap so far has been tied to the URL — click a link, change the path, match a route. What if you want to swap a component into a panel *without* changing the URL?
+The router gets you most of the way, but sometimes you want to swap a block into a target **without** a URL change — picking a tab, opening a side panel, lazy-loading a heavy chart. That's what `$mount` and `b-mount` are for.
 
-That's what `$mount` and `b-mount` are for. They let you drop any registered block into any target — no routes, no URL changes.
+By the end of this chapter you'll also see how to defer block code until it's actually needed, using the `manifest` option.
 
-## The Problem
+## `$mount` — imperative
 
-Look at your current app. When you click "Work" in the sidebar, it navigates to `/work` and the route system swaps `task-list` into `#content`. That works for page-level navigation.
+`$mount(tag, target?, props?)` mounts a block. Three forms:
 
-But what about:
-- A **details panel** that shows task info when you click a row — without leaving the page
-- A **tab system** that switches between views inside a single component
-- A **modal** that loads a different block based on context
+| Form | Effect |
+|---|---|
+| `this.$mount('chart-card')` | Returns a detached `<chart-card>` for you to insert manually. |
+| `this.$mount('chart-card', '#panel')` | Clears `#panel` and mounts a fresh `<chart-card>` inside. |
+| `this.$mount('chart-card', '#panel', { id: 42 })` | Same, with `{ id: 42 }` injected as initial state. |
 
-These are all "mount this component here" problems. They don't need URLs.
+`target` accepts a CSS selector, a single element, or an array of elements. Pass `null` as the tag to clear without remounting.
 
-## `$mount` — The Programmatic API
+### Practical example: a tabbed editor
 
-`$mount` takes a block name and a target, and mounts it immediately:
-
-```javascript
-// Mount a block into a target
-this.$mount('task-detail', '#detail-panel');
-
-// Clear a target
-this.$mount(null, '#detail-panel');
-
-// Mount with initial props
-this.$mount('task-detail', '#detail-panel', { taskId: 42 });
-```
-
-### Add a Detail Panel
-
-Let's add a split-view to your task tracker. Clicking a task shows its details in a side panel.
-
-Create `src/blocks/task-detail.lego`:
+Add a tab strip to your `app-shell`:
 
 ```html
-<template>
-  <div class="detail">
-    <h3>[[ taskName ]]</h3>
-    <p class="category">[[ category ]]</p>
-    <p class="desc">[[ description ]]</p>
-    <button @click="$mount(null, $element.parentElement)">Close</button>
-  </div>
-</template>
-
-<style>
-  self {
-    display: block;
-    padding: 1.5rem;
-    animation: slideIn 0.2s ease-out;
-  }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(10px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-
-  h3 { margin: 0 0 0.5rem; color: #333; }
-  .category {
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    background: #667eea;
-    color: white;
-    border-radius: 4px;
-    font-size: 0.8rem;
-  }
-  .desc { color: #666; line-height: 1.5; margin-top: 1rem; }
-
-  button {
-    margin-top: 1rem;
-    padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    background: white;
-    cursor: pointer;
-  }
-  button:hover { background: #f5f5f5; }
-</style>
-
-<script>
-export default {
-  taskName: 'Untitled',
-  category: '',
-  description: 'No details available.'
-}
-</script>
-```
-
-Now update your `task-list.lego` template to include a detail panel and mount into it on click:
-
-```html
-<template>
-  <div class="split-view">
-    <ul class="task-list">
-      <li b-for="task in tasks"
-          @click="showDetail(task)">
-        <span>[[ task.name ]]</span>
-        <span class="badge">[[ task.category ]]</span>
-      </li>
-    </ul>
-    <aside id="detail-panel"></aside>
-  </div>
-</template>
-
-<script>
-export default {
-  tasks: [],
-
-  mounted() {
-    this.tasks = [
-      { name: 'Write docs', category: 'work', description: 'Document the $mount API' },
-      { name: 'Buy groceries', category: 'personal', description: 'Milk, eggs, bread' },
-      { name: 'Code review', category: 'work', description: 'Review PR #42' }
-    ];
-  },
-
-  showDetail(task) {
-    this.$mount('task-detail', '#detail-panel', {
-      taskName: task.name,
-      category: task.category,
-      description: task.description
-    });
-  }
-}
-</script>
-```
-
-Click a task — the detail block slides in on the right. Click "Close" — it clears. No URL change, no route needed.
-
-## `b-mount` — The Reactive Directive
-
-For cases where the mounted component should change reactively based on state, use the `b-mount` directive:
-
-```html
-<div b-mount="currentView"></div>
-```
-
-The element bearing `b-mount` is the container. When `currentView` changes, the old component is automatically cleaned up and the new one is mounted in its place.
-
-### Build a Tabbed Dashboard
-
-Let's add a dashboard to your tracker with tabs that swap content without routing.
-
-Create `src/blocks/stats-panel.lego`:
-
-```html
-<template>
-  <div class="stats">
-    <div class="stat-card">
-      <span class="number">6</span>
-      <span class="label">Total Tasks</span>
-    </div>
-    <div class="stat-card">
-      <span class="number">4</span>
-      <span class="label">Work</span>
-    </div>
-    <div class="stat-card">
-      <span class="number">2</span>
-      <span class="label">Personal</span>
-    </div>
-  </div>
-</template>
-
-<style>
-  .stats { display: flex; gap: 1rem; padding: 1rem 0; }
-  .stat-card {
-    flex: 1;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    padding: 1.5rem;
-    border-radius: 12px;
-    text-align: center;
-  }
-  .number { display: block; font-size: 2rem; font-weight: 700; }
-  .label { opacity: 0.8; font-size: 0.85rem; }
-</style>
-```
-
-Create `src/blocks/activity-feed.lego`:
-
-```html
-<template>
-  <ul class="feed">
-    <li>Completed "Write docs" <time>2 min ago</time></li>
-    <li>Added "Buy groceries" <time>1 hour ago</time></li>
-    <li>Started "Code review" <time>3 hours ago</time></li>
-  </ul>
-</template>
-
-<style>
-  .feed { list-style: none; padding: 0; }
-  .feed li {
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #eee;
-    color: #555;
-  }
-  time { float: right; color: #999; font-size: 0.85rem; }
-</style>
-```
-
-Now create a tabbed container. Create `src/blocks/dashboard-view.lego`:
-
-```html
-<template>
-  <div class="dashboard">
-    <div class="tabs">
-      <button @click="tab = 'stats-panel'"
-              class="tab"
-              b-show="tab !== 'stats-panel'">Stats</button>
-      <button @click="tab = 'stats-panel'"
-              class="tab active"
-              b-show="tab === 'stats-panel'">Stats</button>
-
-      <button @click="tab = 'activity-feed'"
-              class="tab"
-              b-show="tab !== 'activity-feed'">Activity</button>
-      <button @click="tab = 'activity-feed'"
-              class="tab active"
-              b-show="tab === 'activity-feed'">Activity</button>
-    </div>
-
-    <div class="tab-content" b-mount="tab"></div>
-  </div>
-</template>
-
-<style>
-  .dashboard { padding: 1rem; }
-  .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-  .tab {
-    padding: 0.5rem 1.25rem;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    background: white;
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-  .tab:hover { background: #f5f5f5; }
-  .tab.active {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
-  }
-  .tab-content {
-    min-height: 200px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 1rem;
-  }
-</style>
-
-<script>
-export default {
-  tab: 'stats-panel'
-}
-</script>
-```
-
-The magic line is:
-
-```html
-<div class="tab-content" b-mount="tab"></div>
-```
-
-When `tab` is `'stats-panel'`, the stats block is mounted inside that div. Click "Activity" — `tab` changes to `'activity-feed'`, the stats block is cleaned up, and the activity feed mounts in its place. All reactive, no routing.
-
-### Ternary Expressions
-
-`b-mount` accepts any expression, so you can use ternaries:
-
-```html
-<div b-mount="isAdmin ? 'admin-panel' : 'user-panel'"></div>
-```
-
-Or clear the mount point with a falsy value:
-
-```html
-<div b-mount="showPanel ? 'settings-panel' : null"></div>
-```
-
-## `$mount` vs `$go` — When to Use Which
-
-| | `$go` | `$mount` |
-|---|---|---|
-| **Changes URL** | Yes | No |
-| **Needs a route** | Yes | No |
-| **Updates history** | Yes | No |
-| **Use for** | Page navigation | UI composition |
-| **Supports targets** | Yes (`b-target`) | Yes (2nd argument) |
-| **Supports props** | No | Yes (3rd argument) |
-
-Use `$go` when the user is navigating between pages. Use `$mount` when you're composing UI within a page — tabs, panels, modals, detail views.
-
-They work well together. Your sidebar links still use `b-target` and routing for page-level navigation. Inside those pages, `$mount` and `b-mount` handle the component-level composition.
-
-## What You've Added
-
-| Feature | How |
-|---------|-----|
-| Programmatic mounting | `this.$mount('block-name', '#target')` |
-| Props on mount | `this.$mount('block', '#target', { key: val })` |
-| Clear a target | `this.$mount(null, '#target')` |
-| Reactive mounting | `<div b-mount="stateVar"></div>` |
-| Conditional mounting | `b-mount="flag ? 'comp-a' : 'comp-b'"` |
-
----
-
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-  <a href="/tutorial/05-state-and-globals" style="text-decoration: none; color: #667eea; font-weight: 500;">← 5. State, Guards & Beyond</a>
-  <a href="/guide/" style="text-decoration: none; color: #667eea; font-weight: 500;">Explore the Full Guide →</a>
+<div class="tabs">
+  <button @click="switchTab('summary')">Summary</button>
+  <button @click="switchTab('details')">Details</button>
+  <button @click="switchTab('history')">History</button>
 </div>
+<div id="tab-panel"></div>
+```
+
+```js
+{
+  switchTab(name) {
+    this.$mount(`${name}-tab`, '#tab-panel');
+  }
+}
+```
+
+`summary-tab.lego`, `details-tab.lego`, `history-tab.lego` each define their own block — switching tabs unmounts the previous one (running its `unmounted()` hook) and mounts the new one. No router involved.
+
+### Passing initial state
+
+If you need to seed the new block with data, pass it as the third arg:
+
+```js
+openTaskEditor(task) {
+  this.$mount('task-editor', '#right-pane', {
+    task,
+    onSave: (updated) => this.replaceTask(updated)
+  });
+}
+```
+
+Inside `task-editor.lego`, those keys are merged into state on mount:
+
+```js
+export default {
+  task: null,
+  onSave: () => {},
+  save() {
+    this.onSave({ ...this.task, title: this.title });
+  }
+}
+```
+
+## `b-mount` — declarative
+
+`b-mount="expr"` evaluates an expression to a tag name string and mounts it as a child of the host element. When the expression value changes, the previous mount is unmounted and the new one takes its place.
+
+```html
+<div b-mount="`${activeTab}-tab`"></div>
+```
+
+```js
+{
+  activeTab: 'summary'   // changing this swaps the mount
+}
+```
+
+`null`/`undefined`/empty string clears the mount. To pass props, use `$mount` (declarative `b-mount` does not support props in v2).
+
+## Lazy-loading with `manifest`
+
+For larger apps, you don't want to ship every block on first load. Use the `manifest` option to register tag names that **fetch on first use**:
+
+```js
+await Lego.init(document.body, {
+  manifest: [{
+    base: '/blocks/',
+    suffix: true,                       // appends '.lego'
+    legos: ['chart-card', 'data-table', 'task-editor']
+  }]
+});
+```
+
+What happens:
+
+1. The runtime registers each tag as a custom element immediately. `<chart-card>` is now a recognized tag.
+2. Until the first `<chart-card>` connects to the DOM, no fetch happens.
+3. The first connection triggers `fetch('/blocks/chart-card.lego')`, which is parsed via `Lego.defineLegoFile()` and the live element is snapped.
+4. Any other `<chart-card>` instances that connected during the fetch are queued and snapped together when the response lands — exactly one round-trip per tag.
+
+Same pattern with explicit URL mappings:
+
+```js
+manifest: [{
+  base: '/widgets/',
+  map: {
+    'date-picker': 'pickers/date.lego',
+    'time-picker': 'pickers/time.lego'
+  }
+}]
+```
+
+…or fetched from a JSON endpoint:
+
+```js
+manifest: '/blocks/manifest.json'
+```
+
+…with auth:
+
+```js
+manifest: {
+  url: '/api/blocks/manifest',
+  credentials: 'include',
+  headers: { Authorization: () => `Bearer ${getToken()}` }
+}
+```
+
+## Auto-discovery (`config.loader`)
+
+For apps that grow organically, `Lego.config.loader` lets you handle **any** unknown hyphenated tag:
+
+```js
+Lego.config.loaderAllowlist = /^app-/;
+await Lego.init(document.body, {
+  loader: (tag) => `/blocks/${tag}.lego`
+});
+```
+
+A `MutationObserver` watches the root for unknown hyphenated tags. When one appears, the loader is called; if it returns a URL or a Promise of a `.lego` string, the block is registered and the live element snaps in place.
+
+The allowlist is mandatory in production — without it, attacker-controlled markup can trigger fetches to your origin.
+
+## When to use which
+
+| You need… | Tool |
+|---|---|
+| The URL to reflect the current view | Routing (`Lego.route` + `b-target`) |
+| To swap a panel based on local state | `$mount` (imperative) or `b-mount` (declarative) |
+| To split a block list across many files but ship it all at once | Vite plugin (default) |
+| To split a block list and load each file on demand | `manifest` |
+| To support arbitrary unknown tags from your origin | `config.loader` + allowlist |
+
+## Where to go next
+
+Your task tracker is feature-complete. From here:
+
+- The [API reference](/api/) is the source-of-truth for every method, directive, and helper.
+- The [Guide](/guide/) goes deeper into individual concepts (reactivity internals, error boundary cascade, vite plugin).
+- The [Contributing](/contributing/) track is a tour through the source code itself — useful if you want to extend the framework.
+
+You're done. Ship it.

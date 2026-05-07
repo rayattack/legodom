@@ -1,366 +1,222 @@
-# Step 5: State, Guards & Beyond
+# 5. State & guards
 
-Your task tracker works, persists data, and has surgical navigation. Let's add the final layer: global state for cross-component communication, route guards for protection, and a few more features that show the depth of LegoDOM.
+Your tracker works, persists, and routes surgically. Now add the cross-cutting glue: global state for the current user, an auth-guarded admin route, and an error boundary so a single bad block doesn't take the page down.
 
-## Global State with `Lego.globals`
+## `Lego.globals` — shared, reactive
 
-So far, each block has its own local state. But what about data that multiple blocks need to access — a logged-in user, a theme preference, a notification count?
+`Lego.globals` is a reactive object visible to every block. Read it from templates as `global.x`. Write it from anywhere — every block that reads it re-renders.
 
-That's what `Lego.globals` is for. It's a single reactive object shared across every block in your app.
+In `src/app.js`:
 
-### Set Up Auth State
-
-Update `src/main.js`:
-
-```javascript
-import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks';
-
-registerBlocks();
-
-// Global state — accessible from any block
-Lego.globals.user = null;
-Lego.globals.theme = 'light';
-
-// Routes
-Lego.route('/', 'app-shell');
-Lego.route('/work', 'app-shell');
-Lego.route('/personal', 'app-shell');
-Lego.route('/add', 'app-shell');
-Lego.route('/login', 'login-page');
-
-await Lego.init();
+```js
+Lego.globals.user = $db('user').get();   // null on first load
 ```
 
-### Create a Login Page
+That's it. `user` is now globally available, automatically reactive, and seeded from `localStorage` (so it survives refresh).
 
-Create `src/blocks/login-page.lego`:
+::: tip Why `global` in templates, `Lego.globals` in JS?
+The template scope intentionally exposes `global` (singular) because it reads better in attributes. They're the same object.
+:::
+
+## A login form
+
+Create `src/login-page.lego`:
 
 ```html
 <template>
-  <div class="login">
-    <div class="card">
-      <h1>Sign In</h1>
-      <form @submit.prevent="handleLogin()">
-        <input b-sync="email" type="email" placeholder="Email" required>
-        <input b-sync="password" type="password" placeholder="Password" required>
-        <button type="submit">Sign In</button>
-      </form>
-      <p b-show="error" class="error">[[ error ]]</p>
-    </div>
-  </div>
+  <h1>Sign in</h1>
+  <form b-action @submit="login()">
+    <input b-sync.trim="name" placeholder="Your name" autofocus>
+    <button type="submit" b-show="name.length > 0">Sign in</button>
+  </form>
+  <p b-if="error" class="error">[[ error ]]</p>
 </template>
 
 <style>
-  self {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    background: #1a1a2e;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-
-  .card {
-    background: white;
-    padding: 2.5rem;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 380px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-  }
-
-  h1 { text-align: center; color: #333; margin-bottom: 1.5rem; }
-
+  self { display: block; max-width: 360px; margin: 4rem auto; font-family: system-ui; }
+  h1 { font-size: 1.5rem; }
+  form { display: flex; gap: .5rem; }
   input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
+    flex: 1; padding: .75rem; border: 2px solid #e0e0e0; border-radius: 8px;
     font-size: 1rem;
-    margin-bottom: 1rem;
   }
-
-  input:focus { outline: none; border-color: #667eea; }
-
   button {
-    width: 100%;
-    padding: 0.85rem;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
+    padding: .75rem 1.25rem; background: #667eea; color: #fff;
+    border: 0; border-radius: 8px; font-weight: 600; cursor: pointer;
   }
-
-  .error { color: #e74c3c; text-align: center; margin-top: 1rem; }
+  .error { color: #c33; }
 </style>
 
 <script>
 export default {
-  email: '',
-  password: '',
+  name: '',
   error: '',
-
-  handleLogin() {
-    if (!this.email || !this.password) {
-      this.error = 'Please fill in all fields';
-      return;
-    }
-
-    // Set global user state — every block can now see this
-    Lego.globals.user = {
-      name: this.email.split('@')[0],
-      email: this.email
-    };
-
+  login() {
+    if (!this.name) return;
+    const user = { name: this.name, role: this.name === 'admin' ? 'admin' : 'member' };
+    Lego.globals.user = user;
+    Lego.db('user').set(user);
     this.$go('/').get();
   }
 }
 </script>
 ```
 
-### Use Globals in Your Shell
+Two things to note:
 
-Update `src/blocks/app-shell.lego`'s template to show the user:
+- `Lego.db('user').set(user)` writes the user to localStorage immediately. We could have used a `$db` descriptor on a state property instead — both work; this is the imperative style.
+- `this.$go('/').get()` is the in-block alias for `Lego.globals.$go(...).get()`.
+
+## Show the user in the shell
+
+In `src/app-shell.lego`, replace the `<h2>Tracker</h2>` block:
+
+```html
+<h2>Tracker</h2>
+<p class="who" b-show="global.user">
+  Hi, [[ global.user.name ]] · <a href="#" @click.prevent="logout()">log out</a>
+</p>
+<p class="who" b-show="!global.user">
+  <a href="/login" b-link>Sign in</a>
+</p>
+```
+
+…and add the logout method:
+
+```js
+logout() {
+  Lego.globals.user = null;
+  Lego.db('user').delete();
+  this.$go('/login').get();
+}
+```
+
+The `b-show="global.user"` lines are reactive on the global. Every block reading `global.user` is re-rendered when you set it — so the moment login succeeds, the sidebar updates without manual coordination.
+
+Wire up the route in `src/app.js`:
+
+```js
+Lego.route('/login', 'login-page');
+```
+
+## An auth-guarded admin route
+
+Create `src/admin-page.lego`:
 
 ```html
 <template>
-  <div class="layout">
-    <aside class="sidebar">
-      <h2>Tracker</h2>
-
-      <div class="user-info" b-show="global.user">
-        <span>Hi, [[ global.user?.name ]]</span>
-        <button @click="logout()" class="logout-btn">Sign out</button>
-      </div>
-
-      <nav>
-        <a href="/" b-target="#content">All Tasks</a>
-        <a href="/work" b-target="#content">Work</a>
-        <a href="/personal" b-target="#content">Personal</a>
-        <a href="/add" b-target="#content" class="add-link">+ Add Task</a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <p>[[ taskCount ]] total tasks</p>
-      </div>
-    </aside>
-
-    <main id="content">
-      <task-list></task-list>
-    </main>
-  </div>
+  <h1>Admin</h1>
+  <p>Logged in as [[ global.user.name ]] (role: [[ global.user.role ]]).</p>
+  <button @click="resetTasks()">Reset all tasks</button>
 </template>
-```
 
-Add the logout method to the script:
-
-```javascript
 <script>
 export default {
-  taskCount: 0,
-
-  mounted() {
-    this.taskCount = 6;
-  },
-
-  logout() {
-    Lego.globals.user = null;
-    this.$go('/login').get();
+  resetTasks() {
+    Lego.db('tasks.all').delete();
+    location.reload();
   }
 }
 </script>
 ```
 
-The `global` keyword in templates gives you direct access to `Lego.globals`. When `Lego.globals.user` changes — from any block, anywhere — every block that references `global.user` updates automatically.
+Now register the route **with a middleware**:
 
-## Route Guards with Middleware
-
-Want to protect the dashboard so only logged-in users can access it? Add a middleware function to your routes.
-
-Update `src/main.js`:
-
-```javascript
-import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks';
-
-registerBlocks();
-
-Lego.globals.user = null;
-Lego.globals.theme = 'light';
-
-// Middleware: check auth before allowing navigation
-const requireAuth = (params, globals) => {
-  if (!globals.user) {
-    globals.$go('/login').get();
-    return false;   // Block this navigation
+```js
+const requireAdmin = ({ path, params }) => {
+  const u = Lego.globals.user;
+  if (!u) {
+    Lego.globals.$go('/login').get();
+    return false;
   }
-  return true;      // Allow it
+  if (u.role !== 'admin') {
+    Lego.globals.$go('/').get();
+    return false;
+  }
+  return true;
 };
 
-// Public routes
-Lego.route('/login', 'login-page');
-
-// Protected routes — requireAuth runs before the block loads
-Lego.route('/', 'app-shell', requireAuth);
-Lego.route('/work', 'app-shell', requireAuth);
-Lego.route('/personal', 'app-shell', requireAuth);
-Lego.route('/add', 'app-shell', requireAuth);
-
-await Lego.init();
+Lego.route('/admin', 'admin-page', requireAdmin);
 ```
 
-Now navigating to `/` without logging in redirects to `/login`. After signing in, `Lego.globals.user` is set and the middleware lets you through.
-
-## Cross-Block Communication with Events
-
-Blocks can talk to each other using custom events with `$emit`:
+Then add an "Admin" link to the shell sidebar:
 
 ```html
-<!-- child-block.lego -->
+<a href="/admin" b-target="#content" b-show="global.user?.role === 'admin'">
+  Admin
+</a>
+```
+
+Now sign in as `admin` (any other name is a non-admin member). Notice:
+
+- The `Admin` link only renders for admins (`b-show` reacts to globals).
+- A non-admin who manually navigates to `/admin` is bounced back home.
+- A logged-out user visiting `/admin` lands on `/login`.
+
+## Middleware contract
+
+Middleware receives `{ path, params }`. Returning:
+
+- `true` — allow navigation (route renders).
+- `false` — abort. `$route` is not committed; nothing in the DOM swaps.
+- A promise — the route waits for it. If a faster navigation arrives mid-await, the in-flight verdict is discarded.
+
+The middleware function can `$go` somewhere else before returning false (as we do above) — the next navigation cleanly supersedes the aborted one.
+
+## Error boundaries
+
+The last piece: don't let a single block crash the page. Create `src/error-card.lego`:
+
+```html
 <template>
-  <button @click="send()">Notify Parent</button>
-</template>
-
-<script>
-export default {
-  send() {
-    this.$emit('task-added', { name: 'New task' });
-  }
-}
-</script>
-```
-
-```html
-<!-- parent-block.lego -->
-<template>
-  <child-block @task-added="handleNew(event)"></child-block>
-</template>
-
-<script>
-export default {
-  handleNew(event) {
-    console.log(event.detail.name);  // "New task"
-  }
-}
-</script>
-```
-
-Events bubble up through the component tree. The parent listens with `@event-name`, the child fires with `$emit`.
-
-## Viewport Animations with `b-enter`
-
-Want to trigger something when an element scrolls into view? Use `b-enter`:
-
-```html
-<div b-for="task in tasks">
-  <div b-enter="onVisible()" class="task-card">
-    [[ task.name ]]
-  </div>
-</div>
-```
-
-```javascript
-export default {
-  onVisible() {
-    // Fires when the element enters the viewport
-    // Great for lazy loading, analytics, or animations
-  }
-}
-```
-
-Add `.once` to trigger only the first time:
-
-```html
-<div b-enter.once="loadImage()">...</div>
-```
-
-There's also `b-leave` for when an element exits the viewport.
-
-## Error Boundaries
-
-Wrap a block in an error boundary so crashes don't take down the whole app:
-
-```html
-<!-- In your template -->
-<template b-error="error-display">
-  <!-- If anything in here throws, error-display renders instead -->
-  <risky-block></risky-block>
-</template>
-```
-
-```html
-<!-- error-display.lego -->
-<template>
-  <div class="error-card">
-    <h2>Something went wrong</h2>
+  <div class="card">
+    <h3>Something went wrong</h3>
     <p>[[ $error.message ]]</p>
+    <details>
+      <summary>Stack</summary>
+      <pre>[[ $error.stack ]]</pre>
+    </details>
+    <button @click="retry()">Reload</button>
   </div>
+</template>
+
+<style>
+  .card {
+    margin: 2rem; padding: 1.5rem; background: #fee; border: 1px solid #c33;
+    border-radius: 8px; font-family: system-ui;
+  }
+  pre { white-space: pre-wrap; }
+</style>
+
+<script>
+export default {
+  retry() { location.reload(); }
+}
+</script>
+```
+
+Then attach the boundary on the shell template:
+
+```html
+<template b-error="error-card">
+  …existing template…
 </template>
 ```
 
-The error boundary catches render errors, lifecycle hook errors, and event handler errors. The crashed component is replaced with your fallback block.
+Throw an error from any descendant — say, a typo in `task-list.lego`'s `mounted()` — and the runtime catches it, renders `<error-card>` in place of the crashing block, and exposes `$error: { message, stack, component }` to the fallback.
 
-## What You've Built
+The boundary cascades: a block without its own `b-error` bubbles up to its nearest ancestor that has one. There's also a recursion limit (3 deep) so an error boundary that itself crashes won't loop.
 
-Let's step back and look at what you have:
+## Where you are
 
-| Feature | How You Did It |
-|---------|---------------|
-| Reactive components | `.lego` files with state in `<script>` |
-| Lists, conditionals, forms | `b-for`, `b-if`, `b-show`, `b-sync` |
-| Surgical navigation | `b-target="#content"` on links |
-| Persistent data | `$db('key').default(value)` |
-| Shared state | `Lego.globals` + `global.` in templates |
-| Route protection | Middleware functions on `Lego.route()` |
-| Component events | `$emit()` and `@event-name` |
+You now have:
 
-All of this in a ~10kb framework with zero dependencies.
+- A persistent shell with surgical routing.
+- Tasks stored in `localStorage` with cross-tab sync.
+- A logged-in user surfaced via `Lego.globals`.
+- Route guards.
+- Error boundaries.
 
-## The Full Architecture
+That's what most "production frameworks" call a stack. You did it in five files and ~150 lines of script logic.
 
-```
-main.js                        Lego.globals
-  │                                │
-  ├── Lego.route(...)             │  user, theme, etc.
-  ├── Lego.globals.user = ...     │  Reactive — any block
-  └── Lego.init()                 │  can read/write
-                                   │
-          ┌────────────────────────┤
-          │                        │
-    ┌─────┴──────┐          ┌──────┴──────┐
-    │ app-shell  │          │ login-page  │
-    │            │          │             │
-    │ sidebar    │          │  sets       │
-    │ #content ──┼── swaps  │  globals.   │
-    │            │   only   │  user       │
-    └────────────┘   this   └─────────────┘
-          │
-    ┌─────┼──────────┐
-    │     │          │
-  task  work    personal
-  list  tasks    tasks
-    │
-    └── $db('key')  ← persists to localStorage
-```
-
-## Keep Going
-
-You've covered the core of LegoDOM. Here's where to go next:
-
-- [Blocks Deep Dive](/guide/blocks) — Composition, slots, logic tiers
-- [All Directives](/guide/directives) — `b-html`, `b-text`, `b-init`, `b-var`, and more
-- [Routing Guide](/guide/routing) — Advanced surgical swaps, cold entry, history
-- [Persistence Guide](/guide/persistence) — Cross-tab sync, quota management, IndexedDB
-- [Error Handling](/guide/error-handling) — Error boundaries and fallback patterns
-- [API Reference](/api/) — Complete method signatures
-
----
-
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-  <a href="/tutorial/04-multi-page-app" style="text-decoration: none; color: #667eea; font-weight: 500;">← 4. Persistence & Forms</a>
-  <a href="/tutorial/06-dynamic-mounting" style="text-decoration: none; color: #667eea; font-weight: 500;">6. Dynamic Mounting →</a>
-</div>
+[Next: Dynamic mounting →](./06-dynamic-mounting)

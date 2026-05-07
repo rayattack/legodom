@@ -3,6 +3,11 @@ import { safeEval } from '../utils/safe-eval.js';
 import { resolve } from '../utils/helpers.js';
 import { syncModelValue, findSyncAttr } from '../utils/dom.js';
 
+// Audit fix #39: monotonic counter for fallback item ids. Replaces
+// Math.random() — same WeakMap-stable identity per item, but cheaper to
+// generate and collision-free across the lifetime of the page.
+let _itemIdCounter = 0;
+
 export const bFor = {
   name: 'b-for',
   scan(node, { checkGlobal, pendingOperations }) {
@@ -33,9 +38,9 @@ export const bFor = {
   },
 
   execute({ binding, state, global, helpers }) {
-    const { bind, updateNodeBindings, scanForBindings, runBinding } = helpers;
-    if (!bind || !updateNodeBindings) {
-      console.error('[Lego] b-for directive missing required helpers: bind, updateNodeBindings');
+    const { bind, scanForBindings, runBinding } = helpers;
+    if (!bind || !runBinding) {
+      console.error('[Lego] b-for directive missing required helpers: bind, runBinding');
       return;
     }
 
@@ -66,7 +71,7 @@ export const bFor = {
         // Fallback to WeakMap-based ID (no mutation, no reactivity trigger)
         if (key === undefined) {
           if (!itemIdMap.has(item)) {
-            itemIdMap.set(item, Math.random());
+            itemIdMap.set(item, ++_itemIdCounter);
           }
           key = itemIdMap.get(item);
         }
@@ -97,30 +102,44 @@ export const bFor = {
         // Keep index current so event handlers and b-sync resolve the right item
         child._loopCtx.index = i;
       }
-      const localScope = Object.assign(Object.create(state), { [itemName]: item, $index: i });
+      // Audit fix #19: reuse the localScope object per pool child instead
+      // of allocating a fresh `Object.create(state)` on every render. The
+      // scope's prototype is `state`, which is stable across renders for
+      // the lifetime of this b-for binding (the pool itself is keyed on
+      // the b-for anchor, which is destroyed alongside the block). 10k
+      // items × per-render allocs were the dominant GC pressure here.
+      let localScope = child._loopScope;
+      if (!localScope) {
+        child._loopScope = localScope = Object.create(state);
+      }
+      localScope[itemName] = item;
+      localScope.$index = i;
 
-      // Run inner directives (b-if, b-show, b-html, b-mount, b-init,
-      // b-enter, b-leave, nested b-for) FIRST so any swap-in (e.g. b-if
-      // restoring a previously-hidden subtree) puts nodes back in the tree
-      // before updateNodeBindings walks for text/attr interpolation.
-      // Skip text/attr — updateNodeBindings handles those, and running them
-      // here would clobber node._tpl with rendered output.
-      if (child._loopBindings && runBinding) {
-        child._loopBindings.forEach(b => {
-          if (b.type === 'text' || b.type === 'attr') return;
+      // Audit fix #15: iterate the pre-scanned bindings directly instead of
+      // walking the whole subtree per render. _loopBindings is in document
+      // order (directive on a parent comes before its descendants' text/attr
+      // bindings), so b-if/b-html swap-in or wipe-out happens before the
+      // inner text bindings run — same ordering the previous
+      // directives-first / updateNodeBindings-second split provided. Text
+      // and attr bindings use `b.template` captured at scan time, so they
+      // also pick up correctly after a b-if swap restores a stashed subtree
+      // (the binding still references the original — and now re-attached —
+      // node).
+      //
+      // track=false: inner-loop bindings can't be re-run individually (their
+      // localScope is ephemeral — a per-binding dirty path would have lost
+      // the item reference). Reads during their execution are tracked under
+      // the outer b-for binding, so item-property mutations trigger a full
+      // loop re-iteration.
+      if (child._loopBindings) {
+        for (const b of child._loopBindings) {
           try {
-            // track=false: inner-loop bindings can't be re-run individually
-            // (their localScope is ephemeral). Reads during their execution
-            // are still tracked under the outer b-for binding, so mutations
-            // trigger a full loop re-iteration.
             runBinding(b, localScope, contextEl, false);
           } catch (err) {
-            console.error('[Lego] Error in b-for inner directive:', err);
+            console.error('[Lego] Error in b-for inner binding:', err);
           }
-        });
+        }
       }
-
-      updateNodeBindings(child, localScope);
 
       const syncInputs = [child, ...child.querySelectorAll('*')].filter(el => findSyncAttr(el));
       syncInputs.forEach(input => {

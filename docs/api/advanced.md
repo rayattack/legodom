@@ -1,174 +1,143 @@
 # Advanced API
 
-These APIs are intended for advanced use cases like building development tools, testing utilities, or custom block loaders.
+Methods that the average app never reaches for, but that exist for testing, devtools, manual mounting, and bespoke loaders.
 
 ## Lego.snap()
 
-Manually initializes a LegoDOM block element.
+Manually mount a block element. Equivalent to what `connectedCallback` does for elements inserted into the light DOM.
 
-```javascript
-Lego.snap(element)
+```ts
+Lego.snap(el: HTMLElement): void
 ```
 
-### Parameters
+Steps:
 
-- `element` (HTMLElement) - The custom element to initialize
+1. No-op if `el` is already snapped.
+2. Clone the registered template, attach Shadow DOM, adopt stylesheets.
+3. Build the state proxy (script → template `b-logic` → instance `b-logic`).
+4. Walk the shadow tree, attach event listeners, scan for bindings, first render.
+5. Fire `mounted()`.
+6. Recursively snap nested registered blocks inside the shadow tree.
 
-### Description
+The most common reason to call `snap()` is **inside another Shadow DOM** — `MutationObserver` doesn't watch shadow trees, and the manifest/loader paths only re-fire for elements connecting to the light DOM tree.
 
-`snap()` performs the following operations on a block element:
-
-1. **Checks if already initialized** - Skips if the element has already been "snapped"
-2. **Attaches Shadow DOM** - Creates and attaches a shadow root
-3. **Clones template** - Copies the block's template into the shadow root
-4. **Applies styles** - Attaches any registered stylesheets via `b-stylesheets`
-5. **Merges state** - Combines Block logic, template `b-logic`, and instance `b-logic`
-6. **Creates reactive state** - Wraps the state in a Proxy for reactivity
-7. **Binds events** - Attaches event listeners from `@click`, `@input`, etc.
-8. **Renders** - Processes all directives (`b-show`, `b-for`, etc.)
-9. **Calls `mounted()`** - Invokes the block's lifecycle hook
-
-### When to Use
-
-**Common use cases:**
-
-- **Dynamic block creation** - When programmatically creating block outside the normal DOM flow
-- **Testing** - Manually initializing block in test environments
-- **Development tools** - Building block preview tools (like Lego Studio)
-- **Custom loaders** - Implementing alternative block loading strategies
-
-**Note**: While LegoDOM primarily uses Native Web Components, it will start a lightweight `MutationObserver` for **Auto-Discovery** if you provide a `loader`. This watches for unknown tags to fetch from the server.
-
-### Example: Dynamic Block Preview
-
-```javascript
-// Create a mount point
-const container = document.createElement('div');
-document.body.appendChild(container);
-
-// Dynamically create and initialize a block
-const block = document.createElement('my-block');
-container.appendChild(block);
-
-// Manually initialize (needed if container is in Shadow DOM)
-Lego.snap(block);
+```js
+const card = document.createElement('user-card');
+container.shadowRoot.appendChild(card);
+Lego.snap(card); // observer didn't see it; do it manually
 ```
-
-### Example: Testing
-
-```javascript
-// In a test file
-import { Lego } from 'lego-dom';
-
-test('my-block renders correctly', () => {
-  const el = document.createElement('my-block');
-  document.body.appendChild(el);
-  
-  // Manually initialize for testing
-  Lego.snap(el);
-  
-  // Now you can test the block
-  expect(el.shadowRoot.querySelector('h1').textContent).toBe('Hello');
-});
-```
-
-### Shadow DOM Considerations
-
-If you're creating block inside a Shadow DOM (like in Lego Studio), you need to:
-
-1. Append the element to the Shadow DOM
-2. Call `Lego.snap()` to initialize it
-
-```javascript
-// Inside a Shadow DOM block
-const mount = this.$element.shadowRoot.getElementById('preview');
-const block = document.createElement('user-card');
-mount.appendChild(block);
-Lego.snap(block); // Required - observer doesn't watch Shadow DOMs
-```
-
----
 
 ## Lego.unsnap()
 
-Cleans up and destroys a LegoDOM block.
+Tear down a block. Symmetric to `snap()`.
 
-```javascript
-Lego.unsnap(element)
+```ts
+Lego.unsnap(el: HTMLElement): void
 ```
 
-### Parameters
+Steps:
 
-- `element` (HTMLElement) - The block element to destroy
+1. Fire `unmounted()`.
+2. Remove all event listeners attached via `@event` and `b-sync`.
+3. Disconnect `IntersectionObserver` instances from `b-enter` / `b-leave`.
+4. Clean up `$db` bindings on the element.
+5. Drop the element from `activeBlocks` and `globalSubscribers`.
+6. Break circular refs (`$element`, `$vars`, `$emit`, `$parent`, `$route`, `$go`, `$mount`).
+7. Recursively unsnap child blocks.
 
-### Description
+Calling `unsnap()` is rarely needed — element removal triggers `disconnectedCallback`, which calls it for you. Use it explicitly when you're swapping content programmatically and want clean teardown before reattachment.
 
-`unsnap()` performs cleanup operations:
+## Lego.mount()
 
-1. **Removes from active block** - Unregisters from LegoDOM's tracking
-2. **Cleans up event listeners** - Prevents memory leaks
-3. **Removes from DOM** - Detaches the element from its parent
+Imperative mount. Powers both [`b-mount`](/api/directives#b-mount) and the global [`$mount`](/api/globals#mount) helper.
 
-### When to Use
-
-- **Programmatic cleanup** - When you need to explicitly destroy a block
-- **Memory management** - In long-running apps with many dynamic block
-- **Testing teardown** - Cleaning up after tests
-
-### Example: Block Lifecycle Management
-
-```javascript
-// Create and initialize
-const widget = document.createElement('my-widget');
-document.body.appendChild(widget);
-Lego.snap(widget);
-
-// Later, clean up
-Lego.unsnap(widget);
-// widget is now removed from DOM and cleaned up
+```ts
+Lego.mount(
+  tagName: string | null,
+  target?: string | HTMLElement | HTMLElement[],
+  props?: object
+): HTMLElement | HTMLElement[] | undefined
 ```
 
-### Example: Dynamic Preview Tool
+| Form | Effect | Returns |
+|---|---|---|
+| `mount('user-card')` | Create a detached `<user-card>` | the element |
+| `mount('user-card', '#main')` | Clear `#main`, mount one `<user-card>` | the element |
+| `mount('user-card', '.row', { id: 1 })` | For each `.row`: clear, mount with `$initialState = { id: 1 }` | array (or single el) |
+| `mount(null, '#main')` | Clear `#main` (no mount) | `undefined` |
 
-```javascript
-// Preview block manager
-class BlockPreview {
-  showBlock(tagName) {
-    // Clean up previous block
-    if (this.current) {
-      Lego.unsnap(this.current);
-    }
-    
-    // Create and show new block
-    this.current = document.createElement(tagName);
-    this.container.appendChild(this.current);
-    Lego.snap(this.current);
-  }
+`tagName` must contain a hyphen (custom-element rules) — otherwise a console warning is emitted and nothing is mounted.
+
+`props` is injected onto the host element as `$initialState` before the element connects, so `mounted()` can see them via the merge into state.
+
+## Lego.db()
+
+Persistence factory. Returns a descriptor that can be:
+
+- assigned into block state (acts as a reactive, persisted property);
+- used directly to read/write the underlying storage.
+
+```ts
+Lego.db(key: string): {
+  default(v: any):       this;       // init-time, fluent
+  debounce(ms: number):  this;       // init-time, fluent
+  set(value: any, debounceMs?: number): any;  // runtime
+  get(): any;                         // runtime
+  delete(): boolean;                  // runtime
 }
 ```
 
----
+### As a reactive state property
 
-## Best Practices
+When the descriptor is assigned to a key inside a block's logic, the runtime hydrates it into a regular reactive value: any read from `localStorage` is performed at mount time, and any subsequent write to the property is debounced and persisted.
 
-### ✅ Do
+```js
+{
+  theme: $db('theme').default('light'),
+  draft: $db('draft.signup').default('').debounce(500)
+}
+```
 
-- Use `snap()` when creating block in Shadow DOMs
-- Use `snap()` in testing environments for explicit control
-- Call `unsnap()` when programmatically removing block
-- Check if an element is already initialized before calling `snap()`
+```html
+<select b-sync="theme">
+  <option>light</option>
+  <option>dark</option>
+</select>
+```
 
-### ❌ Don't
+Cross-tab sync is automatic — every other tab with bindings to the same key receives the new value via the `storage` event.
 
-- Don't call `snap()` on block in the normal DOM (observer handles it)
-- Don't call `snap()` multiple times on the same element
-- Don't forget to call `unsnap()` when cleaning up dynamic block
-- Don't use these APIs unless you have a specific advanced use case
+### Direct usage from JS
 
----
+```js
+Lego.db('user').set({ name: 'Alice' });          // immediate write
+Lego.db('user').set({ name: 'Bob' }, 200);       // debounced write
+const u = Lego.db('user').get();                 // synchronous read
+Lego.db('user').delete();                        // remove + notify
+```
 
-## Related
+`Lego.db` is also exposed as `Lego.globals.$db` and as `$db` inside expression scope.
 
-- [Lego.init()](/api/config#init) - Initialize LegoDOM on a root element
-- [Lifecycle Hooks](/api/lifecycle) - Block lifecycle methods
-- [Lego Studio](https://github.com/rayattack/legodom/tree/main/lego-studio) - Example usage in a development tool
+### Quota handling
+
+When a write exceeds `localStorage` quota, the runtime evicts the oldest tracked keys (FIFO) to free at least 2× the space needed, then retries. Eviction only applies to keys this app wrote — third-party `localStorage` usage is left alone. If eviction can't free enough space, `config.onError` is called with `type: 'quota-critical'`.
+
+## Introspection
+
+```ts
+Lego.getLegos(): string[]               // all registered tag names
+Lego.getActiveBlocksCount(): number     // currently snapped blocks
+```
+
+## Debug
+
+```ts
+Lego.debug.stylesheets(el: HTMLElement): { explicit: string[]; inherited: string[]; applied: string[] } | null
+```
+
+Returns the stylesheet keys that resolved for an element — what was declared on the template, what cascaded in from ancestors, and the deduped final list. `null` if the element hasn't been snapped or doesn't carry stylesheet metadata.
+
+```js
+Lego.debug.stylesheets(document.querySelector('user-card'));
+// { explicit: ['cards'], inherited: ['design-tokens'], applied: ['design-tokens', 'cards'] }
+```

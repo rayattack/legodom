@@ -12,6 +12,12 @@ import { applyStyles } from './stylesheets.js';
 import { findErrorBoundary, renderErrorBlock, handleError } from '../features/error.js';
 import { _go } from '../features/router.js';
 
+// Audit fix #24: `el.state = X` performs a shallow merge (Object.assign),
+// not a replacement. Warn once per session so authors who expect
+// assignment semantics (`=` looks like assignment, after all) discover
+// the actual behaviour without flooding logs in steady-state apps.
+let _stateAssignWarned = false;
+
 export const snap = (el) => {
   if (config.debug) console.log('[Lego Trace] snap() called for:', el.tagName);
   if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
@@ -72,7 +78,18 @@ export const snap = (el) => {
 
     Object.defineProperty(el, 'state', {
       get() { return this._studs },
-      set(v) { Object.assign(this._studs, v) },
+      set(v) {
+        if (!_stateAssignWarned) {
+          _stateAssignWarned = true;
+          console.warn(
+            '[Lego] `el.state = X` performs a shallow merge (Object.assign), ' +
+            'not a replacement. Keys present on state but absent from X are ' +
+            'preserved. Mutate state keys directly if you want this behaviour ' +
+            'or remount the element to start fresh.'
+          );
+        }
+        Object.assign(this._studs, v);
+      },
       configurable: true,
       enumerable: false
     });
@@ -88,7 +105,28 @@ export const snap = (el) => {
 
     const style = shadow.querySelector('style');
     if (style) {
-      style.textContent = style.textContent.replace(/(?<![-\w])self(?![-\w])/g, ':host');
+      // Audit fix #38: don't reach into strings or comments. Previously the
+      // raw substitution turned `content: "self"` into `content: ":host"`
+      // and similarly mangled custom-property values that legitimately
+      // contained the bareword `self`. Stash strings + comments behind
+      // sentinel placeholders, run the rewrite, then restore. Doesn't
+      // attempt to distinguish selector context from value context — that
+      // would require a real CSS parser — but covers the common foot-guns.
+      const segments = [];
+      // Multi-char sentinel that never appears in normal CSS source.
+      const SENTINEL = '__LEGO_SEG_';
+      const protectedCss = style.textContent.replace(
+        /\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,
+        (m) => {
+          segments.push(m);
+          return `${SENTINEL}${segments.length - 1}__`;
+        }
+      );
+      const rewritten = protectedCss.replace(/(?<![-\w])self(?![-\w])/g, ':host');
+      style.textContent = rewritten.replace(
+        /__LEGO_SEG_(\d+)__/g,
+        (_, idx) => segments[+idx]
+      );
     }
 
     bind(shadow, el);

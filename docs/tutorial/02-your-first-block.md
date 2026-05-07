@@ -1,277 +1,173 @@
-# Step 2: Your First Block
+# 2. Your first block
 
-Now let's build something real. By the end of this page, you'll have a reactive task list with adding, completing, deleting, and filtering — all in a single `.lego` file.
+Build a reactive task list with adding, completing, deleting, and a live counter.
 
-## The `.lego` File Format
+## The `.lego` format
 
-Every block has three sections:
+Every block is a single file with up to three sections:
 
 ```html
 <template>
-  <!-- Your HTML with reactive bindings -->
+  <!-- HTML with reactive bindings -->
 </template>
 
 <style>
-  /* Scoped CSS — never leaks to other components */
+  /* scoped CSS — never leaks out, never let in */
 </style>
 
 <script>
 export default {
-  // Reactive state and methods
+  // state and methods
 }
 </script>
 ```
 
-The filename becomes the block's tag name: `task-list.lego` → `<task-list>`.
+The filename becomes the tag name (`task-list.lego` → `<task-list>`). Order doesn't matter — the parser handles them by name.
 
-## Build a Task List
+## Build the task list
 
-Delete the sample `my-app.lego` and create `src/blocks/task-list.lego`:
+Delete `src/my-app.lego`, then create `src/task-list.lego`:
 
 ```html
 <template>
-  <div class="container">
-    <h1>[[ title ]]</h1>
+  <h1>[[ title ]]</h1>
 
-    <!-- Add task form -->
-    <form @submit.prevent="addTask()">
-      <input
-        b-sync="newTask"
-        placeholder="What needs to be done?"
-        autofocus
-      >
-      <button type="submit" b-show="newTask.length > 0">Add</button>
-    </form>
+  <form @submit.prevent="add()">
+    <input b-sync.trim="draft" placeholder="What needs to be done?" autofocus>
+    <button type="submit" b-show="draft.length > 0">Add</button>
+  </form>
 
-    <!-- Task list -->
-    <ul b-show="tasks.length > 0">
-      <li b-for="task in tasks" class="[[ task.done ? 'completed' : '' ]]">
-        <label>
-          <input type="checkbox" b-sync="task.done">
-          <span>[[ task.name ]]</span>
-        </label>
-        <button class="delete" @click="removeTask($index)">x</button>
-      </li>
-    </ul>
+  <ul b-show="tasks.length > 0">
+    <li b-for="task in tasks" class="[[ task.done ? 'done' : '' ]]">
+      <label>
+        <input type="checkbox" b-sync="task.done">
+        <span>[[ task.title ]]</span>
+      </label>
+      <button class="delete" @click="remove($index)">×</button>
+    </li>
+  </ul>
 
-    <!-- Empty state -->
-    <p b-if="tasks.length === 0" class="empty">
-      No tasks yet. Add one above!
-    </p>
+  <p b-if="tasks.length === 0" class="empty">No tasks yet — add one above.</p>
 
-    <!-- Summary -->
-    <footer b-show="tasks.length > 0">
-      [[ remaining ]] of [[ tasks.length ]] remaining
-    </footer>
-  </div>
+  <footer b-show="tasks.length > 0">
+    [[ remaining ]] of [[ tasks.length ]] remaining
+  </footer>
 </template>
 
 <style>
   self {
     display: block;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     max-width: 500px;
     margin: 3rem auto;
     padding: 0 1rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
-
   h1 { color: #333; font-size: 1.75rem; }
-
-  form {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  input[type="text"], input:not([type]) {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
+  form { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+  input:not([type=checkbox]) {
+    flex: 1; padding: .75rem 1rem;
+    border: 2px solid #e0e0e0; border-radius: 8px;
     font-size: 1rem;
   }
-
   input:focus { outline: none; border-color: #667eea; }
-
   form button {
-    padding: 0.75rem 1.5rem;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
+    padding: .75rem 1.5rem; background: #667eea; color: white;
+    border: 0; border-radius: 8px; font-weight: 600; cursor: pointer;
   }
-
   ul { list-style: none; padding: 0; }
-
   li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #f0f0f0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .75rem 0; border-bottom: 1px solid #f0f0f0;
   }
-
-  li label {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-  }
-
-  li.completed span {
-    text-decoration: line-through;
-    opacity: 0.5;
-  }
-
+  li label { display: flex; align-items: center; gap: .75rem; cursor: pointer; }
+  li.done span { text-decoration: line-through; opacity: .5; }
   .delete {
-    background: none;
-    border: none;
-    color: #ccc;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
+    background: 0; border: 0; color: #ccc; font-size: 1.2rem; cursor: pointer;
   }
-
   .delete:hover { color: #e74c3c; }
-
-  .empty {
-    text-align: center;
-    color: #999;
-    padding: 2rem;
-  }
-
-  footer {
-    text-align: center;
-    color: #999;
-    padding: 1rem 0;
-    font-size: 0.9rem;
-  }
+  .empty, footer { color: #999; text-align: center; padding: 1rem 0; }
 </style>
 
 <script>
 export default {
-  title: 'Task Tracker',
-  newTask: '',
+  title: 'Tracker',
+  draft: '',
   tasks: [
-    { name: 'Learn the .lego file format', done: true },
-    { name: 'Build a reactive task list', done: false },
-    { name: 'Add surgical routing', done: false }
+    { title: 'Learn the .lego format',  done: true  },
+    { title: 'Build a reactive list',   done: false },
+    { title: 'Wire up routing',         done: false }
   ],
 
   get remaining() {
     return this.tasks.filter(t => !t.done).length;
   },
 
-  addTask() {
-    if (!this.newTask.trim()) return;
-    this.tasks.push({ name: this.newTask.trim(), done: false });
-    this.newTask = '';
+  add() {
+    if (!this.draft) return;
+    this.tasks.push({ title: this.draft, done: false });
+    this.draft = '';
   },
 
-  removeTask(index) {
-    this.tasks.splice(index, 1);
+  remove(i) {
+    this.tasks.splice(i, 1);
   }
 }
 </script>
 ```
 
-## Update `main.js`
-
-Replace the contents of `src/main.js`:
-
-```javascript
-import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks';
-
-registerBlocks();
-
-await Lego.init();
-```
-
-Update `index.html` to use your new block:
+Update `index.html` to use the new tag:
 
 ```html
 <body>
   <task-list></task-list>
-  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="/src/app.js"></script>
 </body>
 ```
 
-Now run `npm run dev` and try it out. Add tasks, check them off, delete them. Every interaction is instant because LegoDOM updates the DOM directly — no diffing, no virtual DOM.
+Save. Add tasks, check them, delete them. Every interaction is instant — there's no virtual DOM and no diffing pass; the runtime updates exactly the affected nodes.
 
-## What Just Happened
+## What you used
 
-Let's break down the key features you just used:
+### Reactive state
 
-### Reactive State
+Everything in `export default` becomes reactive on mount. The `tasks` array is wrapped in a `Proxy`; pushing, splicing, or assigning to a nested `task.done` all flow through the proxy and schedule a render on the next animation frame.
 
-```javascript
-export default {
-  newTask: '',
-  tasks: [...]
-}
-```
-
-Every property in your export is reactive. When you write `this.tasks.push(...)`, LegoDOM detects the change and updates only the affected DOM nodes. You never call `setState()` or manage subscriptions.
+You never call `setState`. Mutate the data and the DOM follows.
 
 ### Directives
 
-| Directive | What It Does | You Used It For |
-|-----------|-------------|-----------------|
-| `b-sync` | Two-way binding between input and state | Binding the text input to `newTask` and checkboxes to `task.done` |
-| `b-for` | Renders an element for each item in an array | Rendering the task list |
-| `b-if` | Adds/removes an element based on a condition | Showing "No tasks yet" when the list is empty |
-| `b-show` | Toggles `display: none` (element stays in DOM) | Hiding the Add button when input is empty, hiding the list when empty |
+| Used | Effect |
+|---|---|
+| `b-sync.trim="draft"` | Two-way bind to the input's value, with whitespace trimmed on write. |
+| `b-sync="task.done"` | Two-way bind a checkbox to the loop item. |
+| `b-for="task in tasks"` | Render a `<li>` per task. |
+| `b-if="tasks.length === 0"` | Mount/unmount the empty state. |
+| `b-show="…"` | Toggle inline `display`. The element stays in the DOM. |
+
+### Interpolation
+
+`[[ expr ]]` evaluates JavaScript against the block's state. `[[ task.title ]]`, `[[ remaining ]]`, `[[ task.done ? 'done' : '' ]]` — all just expressions. `$index` is available inside `b-for` for the zero-based position.
 
 ### Events
 
-```html
-<form @submit.prevent="addTask()">
-<button @click="removeTask($index)">
-```
+`@submit.prevent="add()"` runs `add()` and calls `event.preventDefault()`. `@click="remove($index)"` passes the loop index. Modifiers stack: `@keydown.enter.ctrl.prevent="save()"` only fires for Ctrl-Enter and prevents the default.
 
-The `@` prefix binds events. Modifiers like `.prevent` call `event.preventDefault()` automatically. Inside `b-for` loops, `$index` gives you the current iteration index.
+### Computed properties
 
-### Computed Properties
+A getter on the logic object becomes a reactive computed. `remaining` reads `this.tasks` — the runtime tracks that read, so any mutation that touches the array re-runs only the binding that depends on `remaining`.
 
-```javascript
-get remaining() {
-  return this.tasks.filter(t => !t.done).length;
-}
-```
+### Scoped styles
 
-JavaScript getters work as computed properties. They re-evaluate automatically when their dependencies change.
+`self` is rewritten to `:host` at mount time. All other selectors are scoped to this block's Shadow DOM — your `button` styling can't reach into other components. The block is self-contained.
 
-### Scoped Styles
+## Try it
 
-```css
-self {
-  display: block;
-  max-width: 500px;
-}
-```
+Three small experiments before moving on:
 
-The `self` selector targets the block's root element (equivalent to `:host` in Shadow DOM). All styles are scoped — your `button` styles won't affect buttons in other blocks.
+1. Add a "Clear completed" button that filters out done tasks.
+2. Use `@keydown.enter="add()"` on the input instead of wrapping it in a `<form>`.
+3. Show the "Clear completed" button only when at least one task is done — `b-show="tasks.some(t => t.done)"`.
 
-## Try This
+Each one only uses what's already on this page.
 
-Before moving on, experiment:
-
-1. Add a "Clear completed" button that filters out done tasks
-2. Try `@keydown.enter="addTask()"` on the input instead of a form
-3. Add a `b-show="tasks.some(t => t.done)"` to show "Clear completed" only when there are completed tasks
-
-These all work with what you've already learned. No new concepts needed.
-
----
-
-<div style="display: flex; justify-content: space-between; margin-top: 3rem;">
-  <a href="./01-project-setup" style="display: inline-block; background: #eee; color: #333; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
-    ← Previous: Project Setup
-  </a>
-  <a href="./03-adding-routes" style="display: inline-block; background: #4CAF50; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
-    Next: Routing & Layouts →
-  </a>
-</div>
+[Next: Routing & layouts →](./03-adding-routes)

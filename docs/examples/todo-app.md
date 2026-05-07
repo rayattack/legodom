@@ -34,7 +34,7 @@ A complete todo application demonstrating Lego features.
   
   <todo-app></todo-app>
 
-  <script src="https://unpkg.com/lego-dom/main.js"></script>
+  <script src="https://unpkg.com/lego-dom"></script>
   
   <template b-id="todo-app">
     <style>

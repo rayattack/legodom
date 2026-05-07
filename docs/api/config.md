@@ -1,95 +1,158 @@
-# Global Configuration
+# Lego.config
 
-`Lego.config` allows you to customize framework behavior, including error handling and metrics.
+Runtime configuration. Every property has a sensible default — set them directly on `Lego.config` at any point (typically in your app entry, before `Lego.init()`).
 
-## Properties
+```ts
+interface LegoConfig {
+  syntax:        'brackets' | 'mustache';
+  debug:         boolean;
+  onError:       (err: Error, type: string, el?: Element) => void;
+  sanitize:      ((html: string) => string) | null;
+  metrics:       { onRenderStart?: (el) => void; onRenderEnd?: (el) => void };
+  loader?:       (tag: string) => string | Promise<string> | void;
+  loaderAllowlist?: string | RegExp | Function | (string | RegExp | Function)[] | null;
+}
+```
 
-### `syntax`
+## syntax
 
-*   **Type**: `'mustache' | 'brackets'`
-*   **Default**: `'brackets'`
+- **Type**: `'brackets' | 'mustache'`
+- **Default**: `'brackets'`
 
-Configures the template delimiter style.
+Switches the template delimiter pair globally.
 
-*   `'brackets'`: Uses <code v-pre>[[ variable ]]</code> (Default)
-*   `'mustache'`: Uses <code v-pre>{{ variable }}</code> (Legacy/Vue-style)
+| Setting | Delimiters |
+|---|---|
+| `'brackets'` | `[[ expr ]]` (recommended — does not collide with frameworks that already use `{{ }}`) |
+| `'mustache'` | `{{ expr }}` |
 
-```javascript
-// Switch back to mustache syntax if preferred
+```js
 Lego.config.syntax = 'mustache';
 ```
 
-### `loader`
+The setting is read on every render — flipping it after blocks have mounted re-interprets future bindings, but already-resolved text won't reformat until the next render cycle for a given binding.
 
-*   **Type**: `(tagName: string) => string | Promise<string> | null`
-*   **Default**: `undefined`
+## debug
 
-Use this hook to implement **Server-Side Block Delivery**.
+- **Type**: `boolean`
+- **Default**: `false`
 
-**Option 1: Simple Mode (Return URL)**
-We fetch it for you.
-```javascript
-loader: (tag) => `/blocks/${tag}.lego`
+Turns on `[Lego Trace]` and `[Lego Debug]` console logging — render entries, reactive sets, stylesheet application, loader skips. Useful while diagnosing reactivity or scoping issues; noisy in steady state.
+
+```js
+Lego.config.debug = true;
+// or
+await Lego.init(document.body, { debug: true });
 ```
 
-**Option 2: Power Mode (Return Promise)**
-You control the fetch. Useful for **Authentication** (Cookies, JWT) or Custom Headers.
+## onError
 
-```javascript
-Lego.init(document.body, {
-  loader: async (tagName) => {
-    // Custom Authenticated Fetch
-    const res = await fetch(`/blocks/${tagName}.lego`, {
-      credentials: 'include', // Send Cookies
-      headers: { 'Authorization': getToken() }
-    });
-    return await res.text(); // Return SFC content directly
-  }
-});
-```
-**Mechanism:**
-1. Browser sees unknown `<admin-widget>`.
-2. `Lego` calls `config.loader('admin-widget')`.
-3. If URL returned, it fetches the file.
-4. The server returns raw SFC content (`<template>...`).
-5. `Lego.defineLegoFile()` parses and upgrades the element instantly.
+- **Type**: `(err: Error, type: string, el?: Element) => void`
+- **Default**: logs to `console.error` with the type tag and element
 
-### `onError`
+The fallback error handler. Called when an error escapes every [error boundary](/api/directives#b-error). The `type` argument tells you where in the lifecycle the error occurred:
 
-*   **Type**: `(error: Error, type: string, context: HTMLElement) => void`
-*   **Default**: `undefined`
+| `type` | Source |
+|---|---|
+| `'render'` | Template/binding evaluation |
+| `'event-handler'` | An `@event="…"` handler |
+| `'mounted'` / `'unmounted'` | Lifecycle hooks |
+| `'sync-update'` | A `b-sync` write |
+| `'define'` | `Lego.block()` registration |
+| `'script'` | `<script>` evaluation in a `.lego` file |
+| `'quota'` / `'quota-critical'` | `$db` storage exhaustion |
 
-Global error handler hook. Called when an error occurs during:
-*   `render`: Template rendering (expression evaluation)
-*   `event-handler`: `@event` callbacks
-*   `define`: Block definition
-*   `sync-update`: `b-sync` updates
-
-```javascript
-Lego.config.onError = (err, type, context) => {
-  console.error(`Error in ${type}:`, err);
-  // Send to Sentry/Datadog
-  captureException(err, { tags: { type } });
+```js
+Lego.config.onError = (err, type, el) => {
+  Sentry.captureException(err, { tags: { lego_type: type, tag: el?.tagName } });
 };
 ```
 
-### `metrics`
+## sanitize
 
-*   **Type**: `Object`
+- **Type**: `((html: string) => string) | null`
+- **Default**: `null`
 
-Performance monitoring hooks, primarily used by plugins.
+User-supplied HTML sanitizer used by `b-html.safe`. When `null`, `b-html.safe` falls back to a small built-in sanitizer that strips:
 
-*   `onRenderStart(el)`: Called before a block renders.
-*   `onRenderEnd(el)`: Called after a block finishes rendering.
+- Dangerous tags: `<script>`, `<iframe>`, `<object>`, `<embed>`, `<link>`, `<meta>`, `<base>`, `<style>`
+- Event-handler attributes (`on*`)
+- `javascript:`, `vbscript:`, and `data:text/html` URL schemes
 
-```javascript
-// Example monitoring implementation
+For production, set this to DOMPurify (or equivalent):
+
+```js
+import DOMPurify from 'dompurify';
+Lego.config.sanitize = (html) => DOMPurify.sanitize(html);
+```
+
+The base `b-html` directive (without the `.safe` modifier) **never** sanitizes — only use it on trusted content.
+
+## metrics
+
+- **Type**: `{ onRenderStart?: (el) => void; onRenderEnd?: (el) => void }`
+- **Default**: `{}`
+
+Hooks called around each block render. Receive the host element. Use them to wire up performance monitoring; the bundled monitoring plugin (`src/plugins/monitoring.js`) ships with a working implementation.
+
+```js
 Lego.config.metrics = {
-  onRenderStart(el) {
-    console.time(el.tagName);
-  },
-  onRenderEnd(el) {
-    console.timeEnd(el.tagName);
-  }
+  onRenderStart(el) { performance.mark(`render-start-${el.id}`); },
+  onRenderEnd(el)   { performance.measure(`render-${el.tagName}`, `render-start-${el.id}`); }
 };
+```
+
+## loader
+
+- **Type**: `(tag: string) => string | Promise<string> | void`
+- **Default**: `undefined`
+
+Auto-discovery hook for unknown hyphenated tags. Documented under [`Lego.init({ loader })`](/api/init#options-loader) — the option there sets this property.
+
+The loader runs whenever the runtime sees an unregistered hyphenated tag in `root` (initially via TreeWalker, ongoing via `MutationObserver`).
+
+## loaderAllowlist
+
+- **Type**: `string | RegExp | (tag: string) => boolean | Array<…>`
+- **Default**: `null`
+
+Allowlist for the loader. When `null`, every unknown hyphenated tag is fetched — and a one-time console warning is emitted to remind you to lock it down. Set this to one of:
+
+```js
+// Single string — exact match
+Lego.config.loaderAllowlist = 'app-shell';
+
+// RegExp
+Lego.config.loaderAllowlist = /^app-/;
+
+// Function
+Lego.config.loaderAllowlist = (tag) => tag.startsWith('app-') || tag === 'shared-modal';
+
+// Array — any-match
+Lego.config.loaderAllowlist = ['app-shell', /^widget-/];
+```
+
+Tag names that don't pass the allowlist are silently skipped (or logged in `debug` mode). Tags that pass are fetched once — concurrent occurrences of the same tag share the in-flight request.
+
+This protects against attacker-controlled markup (e.g. via `b-html`) introducing a tag whose loader fetch then runs through your auth.
+
+## Putting it together
+
+A typical production config:
+
+```js
+import { Lego } from 'lego-dom';
+import DOMPurify from 'dompurify';
+import * as Sentry from '@sentry/browser';
+
+Lego.config.sanitize = DOMPurify.sanitize;
+Lego.config.loaderAllowlist = /^app-/;
+Lego.config.onError = (err, type, el) => {
+  Sentry.captureException(err, { tags: { lego_type: type, tag: el?.tagName } });
+};
+
+await Lego.init(document.body, {
+  styles: { base: ['/styles/theme.css'] },
+  loader: (tag) => `/blocks/${tag}.lego`
+});
 ```

@@ -60,7 +60,7 @@ A multi-page application demonstrating client-side routing.
     <lego-router></lego-router>
   </main>
 
-  <script src="https://unpkg.com/lego-dom/main.js"></script>
+  <script src="https://unpkg.com/lego-dom"></script>
   
   <!-- Home Page -->
   <template b-id="home-page">

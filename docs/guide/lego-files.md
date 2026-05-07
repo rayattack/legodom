@@ -168,8 +168,8 @@ import legoPlugin from 'lego-dom/vite-plugin';
 export default defineConfig({
   plugins: [
     legoPlugin({
-      blocksDir: './src/blocks',  // Where to look
-      include: ['**/*.lego']          // What to match
+      blocksDir: './src',         // root for discovery (default)
+      include:   ['**/*.lego']    // glob for matching blocks (default)
     })
   ]
 });
@@ -180,22 +180,23 @@ export default defineConfig({
 ```
 my-app/
 ├── src/
-│   ├── blocks/
-│   │   ├── block-user-card.lego
-│   │   ├── block-post-list.lego
-│   │   └── block-comment-item.lego
-│   └── main.js
+│   ├── user-card.lego
+│   ├── post-list.lego
+│   ├── comment-item.lego
+│   └── app.js
 ├── index.html
 ├── package.json
 └── vite.config.js
 ```
 
+The plugin's defaults (`blocksDir: './src'`, `include: ['**/*.lego']`) work for most projects. Override only if your `.lego` files live somewhere else.
+
 ### Entry Point
 
-In your `src/main.js`:
+In your `src/app.js`:
 
 ```js
-import { Lego } from 'lego-dom/main.js';
+import { Lego } from 'lego-dom';
 import registerBlocks from 'virtual:lego-blocks';
 
 // Auto-register all discovered blocks
@@ -220,7 +221,7 @@ In your `index.html`:
     <block-post-list></block-post-list>
   </div>
   
-  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="/src/app.js"></script>
 </body>
 </html>
 ```
@@ -356,13 +357,9 @@ For high-frequency updates (like drag-and-drop coordinates or 60fps animations),
 
 ## Hot Module Replacement
 
-During development, changes to `.lego` files trigger a full page reload. Your changes appear instantly!
+During development, saving a `.lego` file does **not** trigger a page reload. The Vite plugin re-runs `Lego.block(...)` for the changed file — the runtime catches the re-registration and replays each live instance through `unsnap()` + `snap()` so the new template/script/style takes effect in place. Routes, globals, and `$db` state survive the swap.
 
-```bash
-npm run dev
-```
-
-Edit your block, save, and see the result immediately.
+Adding or deleting a `.lego` file invalidates the virtual module so newly created blocks become available without a full reload either.
 
 ## Passing Props
 

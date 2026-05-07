@@ -26,7 +26,7 @@ Since a Lego block is a standard Custom Element, you mount it and inspect its `s
 ```javascript
 // user-profile.test.js
 import { describe, it, expect, beforeEach } from 'vitest';
-import './src/blocks/user-profile.lego'; // Import the SFB
+import './src/user-profile.lego'; // Import the SFB
 
 describe('UserProfile Block', () => {
   let el;

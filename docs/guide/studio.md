@@ -137,7 +137,7 @@ Lego.init(document.body, {
 ### Basic Usage
 
 ```javascript
-// src/main.js
+// src/app.js
 import { Lego } from 'lego-dom';
 import './blocks/button.lego';
 import './blocks/card.lego';
@@ -154,7 +154,7 @@ Visit `http://localhost:5173/_/studio` to see your blocks!
 Vite provides `import.meta.env.DEV` which is `true` in development:
 
 ```javascript
-// src/main.js
+// src/app.js
 import { Lego } from 'lego-dom';
 
 Lego.init(document.body, {

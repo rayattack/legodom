@@ -1,6 +1,7 @@
 import { safeEval } from '../utils/safe-eval.js';
 import { scanForAttribute, config } from '../utils/helpers.js';
 import { defaultSanitize } from '../utils/dom.js';
+import { privateData } from '../core/registry.js';
 
 
 /**
@@ -19,7 +20,7 @@ export const bHtml = {
   name: 'b-html',
   scan: node => scanForAttribute('b-html', node),
 
-  execute: ({ binding, state, global }) => {
+  execute: ({ binding, state, global, helpers }) => {
     const { node, expr, modifiers } = binding;
     let value = safeEval(expr, { state, global, self: node }) ?? '';
     if (modifiers && modifiers.includes('safe')) {
@@ -28,6 +29,26 @@ export const bHtml = {
     }
     if (node._bHtmlPrev !== value) {
       node._bHtmlPrev = value;
+      // Audit fix #9: any bindings the initial scan picked up inside this
+      // node (e.g. placeholder content with `[[…]]`) are about to point at
+      // detached nodes. Tag them dead and drop them from the parent block's
+      // bindings array so subsequent renders don't write to dead nodes and
+      // don't keep them alive.
+      const contextEl = helpers && helpers.contextEl;
+      if (contextEl) {
+        const data = privateData.get(contextEl);
+        if (data && data.bindings && data.bindings.length) {
+          for (const b of data.bindings) {
+            if (b !== binding && b.node && b.node !== node && node.contains(b.node)) {
+              b.dead = true;
+              b.node = null;
+            }
+          }
+          if (data.bindings.some(b => b.dead)) {
+            data.bindings = data.bindings.filter(b => !b.dead);
+          }
+        }
+      }
       node.innerHTML = value;
     }
   },

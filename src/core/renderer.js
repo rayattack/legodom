@@ -154,72 +154,84 @@ export const bind = (container, blockRoot, loopCtx = null) => {
 };
 
 export const scanForBindings = (container, subscriberTarget = null) => {
+  // Audit fix #14: recursive walk that skips terminal-directive subtrees
+  // (notably b-for) outright, instead of TreeWalker-descending then
+  // climbing parents per node to detect the boundary. Eliminates the
+  // O(nodes × depth) `isInsideBoundary` scan and the wasted descent into
+  // b-for subtrees the parent block never owns. Closure invariants
+  // (delimiter, subscriber target, directive list) hoist out of the loop.
   const bindings = [];
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
-  let node;
-  const pendingOperations = []; // Queue DOM modifications to avoid breaking TreeWalker
+  const pendingOperations = [];
+  const [delimStart] = getDelimiters();
+  const subscriberRoot = subscriberTarget || container.host || container;
+  const directiveEntries = Object.entries(directives);
 
-  while (node = walker.nextNode()) {
-    const current = node; // Capture for closure
-    const isInsideBoundary = (n) => {
-      let curr = n.parentNode;
-      while (curr && curr !== container) {
-        if (curr.hasAttribute && curr.hasAttribute('b-for')) return true;
-        curr = curr.parentNode;
-      }
-      return false;
-    };
-    if (isInsideBoundary(node)) continue;
+  const checkGlobal = (str) => {
+    if (/\bglobal\b/.test(str)) globalSubscribers.add(subscriberRoot);
+  };
 
-    // Track which element should re-render when a referenced global changes.
-    // Defaults to container.host (shadow root case) or container itself, but
-    // callers (e.g. b-for scanning a loop child) can pass an explicit
-    // subscriberTarget so the parent block — not the detached loop child —
-    // is the subscriber.
-    const checkGlobal = (str) => {
-      if (/\bglobal\b/.test(str)) {
-        const target = subscriberTarget || container.host || container;
-        globalSubscribers.add(target);
-      }
-    };
-
+  const visit = (node) => {
     if (node.nodeType === Node.ELEMENT_NODE) {
-      // Dynamic Directive Scanning
       let isTerminal = false;
-      for (const [name, implementation] of Object.entries(directives)) {
-        if (implementation.scan) {
-          const result = implementation.scan(node, {
-            checkGlobal,
-            getPrivateData,
-            pendingOperations,
-            current
-          });
-          if (result) {
-            bindings.push(result);
-            if (result.terminal) isTerminal = true;
-          }
+      for (const [, implementation] of directiveEntries) {
+        if (!implementation.scan) continue;
+        const result = implementation.scan(node, {
+          checkGlobal,
+          getPrivateData,
+          pendingOperations,
+          current: node
+        });
+        if (result) {
+          bindings.push(result);
+          if (result.terminal) isTerminal = true;
         }
       }
 
-      if (isTerminal) continue;
+      if (isTerminal) return;
 
-      const [start] = getDelimiters();
-      [...node.attributes].forEach(attr => {
-        if (attr.value.includes(start)) {
+      for (const attr of node.attributes) {
+        if (attr.value.includes(delimStart)) {
           checkGlobal(attr.value);
           bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
         }
-      });
+      }
+
+      for (let child = node.firstChild; child; child = child.nextSibling) {
+        visit(child);
+      }
     } else if (node.nodeType === Node.TEXT_NODE) {
-      const [start] = getDelimiters();
-      if (node.textContent.includes(start)) {
+      if (node.textContent.includes(delimStart)) {
         checkGlobal(node.textContent);
         bindings.push({ type: 'text', node, template: node.textContent });
       }
     }
+  };
+
+  // The container itself may carry text/attr interpolations (e.g. b-for's
+  // cloned child `<li b-for="x in items" class="row [[x.active]]">`). The
+  // prior `updateNodeBindings` call processed the root separately; folding
+  // it into scanForBindings keeps a single unified pass. Skip directive
+  // scanning on the root — directives there are a separate concern (and
+  // for the main render path the container is a ShadowRoot with no attrs,
+  // so this is a no-op).
+  if (container.nodeType === Node.ELEMENT_NODE) {
+    for (const attr of container.attributes) {
+      if (attr.value.includes(delimStart)) {
+        checkGlobal(attr.value);
+        bindings.push({ type: 'attr', node: container, attrName: attr.name, template: attr.value });
+      }
+    }
+  } else if (container.nodeType === Node.TEXT_NODE) {
+    if (container.textContent.includes(delimStart)) {
+      checkGlobal(container.textContent);
+      bindings.push({ type: 'text', node: container, template: container.textContent });
+    }
   }
 
-  // Execute deferred DOM modifications
+  for (let child = container.firstChild; child; child = child.nextSibling) {
+    visit(child);
+  }
+
   pendingOperations.forEach(op => op());
 
   return bindings;
@@ -243,6 +255,10 @@ export const scanForBindings = (container, subscriberTarget = null) => {
  * than per-item reactivity but correct.
  */
 const runBinding = (b, state, contextEl, track = true) => {
+  // Audit fix #9: bindings whose nodes were wiped (e.g. b-html replaced the
+  // surrounding subtree) are tagged dead during the wipe. Skip them so we
+  // don't write to detached nodes through the dirty-binding path.
+  if (b.dead) return;
   if (track) setTracking(b, contextEl);
   try {
     const directive = directives[b.type];
@@ -253,7 +269,6 @@ const runBinding = (b, state, contextEl, track = true) => {
         global: globals,
         helpers: {
           bind,
-          updateNodeBindings,
           scanForBindings,
           runBinding,
           contextEl
@@ -274,32 +289,6 @@ const runBinding = (b, state, contextEl, track = true) => {
   } finally {
     if (track) clearTracking();
   }
-};
-
-const updateNodeBindings = (root, scope) => {
-  const processNode = (node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      if (node._tpl === undefined) node._tpl = node.textContent;
-      const out = node._tpl.replace(createRegex(), (_, k) => safeEval(k.trim(), { state: scope, global: globals, self: node }, false) ?? '');
-      if (node.textContent !== out) node.textContent = out;
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const [start] = getDelimiters();
-      [...node.attributes].forEach(attr => {
-        if (attr._tpl === undefined) attr._tpl = attr.value;
-        if (attr._tpl.includes(start)) {
-          const out = attr._tpl.replace(createRegex(), (_, k) => safeEval(k.trim(), { state: scope, global: globals, self: node }, false) ?? '');
-          if (attr.value !== out) {
-            attr.value = out;
-            if (attr.name === 'class') node.className = out;
-          }
-        }
-      });
-    }
-  };
-  processNode(root);
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
-  let n;
-  while (n = walker.nextNode()) processNode(n);
 };
 
 export const render = (el) => {

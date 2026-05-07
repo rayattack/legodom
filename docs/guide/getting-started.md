@@ -21,7 +21,7 @@ The fastest way to try Lego is via CDN:
 <body>
   <my-block></my-block>
 
-  <script src="https://unpkg.com/lego-dom/main.js"></script>
+  <script src="https://unpkg.com/lego-dom"></script>
   <template b-id="my-block" b-logic="{ count: 0 }">
     <h1>Hello Lego!</h1>
     <button @click="count++">Click me</button>
@@ -98,10 +98,10 @@ export default defineConfig({
 ### The Runtime Engine
 
 ::: tip Auto-configured with create-legodom
-If you used `create-legodom`, this is already set up in `src/main.js`!
+If you used `create-legodom`, this is already set up in `src/app.js`!
 :::
 
-You must initialize the Lego engine in your entry file (`src/main.js`):
+You must initialize the Lego engine in your entry file (`src/app.js`):
 
 ```js
 import { Lego } from 'lego-dom';

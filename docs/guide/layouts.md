@@ -11,7 +11,7 @@ The most common pattern is wrapping your router in an "App Shell" that provides 
 Create a block that defines your layout structure and includes a `<slot>` for the main content.
 
 ```html
-<!-- src/blocks/app-shell.lego -->
+<!-- src/app-shell.lego -->
 <!-- The Magic: b-cascade passes 'tailwind' down to children (like the router views) -->
 <template b-stylesheets="tailwind main" b-cascade="tailwind">
   <div class="flex min-h-screen">
@@ -68,7 +68,7 @@ In your `index.html`, simply wrap `<lego-router>` with your shell.
 You can create blocks that conditionally render slots based on state, effectively acting as "Guards" or "Wrappers".
 
 ```html
-<!-- src/blocks/auth-guard.lego -->
+<!-- src/auth-guard.lego -->
 <template>
   <!-- If authenticated, show the content (the slot) -->
   <div b-if="isAuthenticated">
@@ -109,7 +109,7 @@ Native Shadow DOM allows for **Named Slots**, letting you plug content into spec
 ### The Layout
 
 ```html
-<!-- src/blocks/dashboard-layout.lego -->
+<!-- src/dashboard-layout.lego -->
 <template>
   <div class="dashboard">
     <header class="top-bar">

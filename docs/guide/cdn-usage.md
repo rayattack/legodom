@@ -20,7 +20,7 @@ Lego works perfectly without any build tools. Just include it via CDN and start 
   <hello-world b-logic="{ message: 'Hello from CDN!' }"></hello-world>
   
   <!-- Include Lego -->
-  <script src="https://unpkg.com/lego-dom/main.js"></script>
+  <script src="https://unpkg.com/lego-dom"></script>
   <script>
     Lego.init();
   </script>
@@ -36,7 +36,7 @@ That's it! Open this file in any browser and it works.
 
 ```html
 <!-- Latest version -->
-<script src="https://unpkg.com/lego-dom/main.js"></script>
+<script src="https://unpkg.com/lego-dom"></script>
 
 <!-- Specific version -->
 <script src="https://unpkg.com/lego-dom@1.3.4/main.js"></script>
@@ -46,7 +46,7 @@ That's it! Open this file in any browser and it works.
 
 ```html
 <!-- Latest version -->
-<script src="https://cdn.jsdelivr.net/npm/lego-dom/main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lego-dom"></script>
 
 <!-- Specific version -->
 <script src="https://cdn.jsdelivr.net/npm/lego-dom@1.3.4/main.min.js"></script>
@@ -156,7 +156,7 @@ Here's a full working application using only CDN:
     <p>[[ remaining() ]] remaining</p>
   </template>
 
-  <script src="https://unpkg.com/lego-dom/main.js"></script>
+  <script src="https://unpkg.com/lego-dom"></script>
   
   <script>
 
@@ -206,7 +206,7 @@ Lego is perfect for progressively enhancing existing sites:
   <button @click="logout()">Logout</button>
 </template>
 
-<script src="https://unpkg.com/lego-dom/main.js"></script>
+<script src="https://unpkg.com/lego-dom"></script>
 <script>
 
 
@@ -221,7 +221,7 @@ Lego block work alongside other frameworks:
 ```html
 <!-- Works fine with jQuery, Bootstrap, etc. -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://unpkg.com/lego-dom/main.js"></script>
+<script src="https://unpkg.com/lego-dom"></script>
 
 <!-- Your Lego block -->
 <my-block></my-block>

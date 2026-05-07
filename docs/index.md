@@ -38,9 +38,9 @@ features:
   
   - icon: 📦
     title: Zero-Dependency Runtime
-    details: Weighs less than 10kb gzipped. Includes Router, Store, and Reactivity engine without the bloat.
+    details: One small build artifact. Includes router, persistence, and reactivity. No peer dependencies at runtime.
   
-  - icon: �
+  - icon: 🧱
     title: Framework Agnostic
     details: Since blocks are native elements, they work inside React, Vue, Svelte, or vanilla HTML without adapters.
 ---
@@ -94,7 +94,7 @@ Since there are no files, you must explicitly name your blocks using the `b-id` 
 <!-- Use it -->
 <counter-button b-logic="{ title: 'Override b-logic title' }"></counter-button>
 
-<script src="https://unpkg.com/lego-dom/main.js"></script>
+<script src="https://unpkg.com/lego-dom"></script>
 <script>
   // Complete the initialization
   Lego.init();
@@ -123,24 +123,19 @@ That's it. No build step, no npm, no configuration.
 
 | Feature | LegoDOM | Vue | React |
 |---------|--------|-----|-------|
-| Size | < 17KB | ~33KB | ~40KB |
-| Dependencies | 0 | Many | Many |
-| Build Required | No* | Yes | Yes |
+| Build required | Optional | Yes | Yes |
 | Virtual DOM | No | Yes | Yes |
-| Learning Curve | Minimal | Moderate | Moderate |
+| Reactivity | ES6 `Proxy` | `ref` / `reactive` | `useState` |
 | Web Components | Native | Optional | No |
+| Templating | `[[ … ]]` in real DOM | template / JSX | JSX |
 
-\* *Optional with Vite for .lego files*
+The Vite plugin is optional — it's only needed if you want `.lego` Single File Blocks. CDN usage works with no build at all.
 
 ## Browser Support
 
-LegoDOM works in all modern browsers that support:
-- Web Components
-- Shadow DOM
-- ES6 Proxy
-- Template literals
+LegoDOM relies on Custom Elements v1, Shadow DOM v1, ES6 `Proxy`, `IntersectionObserver` (only consumed by `b-enter` / `b-leave`), and constructable stylesheets (only used by `b-stylesheets`).
 
-This includes Chrome 63+, Firefox 63+, Safari 11.1+, and Edge 79+.
+Tested in Chrome 90+, Firefox 90+, Safari 15+, and Edge 90+.
 
 ## Community
 - 💬 [Discussions](https://github.com/rayattack/LegoDOM/discussions)

@@ -85,24 +85,33 @@ export const renderErrorBlock = (errorTag, crashedEl, err) => {
   }
 };
 
-let _errorDepth = 0;
+// Per-boundary recursion counter. Keyed on the boundary's targetElement so
+// concurrent recoveries in unrelated trees don't share a budget — a sibling
+// tree erroring synchronously inside another tree's recovery (e.g. an error
+// block's mounted() hook dispatching an event) gets its own depth, instead
+// of inheriting the elevated count from the in-flight chain.
+const _errorDepth = new WeakMap();
 const MAX_ERROR_DEPTH = 3;
 
 export const handleError = (err, contextEl, contextType) => {
-  if (_errorDepth >= MAX_ERROR_DEPTH) {
+  const boundary = findErrorBoundary(contextEl);
+  if (!boundary) {
+    config.onError(err, contextType, contextEl);
+    return;
+  }
+  const key = boundary.targetElement;
+  const depth = _errorDepth.get(key) || 0;
+  if (depth >= MAX_ERROR_DEPTH) {
     console.error('[Lego] Error boundary recursion limit reached:', err);
     config.onError(err, contextType, contextEl);
     return;
   }
-  const boundary = findErrorBoundary(contextEl);
-  if (boundary) {
-    _errorDepth++;
-    try {
-      renderErrorBlock(boundary.errorTag, boundary.targetElement, err);
-    } finally {
-      _errorDepth--;
-    }
-  } else {
-    config.onError(err, contextType, contextEl);
+  _errorDepth.set(key, depth + 1);
+  try {
+    renderErrorBlock(boundary.errorTag, key, err);
+  } finally {
+    const next = (_errorDepth.get(key) || 0) - 1;
+    if (next <= 0) _errorDepth.delete(key);
+    else _errorDepth.set(key, next);
   }
 };
