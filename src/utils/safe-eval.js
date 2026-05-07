@@ -4,8 +4,10 @@ import { sharedStates } from '../core/registry.js';
 import { globals } from '../core/globals.js';
 import { _go } from '../features/router.js';
 import { mount } from '../features/mount.js';
+import { getDelimiters } from './helpers.js';
 
 const expressionCache = new LRUCache(1000);
+const logicCache = new LRUCache(500);
 
 export const safeEval = (expr, context, throwError = true) => {
   // 1. Security: Block dangerous patterns
@@ -65,9 +67,30 @@ export const safeEval = (expr, context, throwError = true) => {
 export const parseJSObject = (raw, scope = {}) => {
   if (!raw || raw.trim() === '{}') return {};
 
-  const attemptParse = (str) => {
-    return (new Function('scope', 'global', `with(global) { with(scope) { return (${str}); } }`))(scope, globals);
+  // Guardrail: refuse to evaluate b-logic that contains template delimiters.
+  // The body is run as JavaScript, so an interpolated `[[user.bio]]` reaching
+  // this path is RCE. Templating into b-logic is never the right pattern —
+  // use script logic and pass values through state instead.
+  const [start, end] = getDelimiters();
+  if (raw.includes(start) && raw.includes(end)) {
+    console.error(
+      `[Lego] Refusing to parse b-logic containing template delimiters ("${start}...${end}"). ` +
+      `b-logic is evaluated as JavaScript; templating user data into it is unsafe. ` +
+      `Pass values through state instead. Got: "${raw.length > 80 ? raw.slice(0, 80) + '...' : raw}"`
+    );
+    return {};
+  }
+
+  const compile = (str) => {
+    let fn = logicCache.get(str);
+    if (!fn) {
+      fn = new Function('scope', 'global', `with(global) { with(scope) { return (${str}); } }`);
+      logicCache.set(str, fn);
+    }
+    return fn;
   };
+
+  const attemptParse = (str) => compile(str)(scope, globals);
 
   try {
     return attemptParse(raw);

@@ -5,6 +5,7 @@ import { safeEval } from '../utils/safe-eval.js';
 import { findErrorBoundary, renderErrorBlock, handleError } from '../features/error.js';
 import { directives } from '../directives/index.js';
 import { findSyncAttr } from '../utils/dom.js';
+import { setTracking, clearTracking } from './tracking.js';
 
 export const bind = (container, blockRoot, loopCtx = null) => {
   const state = blockRoot._studs;
@@ -152,7 +153,7 @@ export const bind = (container, blockRoot, loopCtx = null) => {
   while (child = walker.nextNode()) bindNode(child);
 };
 
-export const scanForBindings = (container) => {
+export const scanForBindings = (container, subscriberTarget = null) => {
   const bindings = [];
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
   let node;
@@ -170,10 +171,14 @@ export const scanForBindings = (container) => {
     };
     if (isInsideBoundary(node)) continue;
 
-    // TODO: there is a better way to do this, not just sure yet - will research
+    // Track which element should re-render when a referenced global changes.
+    // Defaults to container.host (shadow root case) or container itself, but
+    // callers (e.g. b-for scanning a loop child) can pass an explicit
+    // subscriberTarget so the parent block — not the detached loop child —
+    // is the subscriber.
     const checkGlobal = (str) => {
       if (/\bglobal\b/.test(str)) {
-        const target = container.host || container;
+        const target = subscriberTarget || container.host || container;
         globalSubscribers.add(target);
       }
     };
@@ -220,6 +225,57 @@ export const scanForBindings = (container) => {
   return bindings;
 };
 
+/**
+ * Execute a single binding against a given state scope. Extracted so b-for
+ * can reuse the same path for per-item directive execution (so inner
+ * b-if / b-show / b-html / b-mount / b-enter / b-leave work inside loops).
+ *
+ * Wraps execution with setTracking/clearTracking so the reactive proxy
+ * records which (target, key) pairs this binding reads — enabling
+ * fine-grained re-runs on subsequent state mutations (#16).
+ *
+ * `track=false` is used by b-for for inner-loop bindings: those bindings
+ * receive a per-item localScope (Object.create(state) + item) and can't be
+ * re-run individually on a mutation because we'd have lost which item their
+ * scope referred to. Leaving tracking active under the *outer* b-for
+ * binding means any state read during the loop becomes a dep of the b-for
+ * binding, so a mutation triggers the whole loop to re-iterate. Coarser
+ * than per-item reactivity but correct.
+ */
+const runBinding = (b, state, contextEl, track = true) => {
+  if (track) setTracking(b, contextEl);
+  try {
+    const directive = directives[b.type];
+    if (directive) {
+      directive.execute({
+        binding: b,
+        state,
+        global: globals,
+        helpers: {
+          bind,
+          updateNodeBindings,
+          scanForBindings,
+          runBinding,
+          contextEl
+        }
+      });
+      return;
+    }
+    if (b.type === 'text') {
+      const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
+      if (b.node.textContent !== out) b.node.textContent = out;
+    } else if (b.type === 'attr') {
+      const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
+      if (b.node.getAttribute(b.attrName) !== out) {
+        b.node.setAttribute(b.attrName, out);
+        if (b.attrName === 'class') b.node.className = out;
+      }
+    }
+  } finally {
+    if (track) clearTracking();
+  }
+};
+
 const updateNodeBindings = (root, scope) => {
   const processNode = (node) => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -260,36 +316,16 @@ export const render = (el) => {
     const target = el.shadowRoot || el;
     if (!data.bindings) data.bindings = scanForBindings(target);
 
-    data.bindings.forEach(b => {
-      // Directives execution (b-if, b-for, b-show, etc.)
-      const directive = directives[b.type];
-      if (directive) {
-        directive.execute({
-          binding: b,
-          state,
-          global: globals,
-          helpers: {
-            bind,
-            updateNodeBindings,
-            contextEl: el
-          }
-        });
-        return;
-      }
-
-      // Legacy/Internal binding types
-      if (b.type === 'text') {
-        const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
-        if (b.node.textContent !== out) b.node.textContent = out;
-      }
-      if (b.type === 'attr') {
-        const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
-        if (b.node.getAttribute(b.attrName) !== out) {
-          b.node.setAttribute(b.attrName, out);
-          if (b.attrName === 'class') b.node.className = out;
-        }
-      }
-    });
+    // Fine-grained re-render: if the proxy `set` recorded specific dirty
+    // bindings, run only those. Otherwise (initial render, untracked path,
+    // delete) run the full pass. dirtyBindings is consumed and cleared.
+    if (data.dirtyBindings && data.dirtyBindings.size > 0) {
+      const dirty = data.dirtyBindings;
+      data.dirtyBindings = null;
+      dirty.forEach(b => runBinding(b, state, el));
+    } else {
+      data.bindings.forEach(b => runBinding(b, state, el));
+    }
   } catch (err) {
     handleError(err, el, 'render');
   } finally {

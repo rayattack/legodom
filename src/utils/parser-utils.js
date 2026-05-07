@@ -20,6 +20,7 @@ export function parseLego(content, filename = 'block.lego') {
     stylesAttr: '',
     cascadeAttr: '',
     errorAttr: '',
+    propsAttr: '',
     blockName: deriveBlockName(filename),
     hasTemplate: false,
     hasScript: false,
@@ -80,6 +81,11 @@ export function parseLego(content, filename = 'block.lego') {
       if (bErrorMatch) {
         result.errorAttr = bErrorMatch[1];
       }
+      // Extract b-props attribute if present
+      const bPropsMatch = attrs.match(/b-props=["']([^"']+)["']/);
+      if (bPropsMatch) {
+        result.propsAttr = bPropsMatch[1];
+      }
     } else if (tagName === 'script') {
       result.hasScript = true;
       result.script = innerContent.trim();
@@ -107,7 +113,7 @@ export function parseLego(content, filename = 'block.lego') {
  * @returns {string} - JavaScript code string
  */
 export function generateBlockCall(parsed) {
-  const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr } = parsed;
+  const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr, propsAttr } = parsed;
 
   // Build template HTML
   let templateHTML = '';
@@ -133,7 +139,7 @@ export function generateBlockCall(parsed) {
   }
 
   // Generate the Lego.block call
-  return `Lego.block('${blockName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, '${stylesAttr}', '${cascadeAttr}', '${errorAttr}');`;
+  return `Lego.block('${blockName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, '${stylesAttr}', '${cascadeAttr}', '${errorAttr}', '${propsAttr || ''}');`;
 }
 
 /**

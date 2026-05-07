@@ -6,10 +6,20 @@ const dbTimers = new Map();   // storageKey -> timerId
 const dbMetadata = new WeakMap(); // target -> { prop: { key, debounce } }
 const storageKeys = new Map(); // key -> { timestamp, size }
 
-// Storage quota management (FIFO eviction)
+// Re-entrancy guard for cross-tab and inter-binding sync.
+// When we propagate a $db value to other bindings (or apply a value
+// received from another tab), the proxy `set` handler would otherwise
+// call handleDbUpdate -> scheduleSave again, causing a write-back loop
+// across tabs. While this flag is set, handleDbUpdate is a no-op.
+let _suppressDbWrite = false;
+
+// Storage quota management (FIFO eviction).
+// `storageKeys` is a private tracker — every entry was written by us via
+// scheduleSave, so the keys here are by definition Lego-managed. They are
+// stored under the same name used in localStorage (no prefix) so eviction
+// can call removeItem(key) directly.
 const evictOldestKeys = (bytesNeeded) => {
   const entries = Array.from(storageKeys.entries())
-    .filter(([key]) => key.startsWith('lego:')) // Only evict Lego keys
     .sort((a, b) => a[1].timestamp - b[1].timestamp); // Oldest first
 
   let freedBytes = 0;
@@ -42,9 +52,8 @@ const scheduleSave = (key, value, debounce) => {
       // Attempt write
       localStorage.setItem(key, serialized);
 
-      // Track for eviction (prefix with 'lego:' for identification)
-      const storageKey = key.startsWith('lego:') ? key : `lego:${key}`;
-      storageKeys.set(storageKey, {
+      // Track for eviction under the same name used in localStorage.
+      storageKeys.set(key, {
         timestamp: Date.now(),
         size: sizeBytes
       });
@@ -64,8 +73,7 @@ const scheduleSave = (key, value, debounce) => {
             if (config.debug) console.log(`[Lego] Evicted ${evicted.length} old keys, retrying save`);
             localStorage.setItem(key, serialized);
 
-            const storageKey = key.startsWith('lego:') ? key : `lego:${key}`;
-            storageKeys.set(storageKey, {
+            storageKeys.set(key, {
               timestamp: Date.now(),
               size: sizeBytes
             });
@@ -126,7 +134,7 @@ export const dbFactory = (key) => {
     delete() {
       try {
         localStorage.removeItem(key);
-        storageKeys.delete(key.startsWith('lego:') ? key : `lego:${key}`);
+        storageKeys.delete(key);
 
         // Notify all bindings
         if (dbBindings.has(key)) {
@@ -172,19 +180,27 @@ export const initializeDbProp = (obj, k, desc, el, batcher) => {
 };
 
 export const handleDbUpdate = (target, prop, value) => {
+  if (_suppressDbWrite) return;
   const meta = dbMetadata.get(target);
   if (meta && meta[prop]) {
     const key = meta[prop].key;
     scheduleSave(key, value, meta[prop].debounce);
 
-    // Sync other local bindings immediately (Same Tab)
+    // Sync other local bindings immediately (Same Tab).
+    // Suppress recursion: each `t[p] = value` runs through the proxy
+    // and would re-enter handleDbUpdate.
     if (dbBindings.has(key)) {
-      dbBindings.get(key).forEach(({ target: t, prop: p, el, batcher }) => {
-        if (t !== target) { // Don't notify self
-          t[p] = value;
-          if (el && batcher) batcher.add(el);
-        }
-      });
+      _suppressDbWrite = true;
+      try {
+        dbBindings.get(key).forEach(({ target: t, prop: p, el, batcher }) => {
+          if (t !== target) {
+            t[p] = value;
+            if (el && batcher) batcher.add(el);
+          }
+        });
+      } finally {
+        _suppressDbWrite = false;
+      }
     }
   }
 };
@@ -197,19 +213,35 @@ export const cleanupDbBindings = (el) => {
   });
 };
 
+// Idempotent: HMR / tests / repeated Lego.init() calls would otherwise stack
+// fresh `storage` listeners every time, fanning each event out N×. The
+// handler closes over module-level state (dbBindings, _suppressDbWrite), so
+// one binding is enough — re-running init does not need a fresh handler.
+let _crossTabBound = false;
+
 export const initCrossTabSync = () => {
-  if (typeof window !== 'undefined') {
-    window.addEventListener('storage', (e) => {
-      if (!e.key || !dbBindings.has(e.key)) return;
+  if (typeof window === 'undefined') return;
+  if (_crossTabBound) return;
+  _crossTabBound = true;
+
+  window.addEventListener('storage', (e) => {
+    if (!e.key || !dbBindings.has(e.key)) return;
+    try {
+      const newValue = e.newValue === null ? null : JSON.parse(e.newValue);
+      // Suppress writes: the proxy `set` would otherwise re-save the value
+      // we just received, which fires a storage event in the originating
+      // tab, which fires this handler again -> ping-pong write loop.
+      _suppressDbWrite = true;
       try {
-        const newValue = JSON.parse(e.newValue);
         dbBindings.get(e.key).forEach(({ target, prop, el, batcher }) => {
-          target[prop] = newValue; // Update raw data
-          if (el && batcher) batcher.add(el); // Trigger re-render
+          target[prop] = newValue;
+          if (el && batcher) batcher.add(el);
         });
-      } catch (e) {
-        console.warn(`[Lego] Cross-tab sync error:`, e);
+      } finally {
+        _suppressDbWrite = false;
       }
-    });
-  }
+    } catch (err) {
+      console.warn(`[Lego] Cross-tab sync error:`, err);
+    }
+  });
 };

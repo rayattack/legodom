@@ -54,7 +54,8 @@ export interface Lego {
     logic?: object,
     styles?: string,
     cascade?: string,
-    error?: string
+    error?: string,
+    props?: string
   ): void;
 
   /**

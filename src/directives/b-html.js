@@ -1,20 +1,31 @@
 import { safeEval } from '../utils/safe-eval.js';
-import { scanForAttribute } from '../utils/helpers.js';
+import { scanForAttribute, config } from '../utils/helpers.js';
+import { defaultSanitize } from '../utils/dom.js';
 
 
 /**
  * b-html — Sets innerHTML to the evaluated expression result.
- * 
- * WARNING: This intentionally injects raw, unsanitized HTML.
- * Only use with trusted content. Never bind to user-supplied input.
+ *
+ * Default form (`b-html="expr"`) injects raw, unsanitized HTML — only use
+ * with trusted content.
+ *
+ * `b-html.safe="expr"` runs the value through `Lego.config.sanitize` if
+ * configured, falling back to a minimal built-in sanitizer that strips
+ * <script>/<iframe>/<object>/<embed>/<link>/<meta>/<style>/<base> tags,
+ * `on*` event-handler attributes, and `javascript:`/`vbscript:`/`data:text/html`
+ * URLs. For production, set `Lego.config.sanitize = DOMPurify.sanitize`.
  */
 export const bHtml = {
   name: 'b-html',
   scan: node => scanForAttribute('b-html', node),
 
   execute: ({ binding, state, global }) => {
-    const { node, expr } = binding;
-    const value = safeEval(expr, { state, global, self: node }) ?? '';
+    const { node, expr, modifiers } = binding;
+    let value = safeEval(expr, { state, global, self: node }) ?? '';
+    if (modifiers && modifiers.includes('safe')) {
+      const sanitizer = typeof config.sanitize === 'function' ? config.sanitize : defaultSanitize;
+      value = sanitizer(value);
+    }
     if (node._bHtmlPrev !== value) {
       node._bHtmlPrev = value;
       node.innerHTML = value;

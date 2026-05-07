@@ -7,7 +7,16 @@ export const config = {
   },
   metrics: {},   // Performance hooks
   debug: false,
-  syntax: 'brackets' // 'brackets' ([[ ]]) or 'mustache' ({{ }})
+  syntax: 'brackets', // 'brackets' ([[ ]]) or 'mustache' ({{ }})
+  // User-supplied sanitizer for b-html.safe. Receives the raw HTML string,
+  // returns the cleaned HTML. If null, b-html.safe falls back to a small
+  // built-in sanitizer (script/iframe/event-handler/javascript: stripping).
+  // Set this to DOMPurify.sanitize for production-grade cleaning.
+  sanitize: null,
+  // Auto-discovery (config.loader): if set, only tag names matching this
+  // pattern (or any of these patterns when given an array) will be fetched.
+  // Default null = no allowlist; a console warning is emitted on first use.
+  loaderAllowlist: null
 };
 
 /**

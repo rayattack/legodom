@@ -1,6 +1,6 @@
 {
   "name": "lego-dom",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "license": "MIT",
   "description": "A feature-rich web components + SFC frontend framework",
   "main": "dist/lego.min.js",

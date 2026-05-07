@@ -33,7 +33,7 @@ export const bFor = {
   },
 
   execute({ binding, state, global, helpers }) {
-    const { bind, updateNodeBindings } = helpers;
+    const { bind, updateNodeBindings, scanForBindings, runBinding } = helpers;
     if (!bind || !updateNodeBindings) {
       console.error('[Lego] b-for directive missing required helpers: bind, updateNodeBindings');
       return;
@@ -83,11 +83,43 @@ export const bFor = {
         pool.set(key, child);
         child._loopCtx = { name: itemName, listName, index: i };
         bind(child, contextEl, child._loopCtx);
+        // Scan the child for inner directives (b-if, b-show, b-html, b-mount,
+        // b-enter, b-leave, b-init, nested b-for). The main scanForBindings
+        // skips nodes inside b-for via isInsideBoundary, so without this
+        // pass those directives never bind. We scan once per child and
+        // re-execute them with the loop's local scope on each render.
+        if (scanForBindings) {
+          // Pass contextEl so any `global` reads inside the loop subscribe
+          // the parent block, not the detached child clone.
+          child._loopBindings = scanForBindings(child, contextEl);
+        }
       } else {
         // Keep index current so event handlers and b-sync resolve the right item
         child._loopCtx.index = i;
       }
       const localScope = Object.assign(Object.create(state), { [itemName]: item, $index: i });
+
+      // Run inner directives (b-if, b-show, b-html, b-mount, b-init,
+      // b-enter, b-leave, nested b-for) FIRST so any swap-in (e.g. b-if
+      // restoring a previously-hidden subtree) puts nodes back in the tree
+      // before updateNodeBindings walks for text/attr interpolation.
+      // Skip text/attr — updateNodeBindings handles those, and running them
+      // here would clobber node._tpl with rendered output.
+      if (child._loopBindings && runBinding) {
+        child._loopBindings.forEach(b => {
+          if (b.type === 'text' || b.type === 'attr') return;
+          try {
+            // track=false: inner-loop bindings can't be re-run individually
+            // (their localScope is ephemeral). Reads during their execution
+            // are still tracked under the outer b-for binding, so mutations
+            // trigger a full loop re-iteration.
+            runBinding(b, localScope, contextEl, false);
+          } catch (err) {
+            console.error('[Lego] Error in b-for inner directive:', err);
+          }
+        });
+      }
+
       updateNodeBindings(child, localScope);
 
       const syncInputs = [child, ...child.querySelectorAll('*')].filter(el => findSyncAttr(el));

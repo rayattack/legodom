@@ -7,6 +7,12 @@ export const setSnap = (fn) => { snapFn = fn; };
 
 export const routes = [];
 
+// Monotonic navigation token. Bumped on every _matchRoute entry so a slower
+// in-flight navigation (e.g. one whose middleware is awaiting) can detect
+// that a newer navigation has superseded it and abort before mutating the
+// DOM or $route. Without this, two rapid clicks interleave and produce
+// inconsistent state (second nav's $route + first nav's appended children).
+let _navToken = 0;
 
 export const findRoute = (path) => {
   const match = routes.find(r => r.regex.test(path));
@@ -18,6 +24,9 @@ export const findRoute = (path) => {
 
 export const _matchRoute = async (targetQueries = null, contextEl = null) => {
   if (typeof window === 'undefined') return;
+  const token = ++_navToken;
+  const isCurrent = () => token === _navToken;
+
   const path = window.location.pathname;
   const routeData = findRoute(path);
 
@@ -27,25 +36,29 @@ export const _matchRoute = async (targetQueries = null, contextEl = null) => {
   const { match, params } = routeData;
   const search = window.location.search;
 
-  // Update $route so components see current route data
+  // Middleware check FIRST — we don't commit $route or DOM until we know
+  // this navigation is allowed to proceed AND is still the latest one.
+  if (match.middleware) {
+    const shouldProceed = await match.middleware({ path, params });
+    if (!isCurrent()) return; // superseded mid-await
+    if (!shouldProceed) return;
+  }
+
+  // Commit $route only once this navigation is the winner.
   globals.$route.url = path + search;
   globals.$route.route = match.path;
   globals.$route.params = params;
   globals.$route.query = Object.fromEntries(new URLSearchParams(search));
 
-  // Middleware check
-  if (match.middleware) {
-    const shouldProceed = await match.middleware({ path, params });
-    if (!shouldProceed) return;
-  }
-
   const targetsToResolve = targetQueries && targetQueries.length ? targetQueries : ['lego-router'];
   const context = contextEl || document;
 
   if (match.tagName) {
+    if (!isCurrent()) return;
     const targets = targetsToResolve.flatMap(q => resolveTargets(q, context));
     targets.forEach(t => {
       if (!t) return;
+      if (!isCurrent()) return;
       t.innerHTML = '';
       const child = document.createElement(match.tagName);
       t.appendChild(child);

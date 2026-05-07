@@ -14,7 +14,12 @@ export const createBatcher = (renderHandler = null) => {
   const setHandler = (fn) => { _render = fn; };
 
   const scheduleUpdatedHooks = () => {
-    if (updatedTimer) clearTimeout(updatedTimer);
+    // Trailing-only debounce: do NOT reset the timer if it's already pending.
+    // Resetting on every batch lets sustained mutation (animations, websockets)
+    // starve the hook indefinitely. With this guard, the first batch arms the
+    // timer; subsequent batches within the window add to pendingUpdated but
+    // the hook still fires within ~50ms of the first update.
+    if (updatedTimer) return;
     updatedTimer = setTimeout(() => {
       pendingUpdated.forEach(el => {
         const state = el._studs;
@@ -24,7 +29,7 @@ export const createBatcher = (renderHandler = null) => {
       });
       pendingUpdated.clear();
       updatedTimer = null;
-    }, 50); // Global debounce
+    }, 50);
   };
 
   const processPendingQueue = () => {

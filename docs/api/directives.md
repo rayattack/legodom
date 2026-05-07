@@ -71,4 +71,38 @@ this.mounted = function() {
 }
 ```
 
+## b-props
+
+Declares the prop contract for a block. Goes on the outer `<template>` (or as the 7th argument to `Lego.block()`). Pure metadata — does not change how data flows into the block.
+
+```html
+<template b-id="user-card" b-props="{ user, onSelect, title }">
+  <h2>[[ title ]]</h2>
+  <p>[[ user.name ]]</p>
+</template>
+```
+
+```html
+<user-card b-logic="{ user: currentUser, onSelect: pick }"></user-card>
+```
+
+When a contract is declared, LegoDOM warns at mount-time if:
+
+- a `b-logic` key is passed that is not in the declared list (typo guard)
+- a declared name resolves to `undefined` after the three-tier merge (missing prop)
+
+**Syntax**: identifier list, brace-optional, comma-separated. No values, defaults, or renames in v1 — use `b-logic` for values, the script tier for defaults.
+
+```html
+<!-- valid -->
+b-props="{ age, name, dateOfBirth }"
+b-props="age, name, dateOfBirth"
+
+<!-- invalid (parse error, contract not registered) -->
+b-props="{ name: 'Alice' }"
+b-props="{ name = 'Guest' }"
+```
+
+Omitting `b-props` preserves existing behavior: any `b-logic` key merges in, no validation runs.
+
 

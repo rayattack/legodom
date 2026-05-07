@@ -155,6 +155,37 @@ In the example above, the final state for the block will be:
 - `theme`: `'light'` (Only defined in Script)
 - `name`: `'Alice'` (Instance override beats Template)
 
+### Declaring Props (`b-props`)
+
+`b-logic` accepts any keys, which is flexible but easy to typo. Declare a contract on the outer `<template>` to get dev-time warnings when a parent passes an unexpected key or omits a required one:
+
+```html
+<template b-id="user-card" b-props="{ user, onSelect, title }">
+  <h2>[[ title ]]</h2>
+  <p>[[ user.name ]]</p>
+</template>
+```
+
+`b-props` is **pure metadata** — it does not introduce a new data channel. Parents still pass values via `b-logic` exactly as before:
+
+```html
+<user-card b-logic="{ user: currentUser, onSelect: pick }"></user-card>
+```
+
+What it gets you:
+
+- **Typo guard**: passing `b-logic="{ usre: ... }"` warns that `usre` is not declared.
+- **Missing-prop warning**: declaring `{ user }` and not providing it (and no script default) warns at mount.
+- **Tooling boundary**: editor extensions and devtools can read `b-props` to know which keys are external-by-contract.
+
+Defaults still come from the script tier — if `title: 'User'` is in the script, `title` is satisfied even when the parent omits it.
+
+**Syntax rules**
+
+- Identifiers only: `b-props="{ age, name, dateOfBirth }"`. Whitespace is tolerant; outer braces are optional.
+- No values, defaults, or renames. `b-props="{ name: 'Alice' }"` is a parse error — use `b-logic` for values.
+- Omitting `b-props` keeps existing behavior: any `b-logic` key merges in, no warnings.
+
 ## Block Communication
 
 ### Parent → Child (Scoped Props)

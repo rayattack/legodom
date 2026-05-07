@@ -1,4 +1,5 @@
 import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, privateData, snapState } from './registry.js';
+import { bProps } from '../directives/b-props.js';
 import { globals } from './globals.js';
 import { directives } from '../directives/index.js';
 import { config, mergeDescriptors, resolve, isNode } from '../utils/helpers.js';
@@ -64,6 +65,8 @@ export const snap = (el) => {
       mergeDescriptors(el.$initialState, baseState);
       delete el.$initialState; // Cleanup
     }
+
+    bProps.validate({ instanceLogic, state: baseState, tagName: name });
 
     el._studs = reactive(baseState, el);
 

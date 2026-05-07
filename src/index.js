@@ -1,4 +1,5 @@
 import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData, snapState, globalSubscribers } from './core/registry.js';
+import { bProps } from './directives/b-props.js';
 import { snap, unsnap } from './core/lifecycle.js';
 import { render, bind } from './core/renderer.js';
 import { reactive } from './core/reactive.js';
@@ -51,18 +52,20 @@ const Lego = {
   unsnap,
   mount,
   defineLegoFile: (content, filename) => defineLegoFile(Lego, content, filename),
-  block: (tagName, templateHTML, logic = {}, styles = "", cascade = "", error = "") => {
+  block: (tagName, templateHTML, logic = {}, styles = "", cascade = "", error = "", props = "") => {
     const t = document.createElement('template');
     t.setAttribute('b-id', tagName);
     t.setAttribute('b-stylesheets', styles);
     if (cascade) t.setAttribute('b-cascade', cascade);
     if (error) t.setAttribute('b-error', error);
+    if (props) t.setAttribute('b-props', props);
     t.innerHTML = templateHTML;
 
     // HMR Optimization: REMOVED (Basic re-registration only)
 
     registry[tagName] = t;
     legoFileLogic.set(tagName, logic);
+    bProps.register(tagName, props);
 
     try {
       const sharedState = {};
@@ -156,6 +159,7 @@ const Lego = {
     document.querySelectorAll('template[b-id]').forEach(t => {
       const tagName = t.getAttribute('b-id');
       registry[tagName] = t;
+      bProps.register(tagName, t.getAttribute('b-props'));
 
       if (!customElements.get(tagName)) {
         customElements.define(tagName, class extends HTMLElement {
@@ -312,12 +316,50 @@ const Lego = {
 
     // Auto-Discovery: Watch for unknown tags to lazy-load (HTMX-style / Server Blocks)
     if (config.loader) {
+      // Strict custom-element shape: lowercase, must contain at least one
+      // hyphen-separated segment, no dots/colons/slashes/quotes/whitespace.
+      // Custom elements legally allow more (digits, certain unicode), but
+      // anything beyond this is almost always an injection attempt rather
+      // than a real component — refusing them keeps the loader safe.
+      const VALID_TAG = /^[a-z][a-z0-9]*(-[a-z0-9]+)+$/;
+      const allowlist = config.loaderAllowlist;
+      let warnedNoAllowlist = false;
+      const matchesAllowlist = (tagName) => {
+        if (!allowlist) return true;
+        const list = Array.isArray(allowlist) ? allowlist : [allowlist];
+        return list.some(p => {
+          if (typeof p === 'string') return p === tagName;
+          if (typeof p === 'function') return !!p(tagName);
+          // Duck-type RegExp (cross-realm safe — RegExps from a different
+          // global won't pass `instanceof RegExp` here).
+          if (p && typeof p.test === 'function') return !!p.test(tagName);
+          return false;
+        });
+      };
+
       const discover = (n) => {
         if (n.nodeType !== Node.ELEMENT_NODE) return;
         const tagName = n.tagName.toLowerCase();
         if (tagName.includes('-') && !registry[tagName] && !activeBlocks.has(n)) {
           // Check if we are already fetching this tag to avoid dupes
           if (Lego._fetching && Lego._fetching.has(tagName)) return;
+
+          // Reject malformed tag names (defense against attacker-controlled
+          // tags reaching the loader, e.g. via b-html or untrusted markup).
+          if (!VALID_TAG.test(tagName)) {
+            if (config.debug) console.warn(`[Lego] Loader skipped malformed tag "${tagName}"`);
+            return;
+          }
+
+          if (!matchesAllowlist(tagName)) {
+            if (config.debug) console.warn(`[Lego] Loader skipped "${tagName}": not in loaderAllowlist`);
+            return;
+          }
+
+          if (!allowlist && !warnedNoAllowlist) {
+            warnedNoAllowlist = true;
+            console.warn('[Lego] config.loader is set without config.loaderAllowlist. Any unknown hyphenated tag inserted into the page will trigger a fetch. Set Lego.config.loaderAllowlist to restrict this.');
+          }
 
           if (!Lego._fetching) Lego._fetching = new Set();
           Lego._fetching.add(tagName);

@@ -1,7 +1,8 @@
 import { globalBatcher } from './batcher.js';
-import { proxyCache } from './registry.js';
+import { proxyCache, privateData } from './registry.js';
 import { config, isNode } from '../utils/helpers.js';
 import { isDbDescriptor, initializeDbProp, handleDbUpdate } from '../features/persistence.js';
+import { trackRead, getReaders } from './tracking.js';
 
 
 /**
@@ -33,8 +34,16 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
   }
 
   const handler = {
-    get: (t, k) => {
-      const val = Reflect.get(t, k);
+    get: (t, k, receiver) => {
+      // Record (target, key) read for the currently-evaluating binding so
+      // future writes to this key only re-run dependent bindings.
+      trackRead(el, t, k);
+      // Pass receiver so getters see `this === proxy` — that way `this.x`
+      // inside a getter routes through the proxy's `get` and records `x`
+      // as a dep too. Without this, computed properties (getters reading
+      // other state) appear to depend only on themselves and the renderer
+      // would fall back to a full pass on every mutation.
+      const val = Reflect.get(t, k, receiver);
       if (val !== null && typeof val === 'object' && !isNode(val)) {
         return reactive(val, el, batcher);
       }
@@ -60,6 +69,17 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
 
       if (isSelf || isOwnProp) {
         if (old !== v) {
+          // Fine-grained scheduling: tag dirty bindings so the next render
+          // only re-runs them. If no readers were tracked for (t, k), the
+          // batcher still runs render(el), which falls back to a full pass.
+          const readers = getReaders(el, t, k);
+          if (readers && readers.size > 0) {
+            const data = privateData.get(el);
+            if (data) {
+              if (!data.dirtyBindings) data.dirtyBindings = new Set();
+              readers.forEach(b => data.dirtyBindings.add(b));
+            }
+          }
           batcher.add(el);
           handleDbUpdate(t, k, v);
         }
@@ -67,7 +87,12 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
       return r;
     },
     deleteProperty: (t, k) => {
+      // Mark all bindings reading this key dirty (deletion is structural —
+      // many readers may need to re-run); simplest sound option is a full
+      // re-render via the batcher fallback.
       const r = Reflect.deleteProperty(t, k);
+      const data = privateData.get(el);
+      if (data) data.dirtyBindings = null; // force full pass
       batcher.add(el);
       return r;
     }

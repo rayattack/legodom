@@ -38,7 +38,7 @@ export default { mounted() { console.log('hi') } }
     const blockCall = generateBlockCall(parsed);
 
     expect(blockCall).toContain("Lego.block('test-block'");
-    expect(blockCall).toContain(", 'tailwind', '', '');");
+    expect(blockCall).toContain(", 'tailwind', '', '', '');");
   });
 
   it('should escape correctly in template', () => {

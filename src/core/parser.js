@@ -2,6 +2,7 @@ import { registry, legoFileLogic, getPrivateData } from './registry.js';
 import { config, deriveBlockName } from '../utils/helpers.js';
 import { parseLego } from '../utils/parser-utils.js';
 import { snap } from './lifecycle.js';
+import { bProps } from '../directives/b-props.js';
 
 /**
  * Define a Lego block from a .lego file
@@ -11,7 +12,7 @@ import { snap } from './lifecycle.js';
  */
 export const defineLegoFile = (Lego, content, filename = 'block.lego') => {
   const parsed = parseLego(content, filename);
-  const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr } = parsed;
+  const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr, propsAttr } = parsed;
 
   let logicObj = {};
   if (script) {
@@ -38,6 +39,8 @@ export const defineLegoFile = (Lego, content, filename = 'block.lego') => {
   if (stylesAttr) registry[blockName].setAttribute('b-stylesheets', stylesAttr);
   if (cascadeAttr) registry[blockName].setAttribute('b-cascade', cascadeAttr);
   if (errorAttr) registry[blockName].setAttribute('b-error', errorAttr);
+  if (propsAttr) registry[blockName].setAttribute('b-props', propsAttr);
+  bProps.register(blockName, propsAttr);
 
   legoFileLogic.set(blockName, logicObj);
 
