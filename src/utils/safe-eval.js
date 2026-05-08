@@ -4,14 +4,37 @@ import { sharedStates } from '../core/registry.js';
 import { globals } from '../core/globals.js';
 import { _go } from '../features/router.js';
 import { mount } from '../features/mount.js';
-import { getDelimiters } from './helpers.js';
+import { getDelimiters, config } from './helpers.js';
 
 const expressionCache = new LRUCache(1000);
 const logicCache = new LRUCache(500);
 
+// Audit fix #23: split the blocklist into a strict tier and a "bareword
+// only" tier.
+//
+//   - STRICT covers patterns where the *property-access* form is itself a
+//     known sandbox-escape vector. `obj.constructor.constructor("…")()`
+//     and `obj.__proto__.constructor.…` reach Function regardless of
+//     whether they appear as bareword or member access, so we keep
+//     blocking those words wherever they show up. `eval` and `import`
+//     have no innocuous member-access form in template-shaped JS.
+//
+//   - SOFT covers identifiers that collide with the strict regex by
+//     accident — `item.class` (CSS class name field), `pkg.module`
+//     (string property), `schema.prototype` (a structure field that
+//     happens to share the name). The lookbehind `(?<![\w.$])` allows
+//     these as member access while still blocking the bareword/keyword
+//     form (e.g. `class { … }`, `prototype = X`). `prototype` blocking
+//     is mostly defence-in-depth here since `constructor` stays blocked
+//     in STRICT; without `.constructor` no Function-escape chain
+//     completes anyway.
+const STRICT_BLOCK = /\b(eval|import|constructor|__proto__)\b/;
+const SOFT_BLOCK = /(?<![\w.$])(class|module|prototype)(?![\w$])/;
+
 export const safeEval = (expr, context, throwError = true) => {
   // 1. Security: Block dangerous patterns
-  if (/\b(eval|import|class|module|constructor|__proto__|prototype)\b/.test(expr) ||
+  if (STRICT_BLOCK.test(expr) ||
+      SOFT_BLOCK.test(expr) ||
       /\[\s*['"`].*\+|\+.*['"`]\s*\]/.test(expr)) {
     console.warn(`[Lego] Security Warning: Blocked dangerous expression "${expr}"`);
     return undefined;
@@ -67,9 +90,12 @@ export const safeEval = (expr, context, throwError = true) => {
     return result;
   } catch (e) {
     if (throwError) throw e;
-    // Gracefully degrade for undefined variables (ReferenceError),
-    // but re-throw other errors so error boundaries can catch them
-    if (e instanceof ReferenceError) return undefined;
+    // Audit fix #26: by default we swallow ReferenceErrors so a single
+    // template typo or a transiently-undefined state key doesn't take
+    // down the page. In strict mode (`Lego.config.strict = true`) we
+    // re-throw so the error boundary surfaces the typo immediately
+    // during development. Other error classes always re-throw.
+    if (e instanceof ReferenceError && !config.strict) return undefined;
     throw e;
   }
 };

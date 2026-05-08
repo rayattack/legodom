@@ -30,7 +30,7 @@ Exhaustive surface area of the `Lego` runtime. Every entry on this page maps dir
 
 | Symbol | Purpose |
 |---|---|
-| [`Lego.config.syntax`](/api/config#syntax) | Delimiter style — `'brackets'` (`[[ ]]`, default) or `'mustache'` (`{{ }}`). |
+| [`Lego.config.syntax`](/api/config#syntax) | Delimiter style, `'brackets'` (`[[ ]]`, default) or `'mustache'` (`{{ }}`). |
 | [`Lego.config.debug`](/api/config#debug) | Verbose tracing. |
 | [`Lego.config.onError`](/api/config#onerror) | Last-resort error handler when no boundary catches. |
 | [`Lego.config.sanitize`](/api/config#sanitize) | HTML sanitizer used by `b-html.safe`. |
@@ -56,7 +56,7 @@ Inside template expressions (`[[ … ]]`, `@event="…"`, `b-if/b-show/b-html/b-
 | Symbol | Purpose |
 |---|---|
 | `state` | The block's own state (default scope of every expression). |
-| `global` | Reactive globals — read `global.user.name`, etc. |
+| `global` | Reactive globals, read `global.user.name`, etc. |
 | `self` | The DOM node the binding is on. |
 | `event` / `$event` | The DOM event (event handlers only). |
 | `$ancestors(tag)` | Find the nearest matching block ancestor. |
@@ -97,4 +97,4 @@ LegoDOM relies on:
 - `IntersectionObserver` (only consumed by `b-enter` / `b-leave`)
 - `CSSStyleSheet` constructable + `adoptedStyleSheets` (used by `b-stylesheets`)
 
-Tested in Chrome 90+, Firefox 90+, Safari 15+, Edge 90+. The directives that need `IntersectionObserver` and constructable stylesheets degrade gracefully on older browsers — neither throws, but the affected feature won't run.
+Tested in Chrome 90+, Firefox 90+, Safari 15+, Edge 90+. The directives that need `IntersectionObserver` and constructable stylesheets degrade gracefully on older browsers, neither throws, but the affected feature won't run.

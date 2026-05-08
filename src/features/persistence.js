@@ -5,6 +5,10 @@ const dbBindings = new Map(); // storageKey -> Set<{target, prop, el, batcher}>
 const dbTimers = new Map();   // storageKey -> timerId
 const dbMetadata = new WeakMap(); // target -> { prop: { key, debounce } }
 const storageKeys = new Map(); // key -> { timestamp, size }
+// Audit fix #31: reverse index so cleanupDbBindings(el) is O(entries-for-el)
+// instead of O(total-entries × keys). Each value carries the storage key
+// alongside the entry so we can locate the entry's set in O(1).
+const dbBindingsByEl = new WeakMap(); // el -> Set<{ key, entry }>
 
 // Re-entrancy guard for cross-tab and inter-binding sync.
 // When we propagate a $db value to other bindings (or apply a value
@@ -176,7 +180,12 @@ export const initializeDbProp = (obj, k, desc, el, batcher) => {
 
   // Register for cross-tab updates
   if (!dbBindings.has(desc.key)) dbBindings.set(desc.key, new Set());
-  dbBindings.get(desc.key).add({ target: obj, prop: k, el, batcher });
+  const entry = { target: obj, prop: k, el, batcher };
+  dbBindings.get(desc.key).add(entry);
+  if (el) {
+    if (!dbBindingsByEl.has(el)) dbBindingsByEl.set(el, new Set());
+    dbBindingsByEl.get(el).add({ key: desc.key, entry });
+  }
 };
 
 export const handleDbUpdate = (target, prop, value) => {
@@ -206,11 +215,15 @@ export const handleDbUpdate = (target, prop, value) => {
 };
 
 export const cleanupDbBindings = (el) => {
-  dbBindings.forEach((bindings) => {
-    bindings.forEach(entry => {
-      if (entry.el === el) bindings.delete(entry);
-    });
+  // Audit fix #31: O(entries-for-this-el) via the reverse index, not
+  // O(total-bindings) walking every key.
+  const refs = dbBindingsByEl.get(el);
+  if (!refs) return;
+  refs.forEach(({ key, entry }) => {
+    const set = dbBindings.get(key);
+    if (set) set.delete(entry);
   });
+  dbBindingsByEl.delete(el);
 };
 
 // Idempotent: HMR / tests / repeated Lego.init() calls would otherwise stack

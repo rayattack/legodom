@@ -17,7 +17,7 @@ Runs after the block's template is in the DOM, the Shadow DOM is attached, style
 
 - `this.$element` references the host element.
 - `this.$vars` is populated with any `b-var` refs.
-- The state proxy is live — mutating any property triggers a re-render.
+- The state proxy is live, mutating any property triggers a re-render.
 
 The hook fires **before** child blocks inside this block snap, so any state you set in `mounted()` is visible to children when they mount.
 
@@ -30,7 +30,7 @@ The hook fires **before** child blocks inside this block snap, so any state you 
 }
 ```
 
-If `mounted()` throws, the error is caught and routed to the nearest [error boundary](/api/directives#b-error) — your block doesn't have to crash the page.
+If `mounted()` throws, the error is caught and routed to the nearest [error boundary](/api/directives#b-error), your block doesn't have to crash the page.
 
 ## updated()
 
@@ -45,11 +45,11 @@ Runs ~50 ms after a render cycle completes (a trailing-only debounce). The debou
 }
 ```
 
-`updated()` does **not** fire on initial mount — only on subsequent renders.
+`updated()` does **not** fire on initial mount, only on subsequent renders.
 
 ## unmounted()
 
-Runs when the host element is removed from the DOM (or `Lego.unsnap()` is called explicitly). Use it to dispose of anything that won't be cleaned up automatically — timers, websocket connections, third-party libraries.
+Runs when the host element is removed from the DOM (or `Lego.unsnap()` is called explicitly). Use it to dispose of anything that won't be cleaned up automatically, timers, websocket connections, third-party libraries.
 
 ```js
 {
@@ -60,7 +60,7 @@ Runs when the host element is removed from the DOM (or `Lego.unsnap()` is called
 }
 ```
 
-You don't need to remove DOM event listeners attached via `@event` or `b-sync` — those are tracked and cleaned up automatically. Same for `IntersectionObserver` instances created by `b-enter` / `b-leave`.
+You don't need to remove DOM event listeners attached via `@event` or `b-sync`, those are tracked and cleaned up automatically. Same for `IntersectionObserver` instances created by `b-enter` / `b-leave`.
 
 ## Order of operations
 
@@ -81,7 +81,7 @@ For unmount:
 
 ## Accessing `this`
 
-Inside hooks and methods, `this` is the **reactive proxy** of your state — every read is tracked, every write triggers a re-render.
+Inside hooks and methods, `this` is the **reactive proxy** of your state, every read is tracked, every write triggers a re-render.
 
 ```js
 {
@@ -96,7 +96,7 @@ If you need the raw element (e.g. to call `closest()` or interact with native AP
 
 ## Async hooks
 
-Hooks may return promises. The runtime does not wait for them — your block renders synchronously and the promise resolves whenever it resolves. If the host element is unmounted while the promise is in-flight, guard with `this.$element` (which is nulled in `unmounted`):
+Hooks may return promises. The runtime does not wait for them, your block renders synchronously and the promise resolves whenever it resolves. If the host element is unmounted while the promise is in-flight, guard with `this.$element` (which is nulled in `unmounted`):
 
 ```js
 async mounted() {

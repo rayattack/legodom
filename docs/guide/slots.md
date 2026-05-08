@@ -1,6 +1,6 @@
 # Slots & Content Projection
 
-Slots let you pass content into a block from the outside, just like React's `children` or Svelte's `<slot>`. LegoDOM uses **native Shadow DOM slots** — there's no custom API to learn.
+Slots let you pass content into a block from the outside, just like React's `children` or Svelte's `<slot>`. LegoDOM uses **native Shadow DOM slots**, there's no custom API to learn.
 
 ::: tip Coming from React or Svelte?
 | React | Svelte | LegoDOM |
@@ -25,7 +25,7 @@ Light DOM (what you write)          Shadow DOM (block template)
 
 ## Default Slot
 
-The simplest slot — captures all child content that doesn't have a `slot` attribute.
+The simplest slot, captures all child content that doesn't have a `slot` attribute.
 
 **Define the block:**
 
@@ -171,7 +171,7 @@ A modal that wraps any content:
 
 ### App Shell with Router
 
-The most common layout pattern — a persistent shell with a routed content area:
+The most common layout pattern, a persistent shell with a routed content area:
 
 ```html
 <template b-id="app-shell">
@@ -218,7 +218,7 @@ Slotted content lives in the **Light DOM**, not inside the block's Shadow DOM. T
     /* This styles slotted (Light DOM) content from inside the block */
     ::slotted(p) { color: blue; }
 
-    /* This does NOT work — can only target direct children */
+    /* This does NOT work, can only target direct children */
     /* ::slotted(p span) { ... } */
   </style>
 
@@ -244,7 +244,7 @@ You can slot entire LegoDOM blocks, not just plain HTML:
 </dashboard-layout>
 ```
 
-Each slotted block maintains its own Shadow DOM, state, and lifecycle — fully encapsulated.
+Each slotted block maintains its own Shadow DOM, state, and lifecycle, fully encapsulated.
 
 ## Next Steps
 

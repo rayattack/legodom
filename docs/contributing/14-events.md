@@ -147,17 +147,6 @@ You can chain modifiers:
 
 ```html
 <!-- In your .lego file template -->
-<template>
-  <form @submit.prevent="handleSubmit">
-    <input 
-      @input="updateSearch" 
-      @keydown.enter="search"
-      @keydown.esc="clearSearch"
-    />
-    <button @click.prevent.stop="search">Search</button>
-  </form>
-</template>
-
 <script>
 export default {
   searchTerm: '',
@@ -180,6 +169,17 @@ export default {
   }
 }
 </script>
+
+<template>
+  <form @submit.prevent="handleSubmit">
+    <input 
+      @input="updateSearch" 
+      @keydown.enter="search"
+      @keydown.esc="clearSearch"
+    />
+    <button @click.prevent.stop="search">Search</button>
+  </form>
+</template>
 ```
 
 ## Integration with Reactivity

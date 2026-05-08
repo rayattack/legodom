@@ -90,19 +90,6 @@ Then use it in your HTML:
 Create `src/click-counter.lego` (the Vite plugin discovers anything matching `**/*.lego` under `src/`):
 
 ```html
-<style>
-  self {
-    display: block;
-    padding: 2rem;
-  }
-</style>
-
-<template>
-  <h2>[[ message ]]</h2>
-  <p>Count: [[ count ]]</p>
-  <button @click="increment()">Click Me!</button>
-</template>
-
 <script>
 export default {
   message: 'Welcome!',
@@ -112,6 +99,19 @@ export default {
   }
 }
 </script>
+
+<template>
+  <h2>[[ message ]]</h2>
+  <p>Count: [[ count ]]</p>
+  <button @click="increment()">Click Me!</button>
+</template>
+
+<style>
+  self {
+    display: block;
+    padding: 2rem;
+  }
+</style>
 ```
 
 The Vite plugin automatically discovers and registers it!

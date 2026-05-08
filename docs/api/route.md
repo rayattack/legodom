@@ -1,6 +1,6 @@
 # Lego.route()
 
-Registers a client-side route. Each route binds a path pattern to a block tag — when the URL matches, the runtime renders that block into the resolved targets.
+Registers a client-side route. Each route binds a path pattern to a block tag, when the URL matches, the runtime renders that block into the resolved targets.
 
 ```ts
 Lego.route(
@@ -16,8 +16,8 @@ The path string may contain:
 
 | Token | Meaning |
 |---|---|
-| `:name` | Named parameter — captured into `$route.params[name]`. Greedy up to the next `/`. |
-| `*` | Wildcard — matches anything, including `/`. Useful as a catch-all for `404`. |
+| `:name` | Named parameter, captured into `$route.params[name]`. Greedy up to the next `/`. |
+| `*` | Wildcard, matches anything, including `/`. Useful as a catch-all for `404`. |
 | Anything else | Literal. Regex metacharacters (`. + ? ^ $ { } ( ) | [ ] \`) are escaped automatically, so you can use them safely. |
 
 ```js
@@ -28,11 +28,11 @@ Lego.route('/files/*',              'files-page');   // /files/a/b/c → matches
 Lego.route('*',                     'not-found');    // catch-all
 ```
 
-The order routes are registered does matter — the runtime returns the **first** match. Register specific routes before catch-alls.
+The order routes are registered does matter, the runtime returns the **first** match. Register specific routes before catch-alls.
 
 ## Middleware
 
-The optional third argument is a guard. It receives `{ path, params }` and returns a boolean (or a promise of one). Returning `false` aborts the navigation — `$route` is not committed and no DOM swap happens.
+The optional third argument is a guard. It receives `{ path, params }` and returns a boolean (or a promise of one). Returning `false` aborts the navigation, `$route` is not committed and no DOM swap happens.
 
 ```js
 const requireAuth = async ({ path, params }) => {
@@ -48,7 +48,7 @@ Lego.route('/admin',          'admin-page',   requireAuth);
 Lego.route('/account/:tab',   'account-page', requireAuth);
 ```
 
-Middleware runs **before** `$route` is committed. If a faster navigation supersedes a slow one mid-await, the in-flight middleware's verdict is discarded — only the latest navigation wins.
+Middleware runs **before** `$route` is committed. If a faster navigation supersedes a slow one mid-await, the in-flight middleware's verdict is discarded, only the latest navigation wins.
 
 ## Outlets
 
@@ -58,7 +58,7 @@ A route renders into one or more **target** elements:
 - Links with `b-target="#sidebar #main"` route into the matching elements.
 - `Lego.globals.$go(path, ...targets).get()` accepts targets as positional args.
 
-If multiple targets are passed, the route block is appended to each — useful for synchronizing two panes from a single click.
+If multiple targets are passed, the route block is appended to each, useful for synchronizing two panes from a single click.
 
 ```html
 <nav>
@@ -84,7 +84,7 @@ After every successful match, `Lego.globals.$route` is updated:
 }
 ```
 
-`$route` is reactive — any block reading `$route.params.id` re-renders when navigation changes the value.
+`$route` is reactive, any block reading `$route.params.id` re-renders when navigation changes the value.
 
 ## Examples
 

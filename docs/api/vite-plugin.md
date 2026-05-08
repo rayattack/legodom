@@ -38,7 +38,7 @@ import registerBlocks from 'virtual:lego-blocks';
 registerBlocks();
 ```
 
-Internally the virtual module is a list of side-effect imports — pulling them in is what runs the `Lego.block(...)` calls. `registerBlocks()` is mostly a no-op kept around for ergonomics; you could equally well delete the call as long as you keep the import.
+Internally the virtual module is a list of side-effect imports, pulling them in is what runs the `Lego.block(...)` calls. `registerBlocks()` is mostly a no-op kept around for ergonomics; you could equally well delete the call as long as you keep the import.
 
 ## What `.lego` files compile to
 
@@ -80,7 +80,7 @@ if (import.meta.hot) {
 }
 ```
 
-Tag name is derived from the filename — `user-card.lego` → `user-card`, `UserCard.lego` → `user-card`, `user_card.lego` → `user-card`. Filenames must produce a name with a hyphen.
+Tag name is derived from the filename, `user-card.lego` → `user-card`, `UserCard.lego` → `user-card`, `user_card.lego` → `user-card`. Filenames must produce a name with a hyphen.
 
 ## TypeScript
 
@@ -106,11 +106,11 @@ The plugin emits HMR-aware code so that:
 - Editing a `.lego` file re-runs `Lego.block(...)`. The runtime catches the re-registration and refreshes every live instance (unsnap → snap), preserving DOM identity.
 - Adding or removing `.lego` files invalidates the virtual module so newly created blocks become available without a full reload.
 
-There's no special HMR boundary you have to declare — saving a `.lego` file is enough.
+There's no special HMR boundary you have to declare, saving a `.lego` file is enough.
 
 ## Block discovery
 
-`fast-glob` walks `blocksDir` for the `include` patterns. Only files imported (directly or via the virtual module) end up in the bundle — discovery just guarantees the glob is materialized.
+`fast-glob` walks `blocksDir` for the `include` patterns. Only files imported (directly or via the virtual module) end up in the bundle, discovery just guarantees the glob is materialized.
 
 If you have blocks under multiple directories, register them by importing from outside `blocksDir`:
 

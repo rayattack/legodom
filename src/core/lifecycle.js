@@ -1,4 +1,4 @@
-import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, privateData, snapState } from './registry.js';
+import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, globalKeySubscribers, privateData, snapState } from './registry.js';
 import { bProps } from '../directives/b-props.js';
 import { globals } from './globals.js';
 import { directives } from '../directives/index.js';
@@ -200,8 +200,12 @@ export const unsnap = (el) => {
   // 4. Remove from active blocks tracking
   activeBlocks.delete(el);
   globalSubscribers.delete(el);
+  // Audit fix #20: also drop el from each per-key subscriber set.
+  // Iterating the map is bounded by the number of distinct global keys
+  // ever subscribed (small in practice).
+  globalKeySubscribers.forEach(set => set.delete(el));
 
-  // 4. Break circular references
+  // 5. Break circular references
   if (el._studs) {
     // Clear element references in state object
     el._studs.$element = null;

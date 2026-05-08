@@ -364,7 +364,7 @@ this.todos = this.todos.filter(t => !t.done);
 2. Save as `todo.html`
 3. Open in a browser
 4. Add todos, mark as complete, filter, delete
-5. Refresh—todos persist!
+5. Refresh-todos persist!
 
 ## Extensions
 

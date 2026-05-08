@@ -66,9 +66,9 @@ LegoDOM supports **SSC (Server-Side Blocks)** - you can render blocks on the ser
 
 ## How small is it?
 
-The runtime is split across `src/core/`, `src/directives/`, `src/features/`, and `src/utils/` — each module focused, well-commented, and readable in one sitting. Zero runtime dependencies. The Vite plugin is the only optional `peerDependency` (`fast-glob` is the lone dev-time dependency for block discovery).
+The runtime is split across `src/core/`, `src/directives/`, `src/features/`, and `src/utils/`, each module focused, well-commented, and readable in one sitting. Zero runtime dependencies. The Vite plugin is the only optional `peerDependency` (`fast-glob` is the lone dev-time dependency for block discovery).
 
-Reading the source end-to-end is a feasible weekend project — and a great way to internalize how reactivity and surgical routing actually work.
+Reading the source end-to-end is a feasible weekend project, and a great way to internalize how reactivity and surgical routing actually work.
 
 ## What Makes It Different?
 
@@ -104,7 +104,7 @@ If you already know React or Svelte, here's how LegoDOM concepts map to what you
 | Redux / Svelte stores | **`$db`** (persistent) or **`Lego.globals`** (shared) | `$db('theme').default('light')` |
 
 ::: tip Key Difference
-In React and Svelte, you explicitly tell the framework about state changes (`setState`, `$:`, etc.). In LegoDOM, you just mutate your data directly — `this.count++` — and the framework detects the change automatically via ES6 Proxies.
+In React and Svelte, you explicitly tell the framework about state changes (`setState`, `$:`, etc.). In LegoDOM, you just mutate your data directly, `this.count++`, and the framework detects the change automatically via ES6 Proxies.
 :::
 
 ## Next Steps

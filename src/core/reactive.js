@@ -80,7 +80,10 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
               readers.forEach(b => data.dirtyBindings.add(b));
             }
           }
-          batcher.add(el);
+          // Pass the changed key as a second arg so the globals batcher
+          // can wake only key-specific subscribers (audit fix #20). The
+          // default globalBatcher.add(el) ignores the extra argument.
+          batcher.add(el, k);
           handleDbUpdate(t, k, v);
         }
       }

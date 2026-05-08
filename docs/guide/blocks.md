@@ -71,15 +71,15 @@ With Vite, use `.lego` files:
 
 ```html
 <!-- hello-world.lego -->
-<template>
-  <h1>Hello [[ name ]]!</h1>
-</template>
-
 <script>
 export default {
   name: 'Alice'
 }
 </script>
+
+<template>
+  <h1>Hello [[ name ]]!</h1>
+</template>
 ```
 
 ## Block State (Logic)
@@ -166,7 +166,7 @@ In the example above, the final state for the block will be:
 </template>
 ```
 
-`b-props` is **pure metadata** — it does not introduce a new data channel. Parents still pass values via `b-logic` exactly as before:
+`b-props` is **pure metadata**, it does not introduce a new data channel. Parents still pass values via `b-logic` exactly as before:
 
 ```html
 <user-card b-logic="{ user: currentUser, onSelect: pick }"></user-card>
@@ -178,12 +178,12 @@ What it gets you:
 - **Missing-prop warning**: declaring `{ user }` and not providing it (and no script default) warns at mount.
 - **Tooling boundary**: editor extensions and devtools can read `b-props` to know which keys are external-by-contract.
 
-Defaults still come from the script tier — if `title: 'User'` is in the script, `title` is satisfied even when the parent omits it.
+Defaults still come from the script tier, if `title: 'User'` is in the script, `title` is satisfied even when the parent omits it.
 
 **Syntax rules**
 
 - Identifiers only: `b-props="{ age, name, dateOfBirth }"`. Whitespace is tolerant; outer braces are optional.
-- No values, defaults, or renames. `b-props="{ name: 'Alice' }"` is a parse error — use `b-logic` for values.
+- No values, defaults, or renames. `b-props="{ name: 'Alice' }"` is a parse error, use `b-logic` for values.
 - Omitting `b-props` keeps existing behavior: any `b-logic` key merges in, no warnings.
 
 ## Block Communication

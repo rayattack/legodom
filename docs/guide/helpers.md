@@ -1,6 +1,6 @@
 # Helpers
 
-Every `$`-prefixed name available inside a block. Two scopes share most of these names — JS scope (`this.$x` inside methods, getters, lifecycle hooks) and template scope (`$x` inside `[[ … ]]`, `@event="…"`, and directive expressions).
+Every `$`-prefixed name available inside a block. Two scopes share most of these names, JS scope (`this.$x` inside methods, getters, lifecycle hooks) and template scope (`$x` inside `[[ … ]]`, `@event="…"`, and directive expressions).
 
 ## Scope cheatsheet
 
@@ -8,14 +8,14 @@ Every `$`-prefixed name available inside a block. Two scopes share most of these
 |---|---|---|
 | `$element` | ✓ host element | ✓ same |
 | `$vars` | ✓ DOM refs from `b-var` | ✓ same |
-| `$parent` | ✓ nearest ancestor block | — (`$ancestors('*')` instead) |
+| `$parent` | ✓ nearest ancestor block |, (`$ancestors('*')` instead) |
 | `$emit(name, detail?)` | ✓ | ✓ |
-| `$ancestors(tag)` | — | ✓ |
-| `$registry(tag)` | — | ✓ |
+| `$ancestors(tag)` |, | ✓ |
+| `$registry(tag)` |, | ✓ |
 | `$route`, `$go`, `$mount`, `$db`, `$params` | ✓ | ✓ |
-| `$event` / `event` | — | ✓ inside `@event` only |
+| `$event` / `event` |, | ✓ inside `@event` only |
 | `$error` | ✓ inside error blocks | ✓ inside error blocks |
-| `$initialState` | sets initial state when assigned to an element | — |
+| `$initialState` | sets initial state when assigned to an element |, |
 
 `global` (the reactive globals object) is available in template scope; in JS use `Lego.globals`.
 
@@ -58,7 +58,7 @@ mounted() {
 }
 ```
 
-For child-to-parent communication, prefer `$emit` — it doesn't require the child to know its parent.
+For child-to-parent communication, prefer `$emit`, it doesn't require the child to know its parent.
 
 ## $emit(name, detail?)
 
@@ -88,7 +88,7 @@ Find the nearest ancestor block with a given tag (case-insensitive). Returns the
 <p>App: [[ $ancestors('app-root').state.title ]]</p>
 ```
 
-The host's `state` property is the reactive proxy of the block — reading from it is fully reactive.
+The host's `state` property is the reactive proxy of the block, reading from it is fully reactive.
 
 ## $registry(tag)
 
@@ -122,7 +122,7 @@ See the [Routing guide](/guide/routing) for the full surface.
 
 ## $mount
 
-Imperative mount helper — alias of `Lego.mount`. Mount a tag into a target with optional initial state.
+Imperative mount helper, alias of `Lego.mount`. Mount a tag into a target with optional initial state.
 
 ```js
 openEditor(task) {
@@ -138,7 +138,7 @@ See the [Dynamic mounting tutorial](/tutorial/06-dynamic-mounting) and the [adva
 
 ## $db
 
-Persistence factory — alias of `Lego.db`. Used as a state-property descriptor (most common) or directly for `set` / `get` / `delete`.
+Persistence factory, alias of `Lego.db`. Used as a state-property descriptor (most common) or directly for `set` / `get` / `delete`.
 
 ```js
 {
@@ -158,7 +158,7 @@ See the [Persistence guide](/guide/persistence).
 
 ## $event
 
-Inside `@event` handlers, the DOM event is available as both `event` and `$event`. Both refer to the same object — `$event` is the recommended name when writing inline expressions to make the intent obvious.
+Inside `@event` handlers, the DOM event is available as both `event` and `$event`. Both refer to the same object, `$event` is the recommended name when writing inline expressions to make the intent obvious.
 
 ```html
 <input @input="search = $event.target.value">
@@ -188,7 +188,7 @@ See [Error Handling](/guide/error-handling).
 
 ## $initialState
 
-Not a runtime read — a **write hook**. Setting `el.$initialState = { … }` on an element before it connects to the DOM seeds those values into the block's state at mount time. The runtime uses this internally for `Lego.mount(tag, target, props)` and for error boundaries (which inject `$error`).
+Not a runtime read, a **write hook**. Setting `el.$initialState = { … }` on an element before it connects to the DOM seeds those values into the block's state at mount time. The runtime uses this internally for `Lego.mount(tag, target, props)` and for error boundaries (which inject `$error`).
 
 ```js
 const card = document.createElement('user-card');
@@ -196,13 +196,13 @@ card.$initialState = { user: currentUser };
 container.appendChild(card);
 ```
 
-If you're calling `$mount(tag, target, props)`, the props you pass become `$initialState` for you — there's rarely a reason to use this property directly.
+If you're calling `$mount(tag, target, props)`, the props you pass become `$initialState` for you. There's rarely a reason to use this property directly.
 
 ---
 
 ## Globals (template-scope only)
 
-Inside template expressions, **`global`** (singular) is the `Lego.globals` proxy. From JS, use `Lego.globals` directly — they are the same object.
+Inside template expressions, **`global`** (singular) is the `Lego.globals` proxy. From JS, use `Lego.globals` directly. They are the same object.
 
 ```html
 <p>Hi, [[ global.user.name ]]</p>
@@ -214,4 +214,4 @@ mounted() {
 }
 ```
 
-Reading `global.x` in a template tells the scanner to subscribe this block to globals — mutations on `Lego.globals` re-render only blocks that have read from it.
+Reading `global.x` in a template tells the scanner to subscribe this block to globals, mutations on `Lego.globals` re-render only blocks that have read from it.

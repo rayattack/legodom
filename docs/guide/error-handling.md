@@ -1,6 +1,6 @@
 # Error Handling
 
-LegoDOM provides hierarchical error boundaries that catch errors in rendering, lifecycle hooks, and event handlers — then display a fallback block instead of crashing the entire page.
+LegoDOM provides hierarchical error boundaries that catch errors in rendering, lifecycle hooks, and event handlers, then display a fallback block instead of crashing the entire page.
 
 ::: tip Coming from React or Svelte?
 | React | Svelte | LegoDOM |
@@ -9,7 +9,7 @@ LegoDOM provides hierarchical error boundaries that catch errors in rendering, l
 | `componentDidCatch()` | No built-in | Automatic hierarchical bubbling |
 | `error` state in boundary | Error in catch block | `$error` object injected into fallback |
 
-LegoDOM's approach is closer to React's Error Boundaries, but simpler — you just add a `b-error` attribute instead of writing a wrapper class.
+LegoDOM's approach is closer to React's Error Boundaries, but simpler: you just add a `b-error` attribute instead of writing a wrapper class.
 :::
 
 ## The `b-error` Attribute
@@ -114,19 +114,19 @@ app-shell (b-error="global-error")
 Key rules:
 
 - **Instance-level checked first**, then template-level at each ancestor.
-- **Crosses Shadow DOM boundaries** — errors bubble through shadow roots.
-- **Self-reference prevention** — a `b-error` whose target tag equals the crashing block's tag is skipped, so the boundary can't relaunch the same crashing block.
-- **Recursion limit** — each boundary tracks recovery depth and refuses to re-render its fallback more than 3 times deep. If the fallback itself is consistently broken, the runtime gives up and routes to `Lego.config.onError`.
+- **Crosses Shadow DOM boundaries**, errors bubble through shadow roots.
+- **Self-reference prevention**, a `b-error` whose target tag equals the crashing block's tag is skipped, so the boundary can't relaunch the same crashing block.
+- **Recursion limit**, each boundary tracks recovery depth and refuses to re-render its fallback more than 3 times deep. If the fallback itself is consistently broken, the runtime gives up and routes to `Lego.config.onError`.
 
 ## What Gets Caught
 
 Error boundaries catch errors in:
 
-- **Rendering** — template expression evaluation (`[[ badExpression ]]`) and directive execution.
-- **Lifecycle hooks** — `mounted()` and `unmounted()`.
-- **Event handlers** — `@click`, `@input`, and the rest.
+- **Rendering**, template expression evaluation (`[[ badExpression ]]`) and directive execution.
+- **Lifecycle hooks**, `mounted()` and `unmounted()`.
+- **Event handlers**, `@click`, `@input`, and the rest.
 
-Errors that escape the rendering pipeline (a `setTimeout` callback throwing, a fetch promise rejection, a manually attached `addEventListener` handler) are **not** caught by `b-error` — handle those yourself, typically by routing to `Lego.config.onError`.
+Errors that escape the rendering pipeline (a `setTimeout` callback throwing, a fetch promise rejection, a manually attached `addEventListener` handler) are **not** caught by `b-error`, handle those yourself, typically by routing to `Lego.config.onError`.
 
 ## Global error handler
 
@@ -139,7 +139,7 @@ Lego.config.onError = (err, type, el) => {
 };
 ```
 
-`Lego.init({ onError })` is **not** an option — set the handler on `Lego.config` directly, before or after `Lego.init`.
+`Lego.init({ onError })` is **not** an option, set the handler on `Lego.config` directly, before or after `Lego.init`.
 
 The `type` argument tells you where the error happened:
 
@@ -210,7 +210,7 @@ Here's a full error boundary setup:
 
 ```js
 Lego.config.onError = (err, type, el) => {
-  // Last resort — log errors that no boundary caught
+  // Last resort, log errors that no boundary caught
   console.error(`Uncaught [${type}] in <${el?.tagName?.toLowerCase()}>:`, err);
 };
 
@@ -241,17 +241,17 @@ This ensures no error goes completely unhandled.
 </user-settings>
 ```
 
-Different error fallbacks can show different recovery options — a payment error might show "Contact Support", while a settings error might show "Reset to Defaults".
+Different error fallbacks can show different recovery options, a payment error might show "Contact Support", while a settings error might show "Reset to Defaults".
 
 ### Don't Over-Isolate
 
 ```html
-<!-- Too granular — each card gets its own boundary -->
+<!-- Too granular, each card gets its own boundary -->
 <user-card b-error="card-error"></user-card>
 <user-card b-error="card-error"></user-card>
 <user-card b-error="card-error"></user-card>
 
-<!-- Better — one boundary for the container -->
+<!-- Better, one boundary for the container -->
 <card-list b-error="card-error">
   <user-card></user-card>
   <user-card></user-card>

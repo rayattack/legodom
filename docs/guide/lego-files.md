@@ -8,12 +8,12 @@ Start with our **[Step-by-Step Tutorial](/tutorial/)** to build a complete multi
 
 ## Where Does My Config Go?
 
-The #1 question developers ask: **"I have a `.lego` file – now where do I put my routes?"**
+The #1 question developers ask: **"I have a `.lego` file, now where do I put my routes?"**
 
 **Answer: Everything goes in your entry file (`app.js` or `main.js`):**
 
 ```javascript
-// src/app.js – The control center of your app
+// src/app.js, The control center of your app
 
 import { Lego } from 'lego-dom';
 import registerBlocks from 'virtual:lego-blocks'; // Plugin still uses this name for now
@@ -60,10 +60,6 @@ When your project grows, keeping blocks in separate files makes your codebase mo
 A `.lego` file contains three optional sections:
 
 ```html
-<template>
-  <!-- Your block markup -->
-</template>
-
 <script>
 // Your block logic
 export default {
@@ -71,16 +67,49 @@ export default {
 }
 </script>
 
+<template>
+  <!-- Your block markup -->
+</template>
+
 <style>
   /* Scoped styles */
 </style>
 ```
+
+### Section ordering
+
+The parser finds each section by tag name, so technically the order is up to you. The convention is `<script>` → `<template>` → `<style>`, on two grounds:
+
+- **`<template>` is the only section every block has.** `<script>` and `<style>` are both optional. Putting the constant in the middle keeps the file's visual rhythm stable as you add or remove the optional pieces.
+- **It reads top-to-bottom.** Data and methods come first, then the markup that uses them, then the cosmetic layer. By the time you hit `[[ remaining ]]` or `b-sync="task.done"` in the template, you've already read where those names come from.
+
+The scaffolded `my-app.lego` follows this order. Svelte's SFC convention is also `<script>` then markup then `<style>`. Stick to it unless you have a specific reason not to.
 
 ### Example Block
 
 Here's a complete example (`block-user-card.lego`):
 
 ```html
+<script>
+export default {
+  name: 'John Doe',
+  bio: 'Web developer & coffee enthusiast',
+  avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+  followers: 1234,
+  isFollowing: false,
+  
+  follow() {
+    if (this.isFollowing) {
+      this.followers--;
+      this.isFollowing = false;
+    } else {
+      this.followers++;
+      this.isFollowing = true;
+    }
+  }
+}
+</script>
+
 <template>
   <img class="avatar" src="[[ avatarUrl ]]" alt="[[ name ]]">
   <h2 class="name">[[ name ]]</h2>
@@ -127,26 +156,6 @@ Here's a complete example (`block-user-card.lego`):
     cursor: pointer;
   }
 </style>
-
-<script>
-export default {
-  name: 'John Doe',
-  bio: 'Web developer & coffee enthusiast',
-  avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-  followers: 1234,
-  isFollowing: false,
-  
-  follow() {
-    if (this.isFollowing) {
-      this.followers--;
-      this.isFollowing = false;
-    } else {
-      this.followers++;
-      this.isFollowing = true;
-    }
-  }
-}
-</script>
 ```
 
 ## Vite Plugin Setup
@@ -309,7 +318,7 @@ Scoped styles using Shadow DOM. Use `self` to target the block root:
 </style>
 ```
 
-Styles are automatically scoped to your block—they won't affect other blocks or global styles.
+Styles are automatically scoped to your block-they won't affect other blocks or global styles.
 
 ## Dynamic Styles
 
@@ -318,6 +327,17 @@ A powerful feature of LegoDOM Single File Blocks is that **interpolation works i
 You can use `[[ ]]` to bind CSS values directly to your block's state, props, or logic. Because styles are scoped (Shadow DOM), this is safe and won't leak.
 
 ```html
+<script>
+export default {
+  theme: 'light',
+  basePadding: 20,
+  
+  toggleTheme() {
+    this.theme = this.theme === 'light' ? 'dark' : 'light';
+  }
+}
+</script>
+
 <template>
   <button @click="toggleTheme()">Toggle Theme</button>
 </template>
@@ -333,17 +353,6 @@ You can use `[[ ]]` to bind CSS values directly to your block's state, props, or
     padding: var(--padding);
   }
 </style>
-
-<script>
-export default {
-  theme: 'light',
-  basePadding: 20,
-  
-  toggleTheme() {
-    this.theme = this.theme === 'light' ? 'dark' : 'light';
-  }
-}
-</script>
 ```
 
 ::: tip Why this rocks 🤘
@@ -357,7 +366,7 @@ For high-frequency updates (like drag-and-drop coordinates or 60fps animations),
 
 ## Hot Module Replacement
 
-During development, saving a `.lego` file does **not** trigger a page reload. The Vite plugin re-runs `Lego.block(...)` for the changed file — the runtime catches the re-registration and replays each live instance through `unsnap()` + `snap()` so the new template/script/style takes effect in place. Routes, globals, and `$db` state survive the swap.
+During development, saving a `.lego` file does **not** trigger a page reload. The Vite plugin re-runs `Lego.block(...)` for the changed file, the runtime catches the re-registration and replays each live instance through `unsnap()` + `snap()` so the new template/script/style takes effect in place. Routes, globals, and `$db` state survive the swap.
 
 Adding or deleting a `.lego` file invalidates the virtual module so newly created blocks become available without a full reload either.
 
@@ -422,6 +431,12 @@ blocks/
 
 ```html
 <!-- my-block.lego -->
+<script>
+export default {
+  title: 'Hello'
+}
+</script>
+
 <template>
   <h1>[[ title ]]</h1>
 </template>
@@ -429,10 +444,4 @@ blocks/
 <style>
   self { padding: 1rem; }
 </style>
-
-<script>
-export default {
-  title: 'Hello'
-}
-</script>
 ```

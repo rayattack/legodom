@@ -78,7 +78,7 @@ Called once when the block is first attached to the DOM.
 
 ## updated()
 
-Called after a render cycle settles, on a ~50 ms trailing debounce — so a burst of mutations from animations, websockets, or rapid input collapses into **one** hook call. It does **not** fire on initial mount, only on subsequent renders.
+Called after a render cycle settles, on a ~50 ms trailing debounce, so a burst of mutations from animations, websockets, or rapid input collapses into **one** hook call. It does **not** fire on initial mount, only on subsequent renders.
 
 ### Usage
 
@@ -138,7 +138,7 @@ Called after a render cycle settles, on a ~50 ms trailing debounce — so a burs
 ```
 
 ::: tip Already debounced
-The 50 ms trailing debounce means `updated()` won't run faster than ~20 Hz no matter how much state you mutate — but it still runs in the main thread, so don't put heavy work here. Move expensive work to a method called explicitly when something genuinely changes.
+The 50 ms trailing debounce means `updated()` won't run faster than ~20 Hz no matter how much state you mutate, but it still runs in the main thread, so don't put heavy work here. Move expensive work to a method called explicitly when something genuinely changes.
 :::
 
 ## unmounted()
@@ -387,7 +387,7 @@ If you start something in `mounted()`, stop it in `unmounted()`:
   }
 }
 
-// ✅ Good — call expensive work explicitly when its inputs actually change
+// ✅ Good, call expensive work explicitly when its inputs actually change
 {
   count: 0,
   set count(v) {

@@ -210,7 +210,7 @@ See the [Helper Utilities](/guide/helpers) guide for a full list of available in
 
 ### No Statements
 
-Can't use statements—only expressions:
+Can't use statements-only expressions:
 
 ```html
 <!-- ❌ Doesn't work -->

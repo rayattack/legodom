@@ -48,7 +48,7 @@ The IIFE pattern served well initially, but as the codebase grew past 1500 lines
 
 ## The Assembler Pattern
 
-`src/index.js` is the **entry point**. It doesn't contain business logic—it imports pieces and wires them together:
+`src/index.js` is the **entry point**. It doesn't contain business logic-it imports pieces and wires them together:
 
 ```js
 import { snap, unsnap } from './core/lifecycle.js';

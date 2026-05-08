@@ -1,11 +1,11 @@
-import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData, snapState, globalSubscribers } from './core/registry.js';
+import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData, snapState, globalSubscribers, globalKeySubscribers } from './core/registry.js';
 import { bProps } from './directives/b-props.js';
 import { snap, unsnap } from './core/lifecycle.js';
 import { render, bind } from './core/renderer.js';
 import { reactive } from './core/reactive.js';
 import { createBatcher, globalBatcher } from './core/batcher.js';
 import { setGlobals, globals as globalsTarget } from './core/globals.js';
-import { setStyleConfig, loadStylesheets, styleRegistry } from './core/stylesheets.js';
+import { setStyleConfig, loadStylesheets, styleRegistry, definitionCascades } from './core/stylesheets.js';
 import { config, mergeDescriptors } from './utils/helpers.js';
 import { defineLegoFile } from './core/parser.js';
 import { dbFactory, initCrossTabSync, handleDbUpdate } from './features/persistence.js';
@@ -29,10 +29,16 @@ const browserRoute = {
   body: null
 };
 
-// Custom batcher for globals: when a global mutates, batch all
-// components that reference globals in their templates.
+// Custom batcher for globals (audit fix #20): wake only the components
+// whose binding expressions actually read the mutated key, plus the
+// wildcard fallback set for subscribers that read globals through a
+// pattern we can't statically pin down (computed access, deep paths).
 const globalsBatcher = {
-  add() {
+  add(_el, key) {
+    if (key !== undefined) {
+      const keyed = globalKeySubscribers.get(key);
+      if (keyed) keyed.forEach(block => globalBatcher.add(block));
+    }
     globalSubscribers.forEach(block => globalBatcher.add(block));
   }
 };
@@ -66,6 +72,8 @@ const Lego = {
     registry[tagName] = t;
     legoFileLogic.set(tagName, logic);
     bProps.register(tagName, props);
+    if (cascade) definitionCascades.set(tagName, cascade.split(/\s+/).filter(Boolean));
+    else definitionCascades.delete(tagName);
 
     try {
       const sharedState = {};
@@ -95,6 +103,7 @@ const Lego = {
         legoFileLogic.delete(tagName);
         bProps.unregister(tagName);
         sharedStates.delete(tagName.toLowerCase());
+        definitionCascades.delete(tagName);
         return;
       }
     } else {
@@ -175,6 +184,8 @@ const Lego = {
       const tagName = t.getAttribute('b-id');
       registry[tagName] = t;
       bProps.register(tagName, t.getAttribute('b-props'));
+      const cascade = t.getAttribute('b-cascade') || '';
+      if (cascade) definitionCascades.set(tagName, cascade.split(/\s+/).filter(Boolean));
 
       if (!customElements.get(tagName)) {
         customElements.define(tagName, class extends HTMLElement {
@@ -433,9 +444,16 @@ const Lego = {
       // Observe with subtree to catch deep injections
       Lego._discoveryObserver.observe(root, { childList: true, subtree: true });
 
-      // Initial scan
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-      while (walker.nextNode()) discover(walker.currentNode);
+      // Audit fix #18: `discover` already recurses into children (it has
+      // to, since the MutationObserver only yields the root of each
+      // inserted subtree). The earlier TreeWalker pass plus the manual
+      // recursion meant every descendant was processed twice on init —
+      // dropping the walker leaves a single pass.
+      let child = root.firstElementChild;
+      while (child) {
+        discover(child);
+        child = child.nextElementSibling;
+      }
     }
 
     if (options.studio) {

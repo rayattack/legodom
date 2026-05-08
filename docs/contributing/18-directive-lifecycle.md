@@ -91,7 +91,7 @@ export const render = (el) => {
 }
 ```
 
-**Key Concept:** `execute` must be fast and idempotent. It runs frequently. This is why you check `if (binding.observer) return;` — to ensure you only create expensive resources once.
+**Key Concept:** `execute` must be fast and idempotent. It runs frequently. This is why you check `if (binding.observer) return;`, to ensure you only create expensive resources once.
 
 ---
 

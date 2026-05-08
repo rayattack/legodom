@@ -1,15 +1,15 @@
 # 3. Routing & layouts
 
-The point of LegoDOM's router isn't to "match URLs". It's to swap **only the parts of the page that need to change** — leaving the shell, sidebar, scroll position, and any in-progress form alone.
+Most routers swap the whole page when the URL changes. LegoDOM's router doesn't insist on that. You decide which parts follow the URL and which parts persist. Once you see it work, it's hard to want to go back.
 
-By the end of this chapter you'll have a dashboard layout where the sidebar never reloads, even as the content swaps between three categories.
+By the end of this chapter you'll have a dashboard with a sidebar that never reloads, even as the content area swaps between three categories.
 
 ## The shape we're building
 
 ```
 ┌──────────────────────────────────────────────┐
 │                                              │
-│  app-shell  (mounts once — never reloads)   │
+│  app-shell  (mounts once, never reloads)    │
 │  ┌──────────┐  ┌──────────────────────────┐ │
 │  │ sidebar  │  │ #content                  │ │
 │  │          │  │                           │ │
@@ -20,11 +20,19 @@ By the end of this chapter you'll have a dashboard layout where the sidebar neve
 └──────────────────────────────────────────────┘
 ```
 
+The sidebar is part of the shell. The content area is bound to the URL. Three URLs, three blocks, one shell.
+
 ## Build the shell
 
 Create `src/app-shell.lego`:
 
 ```html
+<script>
+export default {
+  mounted() { console.log('shell mounted'); }
+}
+</script>
+
 <template>
   <aside class="sidebar">
     <h2>Tracker</h2>
@@ -53,29 +61,33 @@ Create `src/app-shell.lego`:
   nav a:hover { background: rgba(255,255,255,.1); color: #fff; }
   main { flex: 1; padding: 2rem; overflow-y: auto; background: #f8f9fa; }
 </style>
-
-<script>
-export default {
-  mounted() { console.log('shell mounted'); }
-}
-</script>
 ```
 
-The crucial element:
+The crucial element is this:
 
 ```html
 <lego-router id="content"></lego-router>
 ```
 
-`<lego-router>` is the default outlet — when a link uses `b-link` (or you call `$go(path).get()` with no targets), the runtime renders the matched route's block into every `<lego-router>` it finds. The `id="content"` is optional but useful: it lets you also address this same outlet surgically (`b-target="#content"`) if you ever need to.
+`<lego-router>` is the default outlet. When a link uses `b-link` (or you call `$go(path).get()` with no targets), the runtime renders the matched route's block into every `<lego-router>` it finds in the document. The `id="content"` is optional, but useful: it lets you also address this same outlet surgically later (`b-target="#content"`) if a different code path needs to.
 
-You can have many `<lego-router>` elements; they all get swapped on default navigation. Or you can have none and route every link with explicit `b-target="#selector"` — but you'd then need to seed the cold-entry render yourself, since the initial route match defaults to `lego-router`.
+There's nothing magical about the tag name. It's literally a `querySelectorAll('lego-router')` under the hood. You can have many of them, or none and route every link with `b-target="#selector"` instead. We'll come back to that.
 
 ## Two category blocks
 
 `src/work-tasks.lego`:
 
 ```html
+<script>
+export default {
+  tasks: [
+    { title: 'Finish quarterly report', done: false },
+    { title: 'Review PRs',               done: true  },
+    { title: 'Update roadmap',           done: false }
+  ]
+}
+</script>
+
 <template>
   <h1>Work</h1>
   <ul>
@@ -95,19 +107,9 @@ You can have many `<lego-router>` elements; they all get swapped on default navi
   label { display: flex; gap: .75rem; align-items: center; cursor: pointer; }
   .done { text-decoration: line-through; opacity: .5; }
 </style>
-
-<script>
-export default {
-  tasks: [
-    { title: 'Finish quarterly report', done: false },
-    { title: 'Review PRs',               done: true  },
-    { title: 'Update roadmap',           done: false }
-  ]
-}
-</script>
 ```
 
-Copy that file to `src/personal-tasks.lego` with personal tasks (groceries, dentist, whatever — the markup is identical).
+Copy that file to `src/personal-tasks.lego` with personal tasks (groceries, dentist, whatever). The markup is identical.
 
 ## Wire up the routes
 
@@ -136,39 +138,33 @@ Update `index.html`:
 </body>
 ```
 
-A note on the architecture: there's nothing magical about `<lego-router>` — it's literally `document.querySelectorAll('lego-router')` under the hood. Three things are true at once:
+## Click around
 
-- A `<lego-router>` element is the **default outlet** — unaddressed navigation lands there.
-- An `id` on it is optional, but lets surgical navigation (`b-target="#content"`) target the same element.
-- Cold entry — visiting `/work` directly — is a default navigation. So you need *either* a `<lego-router>` for cold entry to render into, *or* logic in your shell's `mounted()` to call `$go(this.$route.url, '#somewhere').get(false)`.
-
-## Try it
-
-`npm run dev` and click between the three sidebar links. Watch:
+Click between the three sidebar links. Three things happen:
 
 1. The URL changes (`/`, `/work`, `/personal`).
 2. The content area swaps to the matched block.
-3. The shell never re-renders. Add `console.log('shell mounted')` to `app-shell`'s `mounted()` — it fires exactly once.
+3. **The shell never re-renders.** Open the console and watch `shell mounted` fire exactly once, no matter how many times you click.
 
-That third point is the difference between this and every framework you've used before. Click around as much as you want — the shell, the scroll position, the focus state on the sidebar — none of it moves.
+That third point is the difference between this and most routing setups you've used. The sidebar's scroll position, any focus state, any in-progress form input: none of it moves. The shell is a single mount that lives for the lifetime of the page. Only the content swaps.
 
 ## Programmatic navigation
 
-Inside any block, `this.$go(path, ...targets).get()` performs the same kind of navigation:
+Inside any block, `this.$go(path, ...targets).get()` does the same thing as a `b-link` click:
 
 ```js
 {
   goWork() {
-    this.$go('/work', '#content').get();
+    this.$go('/work').get();
   }
 }
 ```
 
-`get(false)` performs the swap **without** updating the URL — useful for tab-like UIs that you don't want to bookmark.
+`get(false)` performs the swap **without** updating the URL, useful for tab-like UIs you don't want to bookmark. The verb (`get`, `post`, `put`, `patch`, `delete`) only changes what gets stored in `history.state` for back-button replay; the route table still resolves by path.
 
 ## Dynamic routes
 
-Capture URL segments with `:name`:
+URL segments can be captured:
 
 ```js
 Lego.route('/task/:id', 'task-detail');
@@ -177,19 +173,18 @@ Lego.route('/task/:id', 'task-detail');
 ```js
 // task-detail.lego
 mounted() {
-  const id = this.$route.params.id;   // string
+  const id = this.$route.params.id;
   this.task = this.allTasks.find(t => String(t.id) === id);
 }
 ```
 
-`$route` is reactive — any block reading `$route.params.id` re-renders automatically when navigation changes the value.
+`$route` is reactive. Any block reading `[[ $route.params.id ]]` re-renders automatically when navigation changes the value, so a single `<task-detail>` block can survive across `/task/1` → `/task/2` without unmounting. (It will still re-render the bindings that read the param.)
 
-## Building something complex: the persistent shell pattern
+## Building something complex: the persistent shell
 
 When the app gets bigger you'll typically want one main stage **plus** a few surgical regions that update independently. The architecture maps directly to three different selectors:
 
 ```html
-<!-- app-shell.lego -->
 <aside id="left">
   <file-tree></file-tree>     <!-- never reloads -->
 </aside>
@@ -199,8 +194,6 @@ When the app gets bigger you'll typically want one main stage **plus** a few sur
 <aside id="right"></aside>     <!-- contextual tools, surgical -->
 ```
 
-Then:
-
 ```html
 <!-- main navigation: uses the default outlet (which is also #main) -->
 <a href="/dashboard" b-link>Dashboard</a>
@@ -209,21 +202,14 @@ Then:
 <!-- contextual tools: surgical, no URL change -->
 <a href="/tools/inspector" b-target="#right" b-link="false">Inspector</a>
 
-<!-- two outlets at once: useful for master/detail layouts -->
+<!-- two outlets at once: a master/detail layout -->
 <a href="/orders/42" b-target="#main #right">Order 42</a>
 ```
 
-```js
-// In a method, the same options:
-this.$go('/dashboard').get();                      // default → #main (lego-router)
-this.$go('/tools/inspector', '#right').get(false); // surgical, silent
-this.$go('/orders/42', '#main', '#right').get();   // multiple targets
-```
+Three rules of thumb when you build a real shell:
 
-Three rules of thumb:
-
-1. **One `<lego-router>` for the URL-bound stage.** Cold entry needs it (the initial `_matchRoute` call defaults to `lego-router`). If you don't have one, you must seed the cold-entry render from `mounted()`.
-2. **`b-target` for anything not URL-driven.** Side panels, tool panes, modals. Pair with `b-link="false"` so the URL stays clean.
+1. **One `<lego-router>` for the URL-bound stage.** Cold entry needs it (the initial `_matchRoute` call defaults to `lego-router`). If you don't have one, you'd have to seed the cold-entry render yourself from `mounted()`.
+2. **`b-target` for anything not URL-driven.** Side panels, tool panes, modals. Pair with `b-link="false"` to keep the URL clean.
 3. **Don't make routes conditional on selectors.** `Lego.route('/x', 'foo-page')` registers a path → block mapping. The selector lives on the link or the `$go()` call. The same route can render into different outlets from different callsites.
 
 ## Quick reference
@@ -237,5 +223,7 @@ Three rules of thumb:
 | Multiple targets at once | `<a href="/x" b-target="#a #b">` |
 | Programmatic equivalent | `this.$go('/x', '#a', '#b').get(/* push? */)` |
 | Read URL params / query | `this.$route.params.id`, `this.$route.query.tab` |
+
+That's routing. The hard part isn't the API; it's getting your head around "the route doesn't own the page, only the part you point it at". Once that lands, the rest is composition.
 
 [Next: Persistence & forms →](./04-multi-page-app)

@@ -1,25 +1,25 @@
 # Persistence (`$db`)
 
-`$db` treats `localStorage` as first-class reactive state. Declare a `$db` descriptor on a state property and the runtime hydrates from disk on mount, writes back on every mutation, and broadcasts changes to other tabs — for free.
+`$db` treats `localStorage` as first-class reactive state. Declare a `$db` descriptor on a state property and the runtime hydrates from disk on mount, writes back on every mutation, and broadcasts changes to other tabs, for free.
 
 ## Quick example
 
 ```html
 <!-- user-prefs.lego -->
-<template>
-  <h1>Theme: [[ theme ]]</h1>
-  <input type="range" b-sync="volume">
-</template>
-
 <script>
 export default {
   theme:  $db('prefs.theme').default('light'),
   volume: $db('prefs.volume').default(50).debounce(300)
 }
 </script>
+
+<template>
+  <h1>Theme: [[ theme ]]</h1>
+  <input type="range" b-sync="volume">
+</template>
 ```
 
-Drag the slider — the in-memory value updates instantly. The localStorage write is debounced 300 ms, so dragging won't hammer disk. Open the same URL in another tab — both tabs sync.
+Drag the slider, the in-memory value updates instantly. The localStorage write is debounced 300 ms, so dragging won't hammer disk. Open the same URL in another tab, both tabs sync.
 
 ## How it works
 
@@ -94,7 +94,7 @@ Bindings to the same key in different tabs stay in sync via the browser's `stora
 2. Change a `$db` value in tab A.
 3. Tab B re-renders with the new value.
 
-A single `storage` listener handles every key — there's no per-binding overhead.
+A single `storage` listener handles every key. There's no per-binding overhead.
 
 ## Quota and eviction
 
@@ -104,7 +104,7 @@ Browsers cap `localStorage` (typically ~5 MB). When a write exceeds the quota:
 2. It evicts the **oldest** keys this app wrote (FIFO) until 2× the needed space is free.
 3. The write is retried.
 
-If retry still fails, `Lego.config.onError` fires with `type: 'quota-critical'`. Eviction never touches keys this app didn't write — third-party `localStorage` usage is left alone.
+If retry still fails, `Lego.config.onError` fires with `type: 'quota-critical'`. Eviction never touches keys this app didn't write, third-party `localStorage` usage is left alone.
 
 ## Patterns
 
@@ -149,7 +149,7 @@ If retry still fails, `Lego.config.onError` fires with `type: 'quota-critical'`.
 }
 ```
 
-The getter reads `this.user` — the runtime tracks that read, so any cross-tab update of the user re-runs the binding that displayed `displayName`.
+The getter reads `this.user`, the runtime tracks that read, so any cross-tab update of the user re-runs the binding that displayed `displayName`.
 
 ## Use in `.lego` script vs `b-logic`
 

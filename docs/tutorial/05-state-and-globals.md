@@ -1,21 +1,25 @@
 # 5. State & guards
 
-Your tracker works, persists, and routes surgically. Now add the cross-cutting glue: global state for the current user, an auth-guarded admin route, and an error boundary so a single bad block doesn't take the page down.
+The tracker works, persists, and routes surgically. What's missing is the cross-cutting glue: a logged-in user that every block can see, an admin route that bounces unauthorized visitors, and an error boundary so a single bad block doesn't take the page down.
 
-## `Lego.globals` — shared, reactive
+We'll add all of it in this chapter. About 80 lines of code total.
 
-`Lego.globals` is a reactive object visible to every block. Read it from templates as `global.x`. Write it from anywhere — every block that reads it re-renders.
+## `Lego.globals`: shared, reactive state
 
-In `src/app.js`:
+Reactivity in LegoDOM is per-block by default. A `<task-list>` and a `<work-tasks>` each have their own state. Mutating one doesn't ripple to the other, which is what you want most of the time.
+
+When you do want cross-block reactivity, `Lego.globals` is the door. It's a reactive object visible to every block, exposed in template scope as `global`. Mutate any property and every block reading it re-renders.
+
+In `src/app.js`, seed it from `localStorage` so the user survives refresh:
 
 ```js
-Lego.globals.user = $db('user').get();   // null on first load
+Lego.globals.user = Lego.db('user').get();   // null on first load
 ```
 
-That's it. `user` is now globally available, automatically reactive, and seeded from `localStorage` (so it survives refresh).
+That's the whole setup. `user` is now globally available, automatically reactive, and persisted.
 
 ::: tip Why `global` in templates, `Lego.globals` in JS?
-The template scope intentionally exposes `global` (singular) because it reads better in attributes. They're the same object.
+The template scope intentionally exposes `global` (singular) because it reads better in HTML attributes. They're the same object. Pick whichever reads cleanest at the call site.
 :::
 
 ## A login form
@@ -23,6 +27,20 @@ The template scope intentionally exposes `global` (singular) because it reads be
 Create `src/login-page.lego`:
 
 ```html
+<script>
+export default {
+  name: '',
+  error: '',
+  login() {
+    if (!this.name) return;
+    const user = { name: this.name, role: this.name === 'admin' ? 'admin' : 'member' };
+    Lego.globals.user = user;
+    Lego.db('user').set(user);
+    this.$go('/').get();
+  }
+}
+</script>
+
 <template>
   <h1>Sign in</h1>
   <form b-action @submit="login()">
@@ -46,26 +64,18 @@ Create `src/login-page.lego`:
   }
   .error { color: #c33; }
 </style>
-
-<script>
-export default {
-  name: '',
-  error: '',
-  login() {
-    if (!this.name) return;
-    const user = { name: this.name, role: this.name === 'admin' ? 'admin' : 'member' };
-    Lego.globals.user = user;
-    Lego.db('user').set(user);
-    this.$go('/').get();
-  }
-}
-</script>
 ```
 
-Two things to note:
+Two things worth pointing out:
 
-- `Lego.db('user').set(user)` writes the user to localStorage immediately. We could have used a `$db` descriptor on a state property instead — both work; this is the imperative style.
-- `this.$go('/').get()` is the in-block alias for `Lego.globals.$go(...).get()`.
+- `Lego.db('user').set(user)` writes to `localStorage` immediately (instead of declaring `user: $db(...)` on this block's state). Both styles work; the imperative style is clearer when the lifecycle isn't tied to the block itself.
+- `this.$go('/').get()` is the in-block alias for `Lego.globals.$go(...).get()`. Either works.
+
+Wire up the route in `src/app.js`:
+
+```js
+Lego.route('/login', 'login-page');
+```
 
 ## Show the user in the shell
 
@@ -91,25 +101,15 @@ logout() {
 }
 ```
 
-The `b-show="global.user"` lines are reactive on the global. Every block reading `global.user` is re-rendered when you set it — so the moment login succeeds, the sidebar updates without manual coordination.
+Sign in as anyone. The sidebar updates instantly: greeting, log-out link, the works. No event bus, no callback prop. The shell read `global.user` in its template, so the runtime registered it as a subscriber. When you set `Lego.globals.user`, the shell re-rendered. That's it.
 
-Wire up the route in `src/app.js`:
-
-```js
-Lego.route('/login', 'login-page');
-```
+This is the difference between a global store and global *reactive* state: the latter doesn't need any extra wiring at the call site. You write to a property; everything that reads it updates.
 
 ## An auth-guarded admin route
 
 Create `src/admin-page.lego`:
 
 ```html
-<template>
-  <h1>Admin</h1>
-  <p>Logged in as [[ global.user.name ]] (role: [[ global.user.role ]]).</p>
-  <button @click="resetTasks()">Reset all tasks</button>
-</template>
-
 <script>
 export default {
   resetTasks() {
@@ -118,6 +118,12 @@ export default {
   }
 }
 </script>
+
+<template>
+  <h1>Admin</h1>
+  <p>Logged in as [[ global.user.name ]] (role: [[ global.user.role ]]).</p>
+  <button @click="resetTasks()">Reset all tasks</button>
+</template>
 ```
 
 Now register the route **with a middleware**:
@@ -139,35 +145,43 @@ const requireAdmin = ({ path, params }) => {
 Lego.route('/admin', 'admin-page', requireAdmin);
 ```
 
-Then add an "Admin" link to the shell sidebar:
+Add an "Admin" link to the shell sidebar, but only when an admin is signed in:
 
 ```html
-<a href="/admin" b-target="#content" b-show="global.user?.role === 'admin'">
-  Admin
-</a>
+<a href="/admin" b-link b-show="global.user?.role === 'admin'">Admin</a>
 ```
 
-Now sign in as `admin` (any other name is a non-admin member). Notice:
+Sign in as `admin`. The link appears. Click it. You see the admin page. Sign in as `alice` instead. The link is gone, and if you manually navigate to `/admin`, the middleware bounces you back to `/`. Sign out entirely and `/admin` redirects to `/login`.
 
-- The `Admin` link only renders for admins (`b-show` reacts to globals).
-- A non-admin who manually navigates to `/admin` is bounced back home.
-- A logged-out user visiting `/admin` lands on `/login`.
+Three layers of defense, all from a few lines:
 
-## Middleware contract
+- The link is hidden from non-admins (UX).
+- The middleware blocks the route from rendering (correctness).
+- The middleware can redirect before returning false (graceful failure).
 
-Middleware receives `{ path, params }`. Returning:
+### Middleware contract
 
-- `true` — allow navigation (route renders).
-- `false` — abort. `$route` is not committed; nothing in the DOM swaps.
-- A promise — the route waits for it. If a faster navigation arrives mid-await, the in-flight verdict is discarded.
+The function receives `{ path, params }`. Return:
 
-The middleware function can `$go` somewhere else before returning false (as we do above) — the next navigation cleanly supersedes the aborted one.
+- `true`, allow navigation.
+- `false`, abort. `$route` doesn't commit; nothing in the DOM swaps.
+- A promise of either, the route waits for it. If a faster navigation arrives mid-await, the in-flight verdict is silently discarded.
+
+That last point matters in practice. A user clicking around quickly while a permissions check resolves doesn't end up in a half-rendered state. The latest navigation always wins.
 
 ## Error boundaries
 
-The last piece: don't let a single block crash the page. Create `src/error-card.lego`:
+The last piece. You want to make sure a single bad block can't take the whole page down.
+
+Create `src/error-card.lego`:
 
 ```html
+<script>
+export default {
+  retry() { location.reload(); }
+}
+</script>
+
 <template>
   <div class="card">
     <h3>Something went wrong</h3>
@@ -187,12 +201,6 @@ The last piece: don't let a single block crash the page. Create `src/error-card.
   }
   pre { white-space: pre-wrap; }
 </style>
-
-<script>
-export default {
-  retry() { location.reload(); }
-}
-</script>
 ```
 
 Then attach the boundary on the shell template:
@@ -203,20 +211,20 @@ Then attach the boundary on the shell template:
 </template>
 ```
 
-Throw an error from any descendant — say, a typo in `task-list.lego`'s `mounted()` — and the runtime catches it, renders `<error-card>` in place of the crashing block, and exposes `$error: { message, stack, component }` to the fallback.
+Throw an error from any descendant block (a typo in `task-list.lego`'s `mounted()` works for testing) and the runtime catches it, renders `<error-card>` in place of the crashing block, and exposes `$error: { message, stack, component }` to the fallback.
 
-The boundary cascades: a block without its own `b-error` bubbles up to its nearest ancestor that has one. There's also a recursion limit (3 deep) so an error boundary that itself crashes won't loop.
+The boundary cascades: a block without its own `b-error` bubbles up to its nearest ancestor that has one. There's also a recursion limit (3 deep) so an error block that itself crashes doesn't loop forever.
 
 ## Where you are
 
 You now have:
 
 - A persistent shell with surgical routing.
-- Tasks stored in `localStorage` with cross-tab sync.
+- Tasks stored in `localStorage`, synced across tabs.
 - A logged-in user surfaced via `Lego.globals`.
 - Route guards.
 - Error boundaries.
 
-That's what most "production frameworks" call a stack. You did it in five files and ~150 lines of script logic.
+That's what most "production frameworks" call a stack. You did it in five files and roughly 150 lines of script. No state-management library, no client-side router npm package, no error-boundary HOC, no localStorage abstraction. Just the runtime and your code.
 
 [Next: Dynamic mounting →](./06-dynamic-mounting)

@@ -1,6 +1,6 @@
 # Paint Me HTML: The Render Engine
 
-In Topic 11, we mapped out where the dynamic "holes" in your HTML are. Now, we look at the engine that actually fills them with data. The `render()` function is the most frequently called piece of code in LegoDOM—it is the bridge between JavaScript state and the pixels on the screen.
+In Topic 11, we mapped out where the dynamic "holes" in your HTML are. Now, we look at the engine that actually fills them with data. The `render()` function is the most frequently called piece of code in LegoDOM-it is the bridge between JavaScript state and the pixels on the screen.
 
 ## The Rendering Engine
 
@@ -174,7 +174,7 @@ export const directives = {
 };
 ```
 
-This makes the system highly extensible—you can add new directives without modifying the core renderer.
+This makes the system highly extensible-you can add new directives without modifying the core renderer.
 
 ## Surgical Execution
 

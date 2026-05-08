@@ -144,7 +144,7 @@ const shadow = el.attachShadow({ mode: 'open' });
 
 #### What about `<slot>`?
 
-Because we use native Shadow DOM, `<slot>` just works. When `snap` attaches the shadow root, any children *already* inside the custom element (the "Light DOM") are automatically projected into the `<slot>` tags defined in your template. We don't need to write any code for this—the browser does it for us.
+Because we use native Shadow DOM, `<slot>` just works. When `snap` attaches the shadow root, any children *already* inside the custom element (the "Light DOM") are automatically projected into the `<slot>` tags defined in your template. We don't need to write any code for this-the browser does it for us.
 
 ### 3. Stylesheet Application
 

@@ -1,20 +1,12 @@
 # 4. Persistence & forms
 
-Right now your tasks vanish on refresh. Let's fix that with `$db` — LegoDOM's reactive persistence layer. Tasks will survive refresh, sync across browser tabs, and require zero glue code.
+Right now your tasks vanish on refresh. That's about to be a one-line fix.
 
-## What `$db` is
-
-`$db('key')` returns a **descriptor**. When you assign it to a state property, the runtime:
-
-1. Hydrates the property from `localStorage[key]` on mount (with the default if nothing is stored).
-2. Wraps writes in a debounced `localStorage.setItem`.
-3. Subscribes to the `storage` event so changes from other tabs propagate live.
-
-It's the only persistence API. There's no separate "store", no `useState`, no `useReducer` to learn.
+LegoDOM's persistence layer is called `$db`. It treats `localStorage` as first-class reactive state. Declare a `$db` descriptor on a state property, and the runtime hydrates from disk on mount, writes back on every mutation, and broadcasts changes to other tabs. No imports. No glue. No setup.
 
 ## Persist the task list
 
-Open `src/task-list.lego` and change the `tasks` line:
+Open `src/task-list.lego` and change one line:
 
 ```js
 // before
@@ -32,35 +24,36 @@ tasks: $db('tasks.all').default([
 ]),
 ```
 
-That's it. No imports, no init code — `$db` is exposed in `.lego` script scope automatically.
+Save. Refresh the page, add a task, refresh again. Your task is still there.
 
-Refresh the page, add a task, refresh again. Your task is still there. Open the same URL in a second tab — it shows the same list. Check a box in one tab and watch the other tab update.
+Now open the same URL in a second tab. Same list. Check a box in one tab and watch the other tab update in real time, with no code from you.
 
-## How the magic happens
+That's `$db`. The descriptor knows it's persisted; the proxy hydrates from `localStorage` on mount; mutations flow through the proxy's set trap and write back; cross-tab updates ride the browser's `storage` event. You did one line of work and got durability and synchronization.
+
+## What just happened
 
 When the proxy assigns the descriptor:
 
-1. The runtime spots the `__type: 'lego-db'` marker.
-2. It reads `localStorage['tasks.all']`. If present, it parses the JSON; if absent, it uses the default.
-3. It registers the property under the key `'tasks.all'` in a binding map.
-4. From then on, any mutation on the property flows through the proxy's `set` trap, which calls `scheduleSave`, which writes back to `localStorage` (debounced if you set `.debounce(ms)`).
-5. A single `storage` event listener fans incoming cross-tab updates back into every binding.
+1. It reads `localStorage['tasks.all']`. If present, parses the JSON; if absent, uses the default.
+2. Replaces the descriptor with the resolved value, so the property behaves like any other reactive property from then on.
+3. Records the binding so future writes flow through `scheduleSave` (with optional debounce).
+4. Subscribes to a single shared `storage` listener for cross-tab sync.
 
-A re-entrancy flag prevents the obvious feedback loop: incoming cross-tab values would otherwise trigger another write, which would fire another storage event in the originating tab.
+A re-entrancy guard prevents the obvious feedback loop: incoming cross-tab values would otherwise trigger a write, which would fire another storage event in the originating tab, which would trigger another update, and so on.
 
-## Debounce noisy writes
+## Debouncing noisy writes
 
-For high-frequency state like a draft, debounce so you're not pinging `localStorage` on every keystroke:
+For state that mutates rapidly (a draft, a search input, a slider), debounce so you're not pinging `localStorage` on every keystroke:
 
 ```js
 draft: $db('tasks.draft').default('').debounce(300),
 ```
 
-The first write schedules a save in 300 ms. Further writes within that window reset the timer. The user pauses → the save fires.
+The first write schedules a save in 300 ms. Subsequent writes within the window push the deadline back. The user pauses, the save fires.
 
-## Form patterns you actually need
+## Form patterns worth naming
 
-While we're here, two patterns the tutorial code already touched but didn't name:
+You've already used `b-sync`. A few modifiers and conventions are worth pinning down before you start collecting them ad hoc.
 
 ### `b-sync` modifiers
 
@@ -70,6 +63,8 @@ While we're here, two patterns the tutorial code already touched but didn't name
 <input type="number" b-sync.number="age">    <!-- coerce to Number on write -->
 <input b-sync.lazy.number="quantity">        <!-- modifiers stack -->
 ```
+
+`.lazy` is the one you'll reach for most. Search inputs that hit the network on every keystroke are worse than search inputs that wait for the user to pause.
 
 ### Submit handling
 
@@ -82,13 +77,17 @@ A `<form b-action>` automatically calls `event.preventDefault()` for you. So thi
 </form>
 ```
 
-### Live search
+You can also do `<form @submit.prevent="add()">` (which is what the original task list used). Pick whichever reads better at the call site; both work.
 
-Add a search box to the top of `task-list.lego`:
+## Live search
+
+Let's actually build something with these. Add a search box to `task-list.lego`:
 
 ```html
 <input b-sync.trim="filter" placeholder="Filter…">
 ```
+
+Then in the script:
 
 ```js
 filter: $db('tasks.filter').default(''),
@@ -102,26 +101,30 @@ get visibleTasks() {
 
 …and replace the `b-for="task in tasks"` with `b-for="task in visibleTasks"`.
 
-The filter persists across refresh because it's a `$db` value. Nothing else changes — `visibleTasks` is a getter, the runtime reads `this.tasks` and `this.filter` while it executes, and dependency tracking re-runs only that binding when either one updates.
+Type in the search box. The list filters as you type. Refresh the page. Your search query is still there. Open another tab. Same query, same filtered list.
+
+This is the part that should feel weird if you're coming from a framework where filtered lists, persistent state, and cross-tab sync are three separate libraries. Here it's three properties: a filter, a `$db` descriptor, and a getter. The runtime did the rest.
 
 ## Quota and eviction
 
-`localStorage` has a hard quota (typically ~5 MB). When a write exceeds it:
+`localStorage` has a hard quota (browsers cap it around 5 MB). When a write exceeds it:
 
 1. The runtime catches the `QuotaExceededError`.
 2. Evicts the oldest tracked keys (FIFO) to free 2× the space the new value needs.
 3. Retries the write.
 
-If eviction can't free enough room, `Lego.config.onError` is invoked with `type: 'quota-critical'` and the value is dropped. Tracking is bounded to keys this app wrote — third-party `localStorage` usage isn't touched.
+If eviction can't free enough room, `Lego.config.onError` is invoked with `type: 'quota-critical'` and the value is dropped. Eviction only touches keys this app wrote; third-party `localStorage` usage is left alone.
 
 ## Direct `$db` from JS
 
-Anywhere you have access to `Lego` (or via `this.$db` inside a block), you can read/write directly:
+Anywhere you have access to `Lego` (or via `$db` inside a block), you can read and write directly:
 
 ```js
 const tasks = Lego.db('tasks.all').get();   // synchronous read
 Lego.db('tasks.all').set(tasks);            // immediate write
 Lego.db('tasks.all').delete();              // remove + notify bindings
 ```
+
+You'll use these in the next chapter when we add login state.
 
 [Next: State & guards →](./05-state-and-globals)

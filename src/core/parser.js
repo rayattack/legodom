@@ -3,6 +3,7 @@ import { config, deriveBlockName } from '../utils/helpers.js';
 import { parseLego } from '../utils/parser-utils.js';
 import { snap } from './lifecycle.js';
 import { bProps } from '../directives/b-props.js';
+import { definitionCascades } from './stylesheets.js';
 
 /**
  * Define a Lego block from a .lego file
@@ -37,7 +38,10 @@ export const defineLegoFile = (Lego, content, filename = 'block.lego') => {
   registry[blockName].innerHTML = finalTemplate;
 
   if (stylesAttr) registry[blockName].setAttribute('b-stylesheets', stylesAttr);
-  if (cascadeAttr) registry[blockName].setAttribute('b-cascade', cascadeAttr);
+  if (cascadeAttr) {
+    registry[blockName].setAttribute('b-cascade', cascadeAttr);
+    definitionCascades.set(blockName, cascadeAttr.split(/\s+/).filter(Boolean));
+  }
   if (errorAttr) registry[blockName].setAttribute('b-error', errorAttr);
   if (propsAttr) registry[blockName].setAttribute('b-props', propsAttr);
   bProps.register(blockName, propsAttr);

@@ -2,6 +2,10 @@ import { config } from '../utils/helpers.js';
 import { registry, activeBlocks } from './registry.js';
 
 export const styleRegistry = new Map();
+// Audit fix #17: definition cascades resolved once at registration
+// (block() / defineLegoFile()), so per-snap ancestor walks become
+// O(1) Map lookups instead of getAttribute + split per ancestor.
+export const definitionCascades = new Map(); // tagName -> string[]
 export let styleConfig = {};
 
 export const setStyleConfig = (cfg) => { styleConfig = cfg; };
@@ -54,12 +58,11 @@ export const applyStyles = (el) => {
     const instCascade = (parent.getAttribute('b-cascade') || "").split(/\s+/).filter(Boolean);
     if (instCascade.length) inheritedStyles.push(...instCascade);
 
-    // Check definition cascade (if parent is a Lego block)
+    // Check definition cascade (if parent is a Lego block) — read from
+    // the precomputed map, not from the template attribute.
     const pName = parent.tagName ? parent.tagName.toLowerCase() : '';
-    if (registry[pName]) {
-      const defCascade = (registry[pName].getAttribute('b-cascade') || "").split(/\s+/).filter(Boolean);
-      if (defCascade.length) inheritedStyles.push(...defCascade);
-    }
+    const defCascade = definitionCascades.get(pName);
+    if (defCascade && defCascade.length) inheritedStyles.push(...defCascade);
     parent = parent.parentElement || (parent.getRootNode && parent.getRootNode().host);
   }
 

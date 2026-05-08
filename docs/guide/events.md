@@ -43,7 +43,7 @@ The expression is executed directly. The DOM event is available as `event` (and 
 A method call lets you pass arguments. Pass `event` explicitly if the method needs it.
 
 ::: tip Reference vs call
-`@click="ask"` auto-passes the event. `@click="ask()"` does **not** — it calls `ask` with no arguments. Pass `event` yourself when you need it: `@click="ask(event)"`.
+`@click="ask"` auto-passes the event. `@click="ask()"` does **not**, it calls `ask` with no arguments. Pass `event` yourself when you need it: `@click="ask(event)"`.
 :::
 
 ## Action modifiers
@@ -60,7 +60,7 @@ A method call lets you pass arguments. Pass `event` explicitly if the method nee
 <div @click.self="onlyMe()">…</div>
 ```
 
-Modifiers stack — order doesn't matter for these three.
+Modifiers stack, order doesn't matter for these three.
 
 ## System modifier keys (KeyboardEvent + MouseEvent)
 
@@ -99,9 +99,9 @@ Categories:
 | `.alpha` | Any single letter `a-z` (case-insensitive) |
 | `.numbers` | Any digit `0-9` |
 
-Anything else is matched directly (case-insensitive) against `event.key` — so `@keydown.k`, `@keydown.f1`, `@keydown.pageup` all work.
+Anything else is matched directly (case-insensitive) against `event.key`, so `@keydown.k`, `@keydown.f1`, `@keydown.pageup` all work.
 
-Multiple key matchers in the same handler are OR-combined — `@keydown.up.down="step()"` fires for either arrow key.
+Multiple key matchers in the same handler are OR-combined, `@keydown.up.down="step()"` fires for either arrow key.
 
 ```html
 <input @keydown.enter="submit()">

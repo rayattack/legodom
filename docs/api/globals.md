@@ -1,6 +1,6 @@
 # Lego.globals
 
-A reactive object shared across every block. Mutate any property and every block that reads it re-renders. Use it for cross-cutting state — current user, theme, feature flags, anything you'd reach for a "store" for.
+A reactive object shared across every block. Mutate any property and every block that reads it re-renders. Use it for cross-cutting state, current user, theme, feature flags, anything you'd reach for a "store" for.
 
 ```js
 import { Lego } from 'lego-dom';
@@ -20,7 +20,7 @@ In templates, the globals object is available under the name **`global`**:
 In block logic, use `Lego.globals` directly, or the per-block aliases (`this.$route`, `this.$go`, `this.$mount`).
 
 ::: tip Why `global` in templates, `Lego.globals` in JS?
-The template scope intentionally exposes `global` (singular) because it reads better in attribute strings. Inside JS files outside a block, you can either import `Lego` or use `globalThis.Lego` — both reference the same object.
+The template scope intentionally exposes `global` (singular) because it reads better in attribute strings. Inside JS files outside a block, you can either import `Lego` or use `globalThis.Lego`, both reference the same object.
 :::
 
 ## Built-in entries
@@ -57,7 +57,7 @@ mounted() {
 
 ### $go
 
-Programmatic navigation. The first call binds the path and (optionally) targets — the returned object exposes one method per HTTP verb to actually fire the navigation.
+Programmatic navigation. The first call binds the path and (optionally) targets, the returned object exposes one method per HTTP verb to actually fire the navigation.
 
 ```ts
 $go(path: string, ...targets: string[]) => {
@@ -71,7 +71,7 @@ $go(path: string, ...targets: string[]) => {
 
 | Argument | Default | Meaning |
 |---|---|---|
-| `path` | — | URL pathname (with or without leading `/`). |
+| `path` |, | URL pathname (with or without leading `/`). |
 | `targets` | `[]` | CSS selectors. If omitted, defaults to the first `<lego-router>`. |
 | `push` | `true` | Push a new history entry (set to `false` for silent updates). |
 
@@ -82,11 +82,11 @@ Lego.globals.$go('/profile').get();
 // Surgical update of a side panel, keeps URL
 Lego.globals.$go('/widgets/clock', '#sidebar').get(false);
 
-// Form submission style — body is recorded in history state
+// Form submission style, body is recorded in history state
 Lego.globals.$go('/api/save').post({ data: 123 });
 ```
 
-The verb only affects what's stored in `history.state` (so a back-then-forward navigation can replay it). The route table still resolves by **path**, not by method — pick the verb that documents intent.
+The verb only affects what's stored in `history.state` (so a back-then-forward navigation can replay it). The route table still resolves by **path**, not by method, pick the verb that documents intent.
 
 ### $mount
 
@@ -107,7 +107,7 @@ $mount(tagName: string | null, target?: string | HTMLElement | HTMLElement[], pr
 
 ### $db
 
-Persistence factory. See [`Lego.db`](/api/advanced#lego-db) for the full surface — the descriptor it returns supports `default(v)`, `debounce(ms)` (init-time, fluent), and `set/get/delete` (runtime).
+Persistence factory. See [`Lego.db`](/api/advanced#lego-db) for the full surface, the descriptor it returns supports `default(v)`, `debounce(ms)` (init-time, fluent), and `set/get/delete` (runtime).
 
 ```js
 // Persistent state on a block
@@ -135,11 +135,11 @@ Lego.globals.cart      = [];
 Lego.globals.featureFlags = { newCheckout: false };
 ```
 
-Mutating any nested property — `Lego.globals.user.name = 'Bob'`, `Lego.globals.cart.push(item)` — will re-render every block that reads it. The proxy is recursive.
+Mutating any nested property, `Lego.globals.user.name = 'Bob'`, `Lego.globals.cart.push(item)`, will re-render every block that reads it. The proxy is recursive.
 
 ## Read-only access
 
-Inside expressions, prefer reads over writes — globals are intended as a propagation surface, not a free-for-all bus. Three good patterns:
+Inside expressions, prefer reads over writes, globals are intended as a propagation surface, not a free-for-all bus. Three good patterns:
 
 ```js
 // 1. Bootstrap once in app entry

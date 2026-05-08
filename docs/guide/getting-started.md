@@ -3,7 +3,7 @@
 Get up and running with Lego in under 5 minutes.
 
 ::: tip 🚀 Want a Complete Walkthrough?
-Check out our **[Step-by-Step Tutorial](/tutorial/)** – build a full multi-page app from scratch in 15 minutes!
+Check out our **[Step-by-Step Tutorial](/tutorial/)**, build a full multi-page app from scratch in 15 minutes!
 :::
 
 ## Installation
@@ -127,7 +127,7 @@ Templates define what your block looks like. Use `[[ ]]` for dynamic content:
 
 ### 2. State (Logic)
 
-Each block has reactive state called "logic". Just assign values directly — no `setState` or special syntax needed:
+Each block has reactive state called "logic". Just assign values directly, no `setState` or special syntax needed:
 
 ```js
 {
@@ -140,7 +140,7 @@ Each block has reactive state called "logic". Just assign values directly — no
 ```
 
 ::: tip If You Know React
-In React, you call `setCount(count + 1)` to update state. In LegoDOM, you just write `count++` — the Proxy-based reactivity system detects the change and updates the DOM automatically.
+In React, you call `setCount(count + 1)` to update state. In LegoDOM, you just write `count++`. The Proxy-based reactivity system detects the change and updates the DOM automatically.
 :::
 
 ### 3. Events
@@ -153,7 +153,7 @@ Use `@eventname` to handle events (similar to Vue's `@click` or Svelte's `on:cli
 <form @submit.prevent="handleSubmit()">
 ```
 
-Modifiers like `.prevent` and `.stop` work inline — no need to call `event.preventDefault()` in your handler.
+Modifiers like `.prevent` and `.stop` work inline, no need to call `event.preventDefault()` in your handler.
 
 ### 4. Directives
 

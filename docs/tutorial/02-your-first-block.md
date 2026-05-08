@@ -1,34 +1,64 @@
 # 2. Your first block
 
-Build a reactive task list with adding, completing, deleting, and a live counter.
+Let's build something real. By the end of this chapter you'll have a task list with adding, deleting, completing, a live counter for what's left, and an empty state. About 20 lines of script.
+
+The only thing you'll have to remember is what a `.lego` file is.
 
 ## The `.lego` format
 
-Every block is a single file with up to three sections:
+Every block lives in a single file, with up to three sections:
 
 ```html
-<template>
-  <!-- HTML with reactive bindings -->
-</template>
-
-<style>
-  /* scoped CSS — never leaks out, never let in */
-</style>
-
 <script>
 export default {
   // state and methods
 }
 </script>
+
+<template>
+  <!-- HTML with reactive bindings -->
+</template>
+
+<style>
+  /* scoped CSS, never leaks out, never let in */
+</style>
 ```
 
-The filename becomes the tag name (`task-list.lego` → `<task-list>`). Order doesn't matter — the parser handles them by name.
+The filename becomes the tag (`task-list.lego` → `<task-list>`).
+
+The parser finds each section by tag name, so technically the order of `<script>`, `<template>`, `<style>` is up to you. Stick to the order above as a convention: `<template>` is the only section every block has, so it goes in the middle as a stable anchor; `<script>` and `<style>` are both optional and live at the edges. Reading top-to-bottom, you see the data and methods first, then the markup that uses them, then the styles that decorate it. It's also the convention Svelte uses, for the same reasons.
 
 ## Build the task list
 
 Delete `src/my-app.lego`, then create `src/task-list.lego`:
 
 ```html
+<script>
+export default {
+  title: 'Tracker',
+  draft: '',
+  tasks: [
+    { title: 'Learn the .lego format',  done: true  },
+    { title: 'Build a reactive list',   done: false },
+    { title: 'Wire up routing',         done: false }
+  ],
+
+  get remaining() {
+    return this.tasks.filter(t => !t.done).length;
+  },
+
+  add() {
+    if (!this.draft) return;
+    this.tasks.push({ title: this.draft, done: false });
+    this.draft = '';
+  },
+
+  remove(i) {
+    this.tasks.splice(i, 1);
+  }
+}
+</script>
+
 <template>
   <h1>[[ title ]]</h1>
 
@@ -47,7 +77,7 @@ Delete `src/my-app.lego`, then create `src/task-list.lego`:
     </li>
   </ul>
 
-  <p b-if="tasks.length === 0" class="empty">No tasks yet — add one above.</p>
+  <p b-if="tasks.length === 0" class="empty">No tasks yet. Add one above.</p>
 
   <footer b-show="tasks.length > 0">
     [[ remaining ]] of [[ tasks.length ]] remaining
@@ -87,32 +117,6 @@ Delete `src/my-app.lego`, then create `src/task-list.lego`:
   .delete:hover { color: #e74c3c; }
   .empty, footer { color: #999; text-align: center; padding: 1rem 0; }
 </style>
-
-<script>
-export default {
-  title: 'Tracker',
-  draft: '',
-  tasks: [
-    { title: 'Learn the .lego format',  done: true  },
-    { title: 'Build a reactive list',   done: false },
-    { title: 'Wire up routing',         done: false }
-  ],
-
-  get remaining() {
-    return this.tasks.filter(t => !t.done).length;
-  },
-
-  add() {
-    if (!this.draft) return;
-    this.tasks.push({ title: this.draft, done: false });
-    this.draft = '';
-  },
-
-  remove(i) {
-    this.tasks.splice(i, 1);
-  }
-}
-</script>
 ```
 
 Update `index.html` to use the new tag:
@@ -124,50 +128,34 @@ Update `index.html` to use the new tag:
 </body>
 ```
 
-Save. Add tasks, check them, delete them. Every interaction is instant — there's no virtual DOM and no diffing pass; the runtime updates exactly the affected nodes.
+Save. Add a task. Check it off. Delete it. Watch the counter at the bottom update with each change.
 
-## What you used
+## Notice what you didn't have to do
 
-### Reactive state
+You never called `setState`. You never imported a hook. You never told the framework "this property is reactive". You wrote what reads like a plain JavaScript object, and the runtime took care of everything else. That's the whole reactivity model in LegoDOM, and you just used it without thinking about it.
 
-Everything in `export default` becomes reactive on mount. The `tasks` array is wrapped in a `Proxy`; pushing, splicing, or assigning to a nested `task.done` all flow through the proxy and schedule a render on the next animation frame.
+A few specific moments worth pointing out, in case you missed them:
 
-You never call `setState`. Mutate the data and the DOM follows.
+**`b-sync.trim="draft"`**: the input's value and the `draft` property are now the same value. Type, and `[[ remaining ]]` updates. The `.trim` modifier strips whitespace on the way in.
 
-### Directives
+**`b-for="task in tasks"`**: the `<li>` becomes a template. Push to the array and a new `<li>` appears; splice and one disappears. No keys to worry about, because each task object picks up an auto-generated identity from the runtime, which is fine for inline data like this.
 
-| Used | Effect |
-|---|---|
-| `b-sync.trim="draft"` | Two-way bind to the input's value, with whitespace trimmed on write. |
-| `b-sync="task.done"` | Two-way bind a checkbox to the loop item. |
-| `b-for="task in tasks"` | Render a `<li>` per task. |
-| `b-if="tasks.length === 0"` | Mount/unmount the empty state. |
-| `b-show="…"` | Toggle inline `display`. The element stays in the DOM. |
+**`get remaining()`**: a getter on the logic object becomes a reactive computed value. It reads `this.tasks` to count, and the runtime tracks that read. Mutating any task re-runs only this binding.
 
-### Interpolation
+**`<form @submit.prevent="add()">`**: the `.prevent` modifier calls `event.preventDefault()` for you. No imperative event handler needed.
 
-`[[ expr ]]` evaluates JavaScript against the block's state. `[[ task.title ]]`, `[[ remaining ]]`, `[[ task.done ? 'done' : '' ]]` — all just expressions. `$index` is available inside `b-for` for the zero-based position.
+**`b-if="tasks.length === 0"`**: actually mounts and unmounts the empty state. `b-show` next to it toggles `display` instead. Both work; the difference matters when the toggle is frequent (use `b-show`) or when the contents are heavy and you want a fresh start each time (use `b-if`).
 
-### Events
-
-`@submit.prevent="add()"` runs `add()` and calls `event.preventDefault()`. `@click="remove($index)"` passes the loop index. Modifiers stack: `@keydown.enter.ctrl.prevent="save()"` only fires for Ctrl-Enter and prevents the default.
-
-### Computed properties
-
-A getter on the logic object becomes a reactive computed. `remaining` reads `this.tasks` — the runtime tracks that read, so any mutation that touches the array re-runs only the binding that depends on `remaining`.
-
-### Scoped styles
-
-`self` is rewritten to `:host` at mount time. All other selectors are scoped to this block's Shadow DOM — your `button` styling can't reach into other components. The block is self-contained.
+**`self { ... }`** in the style block: `self` is rewritten to `:host` at mount time, which targets the block's root element. Every other selector in this `<style>` is scoped to this block's Shadow DOM. You can name a CSS class `.delete` here without worrying about colliding with another block's `.delete`. They live in different worlds.
 
 ## Try it
 
 Three small experiments before moving on:
 
-1. Add a "Clear completed" button that filters out done tasks.
-2. Use `@keydown.enter="add()"` on the input instead of wrapping it in a `<form>`.
-3. Show the "Clear completed" button only when at least one task is done — `b-show="tasks.some(t => t.done)"`.
+1. Add a "Clear completed" button that removes done tasks. (`this.tasks = this.tasks.filter(t => !t.done)` works, or `this.tasks.splice(0)` and re-push, or anything in between.)
+2. Replace the `<form>` wrapper with `@keydown.enter="add()"` directly on the input.
+3. Show the "Clear completed" button only when at least one task is done. (`b-show="tasks.some(t => t.done)"`).
 
-Each one only uses what's already on this page.
+Each one only uses what you've already seen. If they all feel obvious, you're ready for the next chapter, where the persistent-shell pattern starts to do something the framework you're coming from probably can't.
 
 [Next: Routing & layouts →](./03-adding-routes)

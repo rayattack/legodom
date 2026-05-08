@@ -8,17 +8,6 @@ Use `$db` to persist authentication tokens in `localStorage`. This gives you aut
 
 ```html
 <!-- login-page.lego -->
-<template>
-  <form @submit.prevent="login()">
-    <h2>Sign In</h2>
-    <input b-sync="email" type="email" placeholder="Email">
-    <input b-sync="password" type="password" placeholder="Password">
-    <p b-show="error" class="error">[[ error ]]</p>
-    <button type="submit" b-show="!loading">Sign In</button>
-    <p b-show="loading">Signing in...</p>
-  </form>
-</template>
-
 <script>
 export default {
   email: '',
@@ -47,7 +36,7 @@ export default {
 
       const data = await res.json();
 
-      // Store the token — persists across reloads and syncs across tabs
+      // Store the token, persists across reloads and syncs across tabs
       $db('auth.token').set(data.token);
       $db('auth.user').set(data.user);
 
@@ -61,6 +50,17 @@ export default {
   }
 }
 </script>
+
+<template>
+  <form @submit.prevent="login()">
+    <h2>Sign In</h2>
+    <input b-sync="email" type="email" placeholder="Email">
+    <input b-sync="password" type="password" placeholder="Password">
+    <p b-show="error" class="error">[[ error ]]</p>
+    <button type="submit" b-show="!loading">Sign In</button>
+    <p b-show="loading">Signing in...</p>
+  </form>
+</template>
 
 <style>
   self { display: block; max-width: 400px; margin: 2rem auto; }
@@ -89,16 +89,9 @@ Create a wrapper block that conditionally shows content based on authentication 
 
 ```html
 <!-- auth-guard.lego -->
-<template>
-  <div b-if="isAuthenticated">
-    <slot></slot>
-  </div>
-  <login-page b-if="!isAuthenticated"></login-page>
-</template>
-
 <script>
 export default {
-  // $db creates a reactive binding — when the token changes, the UI updates
+  // $db creates a reactive binding, when the token changes, the UI updates
   token: $db('auth.token').default(null),
 
   get isAuthenticated() {
@@ -106,6 +99,13 @@ export default {
   }
 }
 </script>
+
+<template>
+  <div b-if="isAuthenticated">
+    <slot></slot>
+  </div>
+  <login-page b-if="!isAuthenticated"></login-page>
+</template>
 ```
 
 **Usage in your app:**
@@ -165,7 +165,7 @@ Lego.init(document.body);
 Share user information across all blocks using `Lego.globals`:
 
 ```js
-// app.js — Set up global auth state
+// app.js, Set up global auth state
 Lego.init(document.body);
 
 // Load user from persistent storage into globals
@@ -203,7 +203,7 @@ Because `$db` uses the browser's `storage` event for cross-tab sync, authenticat
 3. User logs out on **Tab B** → `$db('auth.token').delete()`
 4. **Tab A** detects the deletion → auth guard shows login page
 
-No extra code needed — this works automatically with `$db`.
+No extra code needed, this works automatically with `$db`.
 
 ## Authenticated API Requests
 
@@ -211,18 +211,6 @@ Create a reusable pattern for making authenticated API calls:
 
 ```html
 <!-- user-dashboard.lego -->
-<template>
-  <div b-show="loading">Loading...</div>
-  <div b-show="!loading && data">
-    <h1>Dashboard</h1>
-    <p>Welcome, [[ data.name ]]</p>
-  </div>
-  <div b-show="!loading && error">
-    <p>[[ error ]]</p>
-    <button @click="fetchData()">Retry</button>
-  </div>
-</template>
-
 <script>
 export default {
   data: null,
@@ -245,7 +233,7 @@ export default {
       });
 
       if (res.status === 401) {
-        // Token expired — clear and redirect
+        // Token expired, clear and redirect
         $db('auth.token').delete();
         this.$go('/login').get();
         return;
@@ -260,6 +248,18 @@ export default {
   }
 }
 </script>
+
+<template>
+  <div b-show="loading">Loading...</div>
+  <div b-show="!loading && data">
+    <h1>Dashboard</h1>
+    <p>Welcome, [[ data.name ]]</p>
+  </div>
+  <div b-show="!loading && error">
+    <p>[[ error ]]</p>
+    <button @click="fetchData()">Retry</button>
+  </div>
+</template>
 ```
 
 ## Complete Example: Full Auth Flow
@@ -297,13 +297,6 @@ Lego.init(document.body);
 
 ```html
 <!-- src/nav-bar.lego -->
-<template>
-  <nav>
-    <a href="/dashboard" b-link>Dashboard</a>
-    <button @click="logout()">Sign Out</button>
-  </nav>
-</template>
-
 <script>
 export default {
   logout() {
@@ -313,6 +306,13 @@ export default {
   }
 }
 </script>
+
+<template>
+  <nav>
+    <a href="/dashboard" b-link>Dashboard</a>
+    <button @click="logout()">Sign Out</button>
+  </nav>
+</template>
 ```
 
 ## Best Practices
@@ -320,10 +320,10 @@ export default {
 ### Always Namespace Token Keys
 
 ```js
-// Good — namespaced
+// Good, namespaced
 $db('myapp.auth.token')
 
-// Bad — too generic, could collide with other apps on the same domain
+// Bad, too generic, could collide with other apps on the same domain
 $db('token')
 ```
 

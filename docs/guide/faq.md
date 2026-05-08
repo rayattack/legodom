@@ -50,10 +50,10 @@ Either works! It's just a naming convention. Use whatever your Vite template cre
 
 Check these common issues:
 
-1. **No route defined** – Did you add `Lego.route('/', 'my-block')`?
-2. **Missing `<lego-router>`** – Your HTML needs `<lego-router></lego-router>`
-3. **Wrong block name** – Filename `user-card.lego` → block `<user-card>`
-4. **Not registered** – Did you call `registerBlocks()` before `init()`?
+1. **No route defined**, Did you add `Lego.route('/', 'my-block')`?
+2. **Missing `<lego-router>`**, Your HTML needs `<lego-router></lego-router>`
+3. **Wrong block name**, Filename `user-card.lego` → block `<user-card>`
+4. **Not registered**, Did you call `registerBlocks()` before `init()`?
 
 ### Why do block names need hyphens?
 
@@ -256,15 +256,15 @@ See [CDN Usage](/guide/cdn-usage) for details.
 ### Why use Vite?
 
 Benefits of Vite + `.lego` files:
-- **Hot reload** – Changes appear instantly
-- **Auto-discovery** – No manual block registration
-- **Better organization** – One file per block
-- **Syntax highlighting** – Editor support for `.lego` files
+- **Hot reload**, Changes appear instantly
+- **Auto-discovery**, No manual block registration
+- **Better organization**, One file per block
+- **Syntax highlighting**, Editor support for `.lego` files
 
 ---
 
 ## Still Stuck?
 
-- 📖 [Complete Tutorial](/tutorial/) – Build an app step-by-step
+- 📖 [Complete Tutorial](/tutorial/), Build an app step-by-step
 - 💬 [GitHub Discussions](https://github.com/rayattack/LegoDOM/discussions)
 - 🐛 [Report Issues](https://github.com/rayattack/LegoDOM/issues)

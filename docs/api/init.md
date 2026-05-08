@@ -46,7 +46,7 @@ await Lego.init(document.body, {
 </template>
 ```
 
-Stylesheets are pre-loaded in parallel and adopted via `Document.adoptedStyleSheets`. After loading, every block already on the page that names one of these keys is reapplied — order-of-init doesn't matter.
+Stylesheets are pre-loaded in parallel and adopted via `Document.adoptedStyleSheets`. After loading, every block already on the page that names one of these keys is reapplied, order-of-init doesn't matter.
 
 #### `options.loader`
 
@@ -60,9 +60,9 @@ await Lego.init(document.body, {
 
 The loader can return:
 
-- `string` — treated as a URL; the runtime fetches it and parses the response body as a `.lego` SFC.
-- `Promise<string>` — the resolved string is parsed as a `.lego` SFC. Use this when you need custom headers, credentials, or auth.
-- `null` / `undefined` — no fetch is attempted for that tag.
+- `string`, treated as a URL; the runtime fetches it and parses the response body as a `.lego` SFC.
+- `Promise<string>`, the resolved string is parsed as a `.lego` SFC. Use this when you need custom headers, credentials, or auth.
+- `null` / `undefined`, no fetch is attempted for that tag.
 
 ::: warning Lock the loader down
 A loader without an allowlist will fetch any unknown hyphenated tag a third party can inject. Always set `Lego.config.loaderAllowlist` in production. See [`config.loaderAllowlist`](/api/config#loaderallowlist).
@@ -86,7 +86,7 @@ manifest: [
   }
 ]
 
-// 2. URL form — manifest fetched from a public endpoint
+// 2. URL form, manifest fetched from a public endpoint
 manifest: '/blocks/manifest.json'
 
 // 3. Authenticated form
@@ -97,7 +97,7 @@ manifest: {
 }
 ```
 
-For each entry the runtime registers a custom element that, on first connect, fetches the file, parses it via `Lego.defineLegoFile()`, and snaps the live element. While the fetch is in-flight, additional instances are queued and snapped when the response lands — so a list of 50 `<user-card>` elements triggers exactly one network round-trip.
+For each entry the runtime registers a custom element that, on first connect, fetches the file, parses it via `Lego.defineLegoFile()`, and snaps the live element. While the fetch is in-flight, additional instances are queued and snapped when the response lands, so a list of 50 `<user-card>` elements triggers exactly one network round-trip.
 
 Header values may be functions (called per-fetch) or strings. Strings prefixed `$db.` resolve through the persistence layer; strings prefixed `$globals.` read from `Lego.globals`.
 
@@ -122,7 +122,7 @@ In order:
 7. Wires up `popstate`, `<a b-link|b-target>` click delegation, and `<form b-action>` submit prevention.
 8. Calls `initCrossTabSync()` to bind a single `storage` listener for `$db` cross-tab updates.
 
-Step 4 means inline templates are upgraded **after** routes are matched — useful when you want a route to render before declarations are scanned.
+Step 4 means inline templates are upgraded **after** routes are matched, useful when you want a route to render before declarations are scanned.
 
 ## Examples
 

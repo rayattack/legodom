@@ -28,6 +28,14 @@ In this Block, we define a layout with a sidebar and a main content area. Clicki
 
 ```html
 <!-- messaging-shell.html -->
+<script>
+  export default {
+    mounted() {
+      console.log("Messaging shell ready.");
+    }
+  }
+</script>
+
 <template>
   <div class="messaging-layout">
     <aside class="sidebar">
@@ -44,14 +52,6 @@ In this Block, we define a layout with a sidebar and a main content area. Clicki
   </div>
 </template>
 
-<script>
-  export default {
-    mounted() {
-      console.log("Messaging shell ready.");
-    }
-  }
-</script>
-
 <style>
   .messaging-layout {
     display: flex;
@@ -66,7 +66,6 @@ In this Block, we define a layout with a sidebar and a main content area. Clicki
     padding: 20px;
   }
 </style>
-
 ```
 
 ### 1. Targeting by ID

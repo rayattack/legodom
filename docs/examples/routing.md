@@ -399,7 +399,7 @@ Lego.route('/users/:id', 'user-profile');
 1. Copy the code above
 2. Save as `routing-demo.html`
 3. Open in a browser  
-4. Click links—no page reload!
+4. Click links-no page reload!
 5. Use browser back/forward buttons
 
 ## Next Steps

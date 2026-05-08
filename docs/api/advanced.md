@@ -19,7 +19,7 @@ Steps:
 5. Fire `mounted()`.
 6. Recursively snap nested registered blocks inside the shadow tree.
 
-The most common reason to call `snap()` is **inside another Shadow DOM** — `MutationObserver` doesn't watch shadow trees, and the manifest/loader paths only re-fire for elements connecting to the light DOM tree.
+The most common reason to call `snap()` is **inside another Shadow DOM**, `MutationObserver` doesn't watch shadow trees, and the manifest/loader paths only re-fire for elements connecting to the light DOM tree.
 
 ```js
 const card = document.createElement('user-card');
@@ -45,7 +45,7 @@ Steps:
 6. Break circular refs (`$element`, `$vars`, `$emit`, `$parent`, `$route`, `$go`, `$mount`).
 7. Recursively unsnap child blocks.
 
-Calling `unsnap()` is rarely needed — element removal triggers `disconnectedCallback`, which calls it for you. Use it explicitly when you're swapping content programmatically and want clean teardown before reattachment.
+Calling `unsnap()` is rarely needed, element removal triggers `disconnectedCallback`, which calls it for you. Use it explicitly when you're swapping content programmatically and want clean teardown before reattachment.
 
 ## Lego.mount()
 
@@ -66,7 +66,7 @@ Lego.mount(
 | `mount('user-card', '.row', { id: 1 })` | For each `.row`: clear, mount with `$initialState = { id: 1 }` | array (or single el) |
 | `mount(null, '#main')` | Clear `#main` (no mount) | `undefined` |
 
-`tagName` must contain a hyphen (custom-element rules) — otherwise a console warning is emitted and nothing is mounted.
+`tagName` must contain a hyphen (custom-element rules), otherwise a console warning is emitted and nothing is mounted.
 
 `props` is injected onto the host element as `$initialState` before the element connects, so `mounted()` can see them via the merge into state.
 
@@ -105,7 +105,7 @@ When the descriptor is assigned to a key inside a block's logic, the runtime hyd
 </select>
 ```
 
-Cross-tab sync is automatic — every other tab with bindings to the same key receives the new value via the `storage` event.
+Cross-tab sync is automatic, every other tab with bindings to the same key receives the new value via the `storage` event.
 
 ### Direct usage from JS
 
@@ -120,7 +120,7 @@ Lego.db('user').delete();                        // remove + notify
 
 ### Quota handling
 
-When a write exceeds `localStorage` quota, the runtime evicts the oldest tracked keys (FIFO) to free at least 2× the space needed, then retries. Eviction only applies to keys this app wrote — third-party `localStorage` usage is left alone. If eviction can't free enough space, `config.onError` is called with `type: 'quota-critical'`.
+When a write exceeds `localStorage` quota, the runtime evicts the oldest tracked keys (FIFO) to free at least 2× the space needed, then retries. Eviction only applies to keys this app wrote, third-party `localStorage` usage is left alone. If eviction can't free enough space, `config.onError` is called with `type: 'quota-critical'`.
 
 ## Introspection
 
@@ -135,7 +135,7 @@ Lego.getActiveBlocksCount(): number     // currently snapped blocks
 Lego.debug.stylesheets(el: HTMLElement): { explicit: string[]; inherited: string[]; applied: string[] } | null
 ```
 
-Returns the stylesheet keys that resolved for an element — what was declared on the template, what cascaded in from ancestors, and the deduped final list. `null` if the element hasn't been snapped or doesn't carry stylesheet metadata.
+Returns the stylesheet keys that resolved for an element, what was declared on the template, what cascaded in from ancestors, and the deduped final list. `null` if the element hasn't been snapped or doesn't carry stylesheet metadata.
 
 ```js
 Lego.debug.stylesheets(document.querySelector('user-card'));

@@ -1,6 +1,6 @@
 # Basic Routing: The Global Outlet
 
-Before we dive into surgical swaps, we must understand how LegoDOM handles the initial entry into your application. Every application needs a primary gateway—a place where the main content lives. In LegoDOM, this is the `<lego-router>`.
+Before we dive into surgical swaps, we must understand how LegoDOM handles the initial entry into your application. Every application needs a primary gateway-a place where the main content lives. In LegoDOM, this is the `<lego-router>`.
 
 ## The Entry Point
 
@@ -74,11 +74,6 @@ In `.lego` files:
 
 ```html
 <!-- profile-page.lego -->
-<template>
-  <h1>User Profile</h1>
-  <p>Viewing ID: [[ $route.params.id ]]</p>
-</template>
-
 <script>
 export default {
   mounted() {
@@ -87,6 +82,11 @@ export default {
   }
 }
 </script>
+
+<template>
+  <h1>User Profile</h1>
+  <p>Viewing ID: [[ $route.params.id ]]</p>
+</template>
 ```
 
 ::: tip Shorthand

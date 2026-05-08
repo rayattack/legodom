@@ -1,6 +1,6 @@
 # Lego.block()
 
-Defines a block from a string template. Equivalent to writing a `<template b-id>` in HTML, but usable in pure JS — common in CDN setups, ad-hoc registrations, or when the source isn't a `.lego` file.
+Defines a block from a string template. Equivalent to writing a `<template b-id>` in HTML, but usable in pure JS, common in CDN setups, ad-hoc registrations, or when the source isn't a `.lego` file.
 
 ```ts
 Lego.block(
@@ -19,7 +19,7 @@ Lego.block(
 | Name | Type | Effect |
 |---|---|---|
 | `tagName` | `string` | Custom-element tag. Must contain a hyphen. |
-| `templateHTML` | `string` | The block's template body — same shape you'd put inside `<template b-id="…">…</template>`. May include a leading `<style>…</style>`. |
+| `templateHTML` | `string` | The block's template body, same shape you'd put inside `<template b-id="…">…</template>`. May include a leading `<style>…</style>`. |
 | `logic` | `object` | Initial state. Methods, getters, lifecycle hooks (`mounted`, `updated`, `unmounted`) all live here. |
 | `styles` | `string` | Space-separated stylesheet keys (registered via `Lego.init({ styles })`). Maps to `b-stylesheets`. |
 | `cascade` | `string` | Space-separated keys to cascade to descendants. Maps to `b-cascade`. |
@@ -33,9 +33,9 @@ Lego.block(
 1. Creates a `<template>` element, stamps the metadata attributes (`b-id`, `b-stylesheets`, `b-cascade`, `b-error`, `b-props`), and stores it in the registry under `tagName`.
 2. Stores `logic` keyed by `tagName` (the script tier of the [three-tier merge](/guide/blocks#data-merging-the-three-tiers)).
 3. Registers `tagName` as a custom element (no-op if already registered).
-4. If `tagName` was previously defined, all live instances are unsnapped and re-snapped — this is the HMR / re-definition path.
+4. If `tagName` was previously defined, all live instances are unsnapped and re-snapped, this is the HMR / re-definition path.
 
-You can call `Lego.block()` before or after `Lego.init()` — both orders work.
+You can call `Lego.block()` before or after `Lego.init()`, both orders work.
 
 ## Example
 
@@ -88,8 +88,8 @@ Runtime parser for `.lego` Single File Blocks. Used by the Vite plugin and by th
 Lego.defineLegoFile(content: string, filename?: string): void
 ```
 
-- `content` — raw `.lego` text containing one or more of `<template>`, `<script>`, `<style>`.
-- `filename` — used to derive the block name (kebab-cased, must contain a hyphen). Defaults to `'block.lego'`, which is rejected — pass a real name.
+- `content`, raw `.lego` text containing one or more of `<template>`, `<script>`, `<style>`.
+- `filename`, used to derive the block name (kebab-cased, must contain a hyphen). Defaults to `'block.lego'`, which is rejected, pass a real name.
 
 The block name is derived from the filename:
 

@@ -87,13 +87,6 @@ Split this into core blocks and a page.
 
 ```html
 <!-- page-profile-settings.lego -->
-<template>
-  <h2>Your Profile</h2>
-  <block-file-trigger @file-selected="uploadAvatar">
-    <block-avatar src="[[ user.avatarUrl ]]"></block-avatar>
-  </block-file-trigger>
-</template>
-
 <script>
 export default {
   // Only this page knows about /v1/avatars
@@ -104,6 +97,13 @@ export default {
   }
 }
 </script>
+
+<template>
+  <h2>Your Profile</h2>
+  <block-file-trigger @file-selected="uploadAvatar">
+    <block-avatar src="[[ user.avatarUrl ]]"></block-avatar>
+  </block-file-trigger>
+</template>
 ```
 
 ## The Definitions

@@ -34,7 +34,7 @@ features:
   
   - icon: 🛡️
     title: Native Power
-    details: Built on true Web Standards—Custom Elements and Shadow DOM. Your code is future-proof and encapsulated by default.
+    details: Built on true Web Standards-Custom Elements and Shadow DOM. Your code is future-proof and encapsulated by default.
   
   - icon: 📦
     title: Zero-Dependency Runtime
@@ -129,7 +129,7 @@ That's it. No build step, no npm, no configuration.
 | Web Components | Native | Optional | No |
 | Templating | `[[ … ]]` in real DOM | template / JSX | JSX |
 
-The Vite plugin is optional — it's only needed if you want `.lego` Single File Blocks. CDN usage works with no build at all.
+The Vite plugin is optional, it's only needed if you want `.lego` Single File Blocks. CDN usage works with no build at all.
 
 ## Browser Support
 

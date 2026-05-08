@@ -6,6 +6,12 @@ Using `.lego` files with Vite.
 
 **block-counter.lego**
 ```html
+<script>
+  export default {
+    count: 0
+  }
+</script>
+
 <template>
   <button @click="count++">Count: [[ count ]]</button>
 </template>
@@ -13,12 +19,6 @@ Using `.lego` files with Vite.
 <style>
   button { color: red; }
 </style>
-
-<script>
-  export default {
-    count: 0
-  }
-</script>
 ```
 
 ## Usage

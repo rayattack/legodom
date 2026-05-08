@@ -1,173 +1,219 @@
-# Layouts & Composition
+# Layouts
 
-LegoDOM leverages native Web Component **Slots** to create powerful, reusable layouts. Because valid Lego blocks are standard Web Components with Shadow DOM, you can use `<slot>` to allow content projection while keeping your routing simple.
+You build apps with layouts because some things on screen shouldn't disappear when the URL changes. A sidebar. A header. A notification bar. The user's profile menu in the corner. Routing alone doesn't get you there. The router can swap the middle of the page; the rest needs somewhere to live.
 
-## The App Shell Pattern
+In LegoDOM, a layout is just a block. A block whose template has a `<slot>`. Whatever you wrap with that block ends up in that slot, and the rest of the block (chrome, sidebar, whatever) sits around it.
 
-The most common pattern is wrapping your router in an "App Shell" that provides persistent UI (Sidebar, Header, Footer) while letting the router swap the content area.
+That's the whole concept. The patterns on this page are different ways of arranging slots and blocks to do useful things.
 
-### 1. Create the Shell
+## Your first layout
 
-Create a block that defines your layout structure and includes a `<slot>` for the main content.
+The simplest possible layout, no styling, no router yet.
+
+```html
+<!-- src/page-shell.lego -->
+<template>
+  <header>
+    <h1>My App</h1>
+    <nav>
+      <a href="/" b-link>Home</a> ·
+      <a href="/about" b-link>About</a>
+    </nav>
+  </header>
+  <main>
+    <slot></slot>
+  </main>
+  <footer>© 2026</footer>
+</template>
+```
+
+```html
+<!-- index.html -->
+<page-shell>
+  <h1>Hello world</h1>
+  <p>This goes in the slot.</p>
+</page-shell>
+```
+
+The `<h1>` and `<p>` you wrote inside `<page-shell>` get projected into the `<slot>` position. The header, footer, and nav come from the shell. Change what's between the tags; the chrome stays put.
+
+If you understand this snippet, you understand layouts. The rest of this guide is shapes and corners.
+
+## Slots stay in the light DOM
+
+Here's the part that trips people up. When you wrap a block around content like this:
+
+```html
+<page-shell>
+  <user-profile></user-profile>
+</page-shell>
+```
+
+the `<user-profile>` does **not** move into `page-shell`'s shadow DOM. It stays as an ordinary light-DOM child of `<page-shell>`. The browser projects it visually into the slot position, but logically it's still right there in the document tree.
+
+Three reasons that matters:
+
+1. **`<user-profile>` keeps its own state.** It's a separate block with its own shadow DOM and its own reactive proxy. The shell can't reach into it; that's the encapsulation working as designed.
+2. **CSS selectors from outside still apply.** Light DOM means `document.querySelector('user-profile')` finds it. Anything that operates on the document tree treats it as a normal child of `<page-shell>`.
+3. **Routing finds it.** `<lego-router>` slotted into a shell still works, because the router resolves its target as `document.querySelectorAll('lego-router')` and the slotted element is in the document tree.
+
+That last point is why the next pattern works at all.
+
+## Where the router goes
+
+The most common layout pattern: wrap your router in a shell.
 
 ```html
 <!-- src/app-shell.lego -->
-<!-- The Magic: b-cascade passes 'tailwind' down to children (like the router views) -->
-<template b-stylesheets="tailwind main" b-cascade="tailwind">
-  <div class="flex min-h-screen">
-    <aside class="w-64 border-r border-gray-200">
-      <side-menu></side-menu>
-    </aside>
-    
-    <main class="flex-1 p-8">
-      <!-- The router (or page) will be projected here -->
-      <!-- Because of b-cascade, it will receive the tailwind styles -->
-      <slot></slot>
-    </main>
-  </div>
+<template>
+  <header><app-nav></app-nav></header>
+  <main><slot></slot></main>
 </template>
-
-<style>
-  /* Local overrides if needed, but mostly utilizing Tailwind utility classes */
-</style>
 ```
-
-### The Strategy: Cascade = Inheritance
-By adding `b-cascade="tailwind"` to your shell, you unlock "Global Styles" for your entire app.
-1.  **Define** `tailwind` in `Lego.init({ styles: { tailwind: '...' } })`.
-2.  **Cascade** it from `<app-shell>`.
-3.  **Use** utility classes in any page rendered by the router.
-
-This gives you the best of both worlds: Shadow DOM encapsulation by default, with opt-in global inheritance where it makes sense.
-
-### 2. Wrap the Router
-
-In your `index.html`, simply wrap `<lego-router>` with your shell.
 
 ```html
 <!-- index.html -->
 <body>
   <app-shell>
-    <!-- accessible in Light DOM, projected into Shadow DOM slot -->
     <lego-router></lego-router>
   </app-shell>
-  
-  <script type="module" src="./src/app.js"></script>
+  <script type="module" src="/src/app.js"></script>
 </body>
 ```
 
-**Why this works:**
-- `<lego-router>` remains in the **Light DOM**, so `Lego.init()` and the router can easily find it (`document.querySelector('lego-router')`).
-- `<app-shell>` renders its own Shadow DOM (sidebar, layout structure).
-- The router is "projected" into the `<slot>` position inside the shell.
+When the URL changes, the router swaps whatever block lives inside `<lego-router>`. The shell, with its header and `<app-nav>`, doesn't reload. Anything stateful in `<app-nav>` (an open menu, a search input, scroll position) stays put.
 
----
+You don't need a "nested route" or a "layout route" or any of the matching vocabulary from other frameworks. The DOM is the layout config. If you want a page rendered inside a layout, put the layout around the router.
 
-## Authentication Wrapper
+## Named slots
 
-You can create blocks that conditionally render slots based on state, effectively acting as "Guards" or "Wrappers".
-
-```html
-<!-- src/auth-guard.lego -->
-<template>
-  <!-- If authenticated, show the content (the slot) -->
-  <div b-if="isAuthenticated">
-    <slot></slot>
-  </div>
-
-  <!-- If not, show the login page -->
-  <login-page b-if="!isAuthenticated"></login-page>
-</template>
-
-<script>
-export default {
-  // Bind to a global auth token in $db
-  isAuthenticated: $db('auth_token').default(null)
-}
-</script>
-```
-
-**Usage:**
-
-```html
-<!-- index.html -->
-<auth-guard>
-  <app-shell>
-    <lego-router></lego-router>
-  </app-shell>
-</auth-guard>
-```
-
-This ensures the entire app (shell + router) is only rendered if the user is authenticated.
-
----
-
-## Multiple Slots (Advanced Layouts)
-
-Native Shadow DOM allows for **Named Slots**, letting you plug content into specific areas of a layout.
-
-### The Layout
+When a layout has more than one place to plug things in, give the slots names.
 
 ```html
 <!-- src/dashboard-layout.lego -->
 <template>
   <div class="dashboard">
-    <header class="top-bar">
-      <slot name="header"></slot>
-    </header>
-    
-    <div class="body">
-      <nav class="side-nav">
-        <slot name="sidebar"></slot>
-      </nav>
-      
-      <main class="main-area">
-        <slot name="content"></slot>
-      </main>
-    </div>
+    <header><slot name="header"></slot></header>
+    <nav><slot name="sidebar"></slot></nav>
+    <main><slot name="content"></slot></main>
   </div>
 </template>
 ```
 
-### The Usage
-
 ```html
 <dashboard-layout>
   <user-profile slot="header"></user-profile>
-  <nav-menu slot="sidebar"></nav-menu>
-  <lego-router slot="content"></lego-router>
+  <nav-menu     slot="sidebar"></nav-menu>
+  <lego-router  slot="content"></lego-router>
 </dashboard-layout>
 ```
 
----
+Each child carries a `slot` attribute that says where it should land. A nameless `<slot></slot>` in the layout catches anything you didn't explicitly assign.
 
-## Nested Layouts
+This is a native Web Components feature, not a LegoDOM addition. Slots are part of the platform.
 
-Since everything is a component, you can nest layouts arbitrarily.
+## Sharing styles across layout boundaries
+
+Every block has its own scoped styles via Shadow DOM. Usually that's what you want, but layouts are an exception: design tokens, resets, and utility frameworks should be available in every block they wrap.
+
+The combination is `b-stylesheets` plus `b-cascade`:
+
+```html
+<template b-stylesheets="tokens utilities" b-cascade="tokens utilities">
+  <header>...</header>
+  <main><slot></slot></main>
+</template>
+```
+
+`b-stylesheets="tokens utilities"` adopts those named stylesheets into the layout's own shadow DOM. `b-cascade="tokens utilities"` says "also propagate them to every descendant block, including ones that come in through slots". The names refer to entries you registered up front:
+
+```js
+await Lego.init(document.body, {
+  styles: {
+    tokens:    ['/styles/tokens.css'],
+    utilities: ['/styles/utilities.css']
+  }
+});
+```
+
+See [`b-stylesheets`](/api/directives#b-stylesheets) and [`b-cascade`](/api/directives#b-cascade) for the full mechanics. The thing to remember is: cascade only the styles that should genuinely be global. Block-specific styles belong inside that block, not on the layout.
+
+## Auth wrapper
+
+Layouts compose. You can stack one inside another, and a layout can decide whether to render its slot at all. That's the recipe for an auth gate.
+
+```html
+<!-- src/auth-guard.lego -->
+<script>
+export default {
+  user: $db('user').default(null)
+}
+</script>
+
+<template>
+  <div b-if="user">
+    <slot></slot>
+  </div>
+  <login-page b-if="!user"></login-page>
+</template>
+```
+
+```html
+<!-- index.html -->
+<body>
+  <auth-guard>
+    <app-shell>
+      <lego-router></lego-router>
+    </app-shell>
+  </auth-guard>
+</body>
+```
+
+When `user` is null, the wrapping div is removed, the slot has no place to project into, and `<login-page>` renders instead. As soon as login succeeds and you set `user` (typically via `Lego.db('user').set(token)`), the b-if flips and the slotted app comes in.
+
+Because `user` is bound to `$db`, the auth state survives refresh and syncs across tabs automatically.
+
+::: tip Logged-out blocks aren't unmounted, just hidden
+The slotted `<app-shell>` and `<lego-router>` stay in the document tree the whole time. They're just invisible while the slot has no projection target. For most apps that's fine; for stricter teardown (a logged-out user shouldn't have a half-fetched dashboard sitting in memory), separate the two trees explicitly with `b-if` rather than relying on slot projection.
+:::
+
+## Nested layouts
+
+A settings area that needs its own internal navigation can wrap its content in a sub-layout:
 
 ```html
 <auth-guard>
   <app-shell>
-    <!-- Settings has its own sub-layout -->
-    <settings-layout slot="main">
-       <lego-router></lego-router>
+    <settings-layout>
+      <lego-router></lego-router>
     </settings-layout>
   </app-shell>
 </auth-guard>
 ```
 
-## Key Benefits
+`<settings-layout>` has its own shadow DOM with its own slot, perhaps a settings sidebar next to a content area. The router still sits at the bottom and swaps as the URL changes; now it's wrapped in two layouts and an auth gate.
 
-1.  **No Router Complexity**: You don't need "nested routes" or complex router configuration. The DOM hierarchy *is* your layout configuration.
-2.  **Native Performance**: Slots are a native browser feature. Projection is virtually free.
-3.  **Encapsulation**: Layouts manage their own styles (Shadow DOM) but can share global styles via `b-cascade`.
-4.  **Separation of Concerns**: Your router maps URLs to Pages. Your Layouts map Pages to Structure.
+There's no special vocabulary for this. Each layer is just a block with a slot, and the HTML you write is the configuration.
 
-> [!TIP]
-> Always use `b-cascade` on your layout shells if you want them to inherit global styles (like resets or frameworks) defined in `Lego.init()`.
+## How to think about it
 
-```html
-<template b-stylesheets="bulma" b-cascade="bulma">
-  <!-- Styles now available inside the shell -->
-</template>
-```
+Most layout questions reduce to two ideas:
+
+1. **A layout is a block with a `<slot>`.** Whatever you wrap with it lands in the slot.
+2. **Slotted children stay in the light DOM.** They keep their own state, their own shadow DOM, and they're findable from outside. The slot is a visual projection, not a change in parentage.
+
+If you can answer "what's the slot, and what goes in it" for any layout you're building, you've solved the structural problem. Styling, routing, and reactivity all flow through the same primitive.
+
+## Quick reference
+
+| Goal | Pattern |
+|---|---|
+| Static chrome around content | One block with `<slot></slot>` |
+| Multi-pane layout | Multiple `<slot name="...">` plus `slot="..."` on children |
+| Persistent shell wrapping routes | `<shell><lego-router></lego-router></shell>` |
+| Conditional gating (auth, feature flags) | Wrap `<slot>` in a `b-if` div |
+| Layouts inside layouts | Just nest them in HTML |
+| Share styles into wrapped blocks | `b-stylesheets="x" b-cascade="x"` on the layout |
+| Where slotted children "live" | Light DOM, still under `<wrapper>` in the document tree |
+
+That's the whole story. One tag, two attributes for styling, and the rest is HTML composition.

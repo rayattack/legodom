@@ -1263,3 +1263,259 @@ describe('Audit fix #32: safeEval auto-invoke is gated to event-handler context'
     expect(receivedEvent.type).toBe('click');
   });
 });
+
+describe('Audit fix #18: initial discovery walks the tree once, not twice', () => {
+  let win, Lego, calls;
+  beforeEach(() => {
+    win = setupDom();
+    Lego = win.Lego;
+    calls = new Map(); // tagName -> visit count
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('config.loader sees each unknown tag exactly once on initial scan', async () => {
+    win.document.body.innerHTML =
+      '<wrap-a><wrap-b><wrap-c></wrap-c></wrap-b></wrap-a>';
+
+    Lego.config.loaderAllowlist = [/^wrap-/];
+    await Lego.init(win.document.body, {
+      loader: (tag) => {
+        calls.set(tag, (calls.get(tag) || 0) + 1);
+        // Don't actually fetch — return falsy to short-circuit.
+        return null;
+      }
+    });
+    await flush(40);
+
+    // Pre-fix: TreeWalker descended into every node and discover()
+    // recursed on each, so each tag was processed twice.
+    expect(calls.get('wrap-a')).toBe(1);
+    expect(calls.get('wrap-b')).toBe(1);
+    expect(calls.get('wrap-c')).toBe(1);
+  });
+});
+
+describe('Audit fix #20: globals tracking is per-key', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('mutating one global key does not re-render blocks that read a different key', async () => {
+    let aRenders = 0, bRenders = 0;
+    Lego.globals.themeA = 'light';
+    Lego.globals.themeB = 'dark';
+
+    Lego.block('reads-a', '<div>[[ global.themeA ]]</div>', {
+      updated() { aRenders++; }
+    });
+    Lego.block('reads-b', '<div>[[ global.themeB ]]</div>', {
+      updated() { bRenders++; }
+    });
+    win.document.body.innerHTML = '<reads-a></reads-a><reads-b></reads-b>';
+    await flush(80);
+
+    const baselineA = aRenders;
+    const baselineB = bRenders;
+
+    // Mutate themeA only.
+    Lego.globals.themeA = 'dim';
+    await flush(80);
+
+    // reads-a's updated() fired (DOM updated to 'dim'); reads-b stayed quiet.
+    expect(win.document.querySelector('reads-a').shadowRoot.querySelector('div').textContent).toBe('dim');
+    expect(aRenders).toBeGreaterThan(baselineA);
+    expect(bRenders).toBe(baselineB);
+  });
+
+  it('nested global access (deep path) falls back to the wildcard subscriber', async () => {
+    Lego.globals.user = { name: 'Ada' };
+    Lego.globals.theme = 'light';
+
+    let nestedRenders = 0;
+    Lego.block('reads-nested', '<div>[[ global.user.name ]]</div>', {
+      updated() { nestedRenders++; }
+    });
+    win.document.body.innerHTML = '<reads-nested></reads-nested>';
+    await flush(80);
+
+    const baseline = nestedRenders;
+    // Nested reads use the wildcard set, so an unrelated top-level
+    // mutation also wakes them. Conservative but correct.
+    Lego.globals.theme = 'dark';
+    await flush(80);
+    expect(nestedRenders).toBeGreaterThan(baseline);
+
+    // The deep mutation actually changes the DOM.
+    Lego.globals.user.name = 'Grace';
+    await flush(80);
+    expect(win.document.querySelector('reads-nested').shadowRoot.querySelector('div').textContent).toBe('Grace');
+  });
+});
+
+describe('Audit fix #31: cleanupDbBindings uses the reverse index', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    win.localStorage.clear();
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('unsnap removes only this element\'s db entries; siblings stay registered', async () => {
+    Lego.block('db-clean-a', '<span>[[ v ]]</span>', {
+      v: Lego.db('shared.k').default('A')
+    });
+    Lego.block('db-clean-b', '<span>[[ v ]]</span>', {
+      v: Lego.db('shared.k').default('A')
+    });
+    win.document.body.innerHTML = '<db-clean-a></db-clean-a><db-clean-b></db-clean-b>';
+    await flush(30);
+
+    const a = win.document.querySelector('db-clean-a');
+    const b = win.document.querySelector('db-clean-b');
+
+    // Remove A. B should still receive cross-tab updates for the same key.
+    a.remove();
+    await flush(30);
+
+    // Simulate a cross-tab update on the shared key.
+    const event = new win.StorageEvent('storage', {
+      key: 'shared.k',
+      newValue: JSON.stringify('Z'),
+      storageArea: win.localStorage
+    });
+    win.dispatchEvent(event);
+    await flush(30);
+
+    // B sees the new value (its binding is still registered).
+    expect(b.state.v).toBe('Z');
+  });
+});
+
+describe('Audit fix #23: safeEval blocklist allows benign property access', () => {
+  let win, Lego, warnSpy;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+    win.document.body.innerHTML = '';
+  });
+
+  const isBlocked = () =>
+    warnSpy.mock.calls.some(args =>
+      args.some(a => typeof a === 'string' && a.includes('Blocked dangerous'))
+    );
+
+  it('renders item.class, pkg.module, schema.prototype as ordinary property reads', async () => {
+    Lego.block(
+      'soft-allowed',
+      '<div>' +
+        '<span class="c">[[ item.class ]]</span>' +
+        '<span class="m">[[ pkg.module ]]</span>' +
+        '<span class="p">[[ schema.prototype ]]</span>' +
+      '</div>',
+      {
+        item: { class: 'card-large' },
+        pkg: { module: 'auth' },
+        schema: { prototype: 'v2' }
+      }
+    );
+    win.document.body.innerHTML = '<soft-allowed></soft-allowed>';
+    await flush(20);
+
+    const host = win.document.querySelector('soft-allowed');
+    expect(host.shadowRoot.querySelector('.c').textContent).toBe('card-large');
+    expect(host.shadowRoot.querySelector('.m').textContent).toBe('auth');
+    expect(host.shadowRoot.querySelector('.p').textContent).toBe('v2');
+    // None of those triggered the blocklist.
+    expect(isBlocked()).toBe(false);
+  });
+
+  it('still blocks bareword class / module / prototype keyword forms', async () => {
+    Lego.block(
+      'soft-blocked',
+      '<div class="r">[[ class ]]</div>',
+      {}
+    );
+    win.document.body.innerHTML = '<soft-blocked></soft-blocked>';
+    await flush(20);
+
+    expect(isBlocked()).toBe(true);
+  });
+
+  it('still blocks the constructor / __proto__ / eval / import escape vectors', async () => {
+    // These remain in the strict tier — even property-access form is
+    // dangerous because `obj.constructor.constructor("…")()` reaches
+    // Function. The renderer falls back to `?? ''`, so blocked output
+    // shows as the empty string and the warning fires.
+    Lego.block(
+      'strict-blocked',
+      '<div class="r">[[ obj.constructor ]]/[[ obj.__proto__ ]]/[[ x.eval ]]</div>',
+      { obj: {}, x: {} }
+    );
+    win.document.body.innerHTML = '<strict-blocked></strict-blocked>';
+    await flush(20);
+
+    const host = win.document.querySelector('strict-blocked');
+    expect(host.shadowRoot.querySelector('.r').textContent).toBe('//');
+    // Each blocked expression triggers a warning.
+    const warnings = warnSpy.mock.calls.filter(args =>
+      args.some(a => typeof a === 'string' && a.includes('Blocked dangerous'))
+    );
+    expect(warnings.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('Audit fix #26: Lego.config.strict surfaces missing template variables', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => {
+    if (Lego && Lego.config) Lego.config.strict = false;
+    win.document.body.innerHTML = '';
+  });
+
+  it('default behaviour: undefined variable renders as empty string (silent)', async () => {
+    Lego.block('strict-default', '<div class="r">A=[[ a ]] B=[[ b ]]</div>', { a: 'x' });
+    win.document.body.innerHTML = '<strict-default></strict-default>';
+    await flush(20);
+
+    const host = win.document.querySelector('strict-default');
+    // `b` doesn't exist on state → silent fallback to empty string.
+    expect(host.shadowRoot.querySelector('.r').textContent).toBe('A=x B=');
+  });
+
+  it('strict mode: undefined variable triggers the error boundary', async () => {
+    // Working error block displays a marker class.
+    Lego.block('strict-err', '<div class="caught">caught</div>');
+
+    Lego.block(
+      'strict-typo',
+      '<div>[[ usre.email ]]</div>',
+      { user: { email: 'a@b' } }
+    );
+
+    Lego.config.strict = true;
+    const host = win.document.createElement('strict-typo');
+    host.setAttribute('b-error', 'strict-err');
+    win.document.body.appendChild(host);
+    await flush(40);
+
+    // Error boundary swapped in — the typo'd binding raised a
+    // ReferenceError instead of being silently swallowed.
+    const target = host.shadowRoot || host;
+    expect(target.querySelector('strict-err')).toBeTruthy();
+  });
+});

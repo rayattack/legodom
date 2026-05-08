@@ -1,6 +1,6 @@
 # Lego.config
 
-Runtime configuration. Every property has a sensible default — set them directly on `Lego.config` at any point (typically in your app entry, before `Lego.init()`).
+Runtime configuration. Every property has a sensible default, set them directly on `Lego.config` at any point (typically in your app entry, before `Lego.init()`).
 
 ```ts
 interface LegoConfig {
@@ -23,21 +23,21 @@ Switches the template delimiter pair globally.
 
 | Setting | Delimiters |
 |---|---|
-| `'brackets'` | `[[ expr ]]` (recommended — does not collide with frameworks that already use `{{ }}`) |
+| `'brackets'` | `[[ expr ]]` (recommended, does not collide with frameworks that already use `{{ }}`) |
 | `'mustache'` | `{{ expr }}` |
 
 ```js
 Lego.config.syntax = 'mustache';
 ```
 
-The setting is read on every render — flipping it after blocks have mounted re-interprets future bindings, but already-resolved text won't reformat until the next render cycle for a given binding.
+The setting is read on every render, flipping it after blocks have mounted re-interprets future bindings, but already-resolved text won't reformat until the next render cycle for a given binding.
 
 ## debug
 
 - **Type**: `boolean`
 - **Default**: `false`
 
-Turns on `[Lego Trace]` and `[Lego Debug]` console logging — render entries, reactive sets, stylesheet application, loader skips. Useful while diagnosing reactivity or scoping issues; noisy in steady state.
+Turns on `[Lego Trace]` and `[Lego Debug]` console logging, render entries, reactive sets, stylesheet application, loader skips. Useful while diagnosing reactivity or scoping issues; noisy in steady state.
 
 ```js
 Lego.config.debug = true;
@@ -86,7 +86,7 @@ import DOMPurify from 'dompurify';
 Lego.config.sanitize = (html) => DOMPurify.sanitize(html);
 ```
 
-The base `b-html` directive (without the `.safe` modifier) **never** sanitizes — only use it on trusted content.
+The base `b-html` directive (without the `.safe` modifier) **never** sanitizes, only use it on trusted content.
 
 ## metrics
 
@@ -107,7 +107,7 @@ Lego.config.metrics = {
 - **Type**: `(tag: string) => string | Promise<string> | void`
 - **Default**: `undefined`
 
-Auto-discovery hook for unknown hyphenated tags. Documented under [`Lego.init({ loader })`](/api/init#options-loader) — the option there sets this property.
+Auto-discovery hook for unknown hyphenated tags. Documented under [`Lego.init({ loader })`](/api/init#options-loader), the option there sets this property.
 
 The loader runs whenever the runtime sees an unregistered hyphenated tag in `root` (initially via TreeWalker, ongoing via `MutationObserver`).
 
@@ -116,10 +116,10 @@ The loader runs whenever the runtime sees an unregistered hyphenated tag in `roo
 - **Type**: `string | RegExp | (tag: string) => boolean | Array<…>`
 - **Default**: `null`
 
-Allowlist for the loader. When `null`, every unknown hyphenated tag is fetched — and a one-time console warning is emitted to remind you to lock it down. Set this to one of:
+Allowlist for the loader. When `null`, every unknown hyphenated tag is fetched, and a one-time console warning is emitted to remind you to lock it down. Set this to one of:
 
 ```js
-// Single string — exact match
+// Single string, exact match
 Lego.config.loaderAllowlist = 'app-shell';
 
 // RegExp
@@ -128,11 +128,11 @@ Lego.config.loaderAllowlist = /^app-/;
 // Function
 Lego.config.loaderAllowlist = (tag) => tag.startsWith('app-') || tag === 'shared-modal';
 
-// Array — any-match
+// Array, any-match
 Lego.config.loaderAllowlist = ['app-shell', /^widget-/];
 ```
 
-Tag names that don't pass the allowlist are silently skipped (or logged in `debug` mode). Tags that pass are fetched once — concurrent occurrences of the same tag share the in-flight request.
+Tag names that don't pass the allowlist are silently skipped (or logged in `debug` mode). Tags that pass are fetched once, concurrent occurrences of the same tag share the in-flight request.
 
 This protects against attacker-controlled markup (e.g. via `b-html`) introducing a tag whose loader fetch then runs through your auth.
 

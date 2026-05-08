@@ -1,3 +1,12 @@
+<script>
+  export default {
+    count: 0,
+    increment() {
+      this.count++;
+    }
+  }
+</script>
+
 <template>
   <div class="card">
     <a href="https://github.com/rayattack/LegoDOM" target="_blank">
@@ -17,15 +26,6 @@
     </p>
   </div>
 </template>
-
-<script>
-  export default {
-    count: 0,
-    increment() {
-      this.count++;
-    }
-  }
-</script>
 
 <style>
 .logo {

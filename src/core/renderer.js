@@ -1,4 +1,4 @@
-import { registry, forPools, itemIdMap, getPrivateData, globalSubscribers } from './registry.js';
+import { registry, forPools, itemIdMap, getPrivateData, globalSubscribers, globalKeySubscribers } from './registry.js';
 import { globals } from './globals.js';
 import { config, resolve, createRegex, getDelimiters } from '../utils/helpers.js';
 import { safeEval } from '../utils/safe-eval.js';
@@ -166,8 +166,37 @@ export const scanForBindings = (container, subscriberTarget = null) => {
   const subscriberRoot = subscriberTarget || container.host || container;
   const directiveEntries = Object.entries(directives);
 
+  // Audit fix #20: extract the *top-level* global keys an expression
+  // touches and register the subscriber against each one. Falls back to
+  // the wildcard set when the access pattern is too dynamic to pin
+  // down (computed/bracket access, deep dotted paths — the proxy can't
+  // surface a top-level key from a nested mutation, so any nested-read
+  // subscriber must wake on every global change to stay correct).
+  const TOP_KEY = /\bglobal\.([\w$]+)([\w$.]*)/g;
   const checkGlobal = (str) => {
-    if (/\bglobal\b/.test(str)) globalSubscribers.add(subscriberRoot);
+    if (!/\bglobal\b/.test(str)) return;
+    let useWildcard = false;
+    const keys = new Set();
+    let m;
+    TOP_KEY.lastIndex = 0;
+    while ((m = TOP_KEY.exec(str)) !== null) {
+      const tail = m[2] || '';
+      if (tail.includes('.')) { useWildcard = true; break; }
+      keys.add(m[1]);
+    }
+    // If the regex didn't match anything but `global` is in the string
+    // (e.g. `global['x']` or a computed access), play safe with the
+    // wildcard set.
+    if (keys.size === 0) useWildcard = true;
+    if (useWildcard) {
+      globalSubscribers.add(subscriberRoot);
+      return;
+    }
+    keys.forEach(k => {
+      let set = globalKeySubscribers.get(k);
+      if (!set) { set = new Set(); globalKeySubscribers.set(k, set); }
+      set.add(subscriberRoot);
+    });
   };
 
   const visit = (node) => {

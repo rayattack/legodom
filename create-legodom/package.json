@@ -1,6 +1,6 @@
 {
   "name": "create-legodom",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Scaffolding tool for LegoDOM applications",
   "type": "module",
   "main": "index.js",

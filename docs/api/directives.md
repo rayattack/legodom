@@ -19,7 +19,7 @@ Conditional mount. The element is removed from the DOM when the expression is fa
 <empty-state b-if="todos.length === 0"></empty-state>
 ```
 
-Use `b-show` instead when toggling is frequent — `b-if` is for branches that rarely flip.
+Use `b-show` instead when toggling is frequent, `b-if` is for branches that rarely flip.
 
 ## b-show
 
@@ -51,8 +51,8 @@ Inside the loop, `$index` is the zero-based position.
 
 By default, items are tracked by:
 
-1. `b-key="someProp"` — the property path you specify (dot notation supported).
-2. `item.id` → `item._id` → `item.uuid` → `item.key` — auto-detected.
+1. `b-key="someProp"`, the property path you specify (dot notation supported).
+2. `item.id` → `item._id` → `item.uuid` → `item.key`, auto-detected.
 3. A WeakMap-backed monotonic counter for objects with no recognizable id.
 4. `${index}-${value}` for primitives.
 
@@ -66,11 +66,11 @@ By default, items are tracked by:
 
 ### Inner directives in loops
 
-`b-if`, `b-show`, `b-html`, `b-mount`, `b-enter`, `b-leave`, `b-init`, and `b-sync` all work inside `b-for`. Reactivity is granted at the loop level — mutating any item triggers a full loop re-iteration, not a per-binding update. (Reading the design notes in `src/directives/b-for.js` shows why.)
+`b-if`, `b-show`, `b-html`, `b-mount`, `b-enter`, `b-leave`, `b-init`, and `b-sync` all work inside `b-for`. Reactivity is granted at the loop level, mutating any item triggers a full loop re-iteration, not a per-binding update. (Reading the design notes in `src/directives/b-for.js` shows why.)
 
 ## b-text
 
-Text content from a property path. Path-only — **no expressions, math, or function calls**. For anything beyond a single path, use `[[ … ]]` interpolation.
+Text content from a property path. Path-only, **no expressions, math, or function calls**. For anything beyond a single path, use `[[ … ]]` interpolation.
 
 ```html
 <span b-text="user.name"></span>
@@ -85,7 +85,7 @@ Sets `innerHTML` to the result of an expression. Two forms:
 
 | Form | Behavior |
 |---|---|
-| `b-html="expr"` | Raw — no sanitization. **Trusted content only.** |
+| `b-html="expr"` | Raw, no sanitization. **Trusted content only.** |
 | `b-html.safe="expr"` | Runs the value through `Lego.config.sanitize` (or the built-in fallback) before insertion. |
 
 ```html
@@ -93,7 +93,7 @@ Sets `innerHTML` to the result of an expression. Two forms:
 <div b-html.safe="comment.bodyMarkdown"></div>
 ```
 
-When the inserted HTML replaces existing bindings, the runtime tags those bindings dead and drops them from the parent block's binding list — they will not write to detached nodes on later renders.
+When the inserted HTML replaces existing bindings, the runtime tags those bindings dead and drops them from the parent block's binding list, they will not write to detached nodes on later renders.
 
 ## b-sync
 
@@ -109,7 +109,7 @@ Two-way binding for form inputs. Source of truth is the state path; the input is
 </select>
 ```
 
-Radio groups bind to a single state property — each radio's `value` attribute is matched against the property:
+Radio groups bind to a single state property, each radio's `value` attribute is matched against the property:
 
 ```html
 <input type="radio" name="size" value="small"  b-sync="size">
@@ -150,7 +150,7 @@ Runs an expression **once**, the first time the binding executes.
 <section b-init="track('view', 'pricing')">…</section>
 ```
 
-For block-level one-shot work, use the `mounted()` hook instead — `b-init` is element-level.
+For block-level one-shot work, use the `mounted()` hook instead, `b-init` is element-level.
 
 ## b-enter
 
@@ -211,7 +211,7 @@ Captures a DOM ref into `this.$vars`. Useful for `.focus()`, `.play()`, canvas a
 
 ## b-logic / b-data
 
-Inject state at the template or instance level. Both names are equivalent — the runtime accepts either.
+Inject state at the template or instance level. Both names are equivalent, the runtime accepts either.
 
 ```html
 <!-- Template default -->
@@ -231,7 +231,7 @@ Merge order (last wins): script logic → template `b-logic` → instance `b-log
 
 ## b-props
 
-Declared prop contract on the outer `<template>`. **Pure metadata** — does not change how data flows.
+Declared prop contract on the outer `<template>`. **Pure metadata**, does not change how data flows.
 
 ```html
 <template b-id="user-card" b-props="{ user, title }">…</template>
@@ -254,7 +254,7 @@ Names an inline `<template>` so the runtime registers it as a custom element on 
 <template b-id="user-card">…</template>
 ```
 
-`Lego.block()` adds this attribute automatically. In `.lego` files the build plugin derives the name from the filename — no `b-id` is needed.
+`Lego.block()` adds this attribute automatically. In `.lego` files the build plugin derives the name from the filename, no `b-id` is needed.
 
 ## b-error
 
@@ -310,8 +310,8 @@ Specifies a CSS selector (or several space-separated selectors) for the navigati
 
 Attached to `<a>` elements with or without `b-target`. Controls history:
 
-- `b-link` (or just `b-target`) — pushes a new history entry (default).
-- `b-link="false"` — performs the navigation without changing the URL.
+- `b-link` (or just `b-target`), pushes a new history entry (default).
+- `b-link="false"`, performs the navigation without changing the URL.
 
 ```html
 <a href="/sidebar/tools" b-target="#sidebar" b-link="false">Tools</a>

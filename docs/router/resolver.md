@@ -66,7 +66,7 @@ For highly dynamic UIs, `b-target` can even be a function or a dynamic expressio
 
 ## Why This Matters
 
-By prioritizing local tags over global IDs, LegoDOM encourages **Encapsulation**. Your blocks become "Black Boxes" that manage their own internal routing targets. This means you can take a complex "Messaging Shell" and drop it into a "Dashboard Shell" without changing a single line of routing code—the targets will still resolve correctly because they are scoped to their parents.
+By prioritizing local tags over global IDs, LegoDOM encourages **Encapsulation**. Your blocks become "Black Boxes" that manage their own internal routing targets. This means you can take a complex "Messaging Shell" and drop it into a "Dashboard Shell" without changing a single line of routing code-the targets will still resolve correctly because they are scoped to their parents.
 
 ## Summary
 

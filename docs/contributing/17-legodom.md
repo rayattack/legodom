@@ -1,6 +1,6 @@
 # We Made It! The Public API
 
-Everything we've discussed—the Scanner, the Registry, the Router, and the Snap—stays dormant until `Lego.init()` is called. This function is not just a starter; it's an orchestrator that synchronizes the JavaScript environment with the existing HTML on the page.
+Everything we've discussed-the Scanner, the Registry, the Router, and the Snap-stays dormant until `Lego.init()` is called. This function is not just a starter; it's an orchestrator that synchronizes the JavaScript environment with the existing HTML on the page.
 
 ## The Lego Object: The Assembler
 

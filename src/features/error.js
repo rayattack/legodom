@@ -60,7 +60,6 @@ export const renderErrorBlock = (errorTag, crashedEl, err) => {
     }
 
     // Create the error block
-    // Create the error block
     const errorBlock = document.createElement(errorTag);
 
     // Pre-seed the state to avoid double-render and ensure $error exists on first render

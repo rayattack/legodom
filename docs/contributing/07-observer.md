@@ -1,6 +1,6 @@
 # Big Brother is Watching (Native Web Components)
 
-In Topic 6, we saw that `Lego.init()` sets up the system. Now, let's look at exactly how detection works. This is what makes LegoDOM feel "automatic"—you can inject HTML into the page using vanilla JavaScript, and Lego will instantly recognize it and bring it to life.
+In Topic 6, we saw that `Lego.init()` sets up the system. Now, let's look at exactly how detection works. This is what makes LegoDOM feel "automatic"-you can inject HTML into the page using vanilla JavaScript, and Lego will instantly recognize it and bring it to life.
 
 ## Native Web Components
 
