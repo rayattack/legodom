@@ -38,7 +38,7 @@ features:
   
   - icon: 📦
     title: Zero-Dependency Runtime
-    details: One small build artifact. Includes router, persistence, and reactivity. No peer dependencies at runtime.
+    details: ~14 KB gzipped. Router, persistence, and reactivity all included, no peer dependencies in the browser.
   
   - icon: 🧱
     title: Framework Agnostic

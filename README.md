@@ -32,7 +32,7 @@ Lego includes a **Vite plugin** for developers who prefer **Single File Componen
 ## Why Lego?
 
 - ⚡ **Extremely Fast** – No virtual DOM. No reconciliation. Direct DOM updates.
-- 📦 **Zero Runtime Dependencies** – Weighs less than 10kb gzipped.
+- 📦 **Zero Runtime Dependencies** – ~14 KB gzipped browser bundle.
 - 🛠️ **No Build Step** – Works directly in the browser with standard `<script>` tags.
 - 🧩 **Native Web Components** – Real Custom Elements, real Shadow DOM.
 - 🌐 **Built-in Routing** – Lego Router included for client-side routing.
