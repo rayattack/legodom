@@ -13,8 +13,8 @@ export default defineConfig({
     logo: '/logo.svg',
 
     nav: [
+      { text: 'Quickstart', link: '/quickstart/' },
       { text: 'Tutorial', link: '/tutorial/' },
-      { text: 'Guide', link: '/guide/' },
       { text: 'Contributing', link: '/contributing/' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
@@ -53,59 +53,59 @@ export default defineConfig({
           ]
         }
       ],
-      '/tutorial/': [
+      '/quickstart/': [
         {
-          text: 'Tutorial: Build a Task Tracker',
+          text: 'Quickstart: Build a Task Tracker',
           items: [
-            { text: 'Overview', link: '/tutorial/' },
-            { text: '1. Project Setup', link: '/tutorial/01-project-setup' },
-            { text: '2. Your First Block', link: '/tutorial/02-your-first-block' },
-            { text: '3. Routing & Layouts', link: '/tutorial/03-adding-routes' },
-            { text: '4. Persistence & Forms', link: '/tutorial/04-multi-page-app' },
-            { text: '5. State, Guards & Beyond', link: '/tutorial/05-state-and-globals' },
-            { text: '6. Dynamic Mounting', link: '/tutorial/06-dynamic-mounting' }
+            { text: 'Overview', link: '/quickstart/' },
+            { text: '1. Project Setup', link: '/quickstart/01-project-setup' },
+            { text: '2. Your First Block', link: '/quickstart/02-your-first-block' },
+            { text: '3. Routing & Layouts', link: '/quickstart/03-adding-routes' },
+            { text: '4. Persistence & Forms', link: '/quickstart/04-multi-page-app' },
+            { text: '5. State, Guards & Beyond', link: '/quickstart/05-state-and-globals' },
+            { text: '6. Dynamic Mounting', link: '/quickstart/06-dynamic-mounting' }
           ]
         }
       ],
-      '/guide/': [
+      '/tutorial/': [
         {
           text: 'Introduction',
           items: [
-            { text: 'What is LegoDOM?', link: '/guide/' },
-            { text: 'Getting Started', link: '/guide/getting-started' },
-            { text: 'Quick Start', link: '/guide/quick-start' },
-            { text: 'FAQ', link: '/guide/faq' },
+            { text: 'What is LegoDOM?', link: '/tutorial/' },
+            { text: 'Getting Started', link: '/tutorial/getting-started' },
+            { text: 'Quick Start', link: '/tutorial/quick-start' },
+            { text: 'FAQ', link: '/tutorial/faq' },
           ]
         },
         {
           text: 'Core Concepts',
           items: [
-            { text: 'The Lego Object', link: '/guide/the-lego-object' },
-            { text: 'Blocks', link: '/guide/blocks' },
-            { text: 'Templating', link: '/guide/templating' },
-            { text: 'Slots & Content Projection', link: '/guide/slots' },
-            { text: 'Layouts & Composition', link: '/guide/layouts' },
-            { text: 'Reactivity', link: '/guide/reactivity' },
-            { text: 'Directives', link: '/guide/directives' },
-            { text: 'Events', link: '/guide/events' },
-            { text: 'Routing', link: '/guide/routing' },
-            { text: 'Error Handling', link: '/guide/error-handling' },
-            { text: 'Persistence ($db)', link: '/guide/persistence' },
-            { text: 'Helper Utilities', link: '/guide/helpers' }
+            { text: 'The Lego Object', link: '/tutorial/the-lego-object' },
+            { text: 'Blocks', link: '/tutorial/blocks' },
+            { text: 'Templating', link: '/tutorial/templating' },
+            { text: 'Slots & Content Projection', link: '/tutorial/slots' },
+            { text: 'Layouts & Composition', link: '/tutorial/layouts' },
+            { text: 'Reactivity', link: '/tutorial/reactivity' },
+            { text: 'Directives', link: '/tutorial/directives' },
+            { text: 'Events', link: '/tutorial/events' },
+            { text: 'Routing', link: '/tutorial/routing' },
+            { text: 'Error Handling', link: '/tutorial/error-handling' },
+            { text: 'Persistence ($db)', link: '/tutorial/persistence' },
+            { text: 'Helper Utilities', link: '/tutorial/helpers' }
           ]
         },
         {
           text: 'Advanced',
           items: [
-            { text: 'Lego Files (.lego)', link: '/guide/lego-files' },
-            { text: 'Authentication', link: '/guide/authentication' },
-            { text: 'Lego Studio', link: '/guide/studio' },
-            { text: 'CDN Usage', link: '/guide/cdn-usage' },
-            { text: 'Lifecycle Hooks', link: '/guide/lifecycle' },
-            { text: 'Large Apps', link: '/guide/directory-structure' },
-            { text: 'Server Side Blocks', link: '/guide/server-side' },
-            { text: 'TypeScript', link: '/guide/typescript' },
-            { text: 'Testing', link: '/guide/testing' },
+            { text: 'Lego Files (.lego)', link: '/tutorial/lego-files' },
+            { text: 'Authentication', link: '/tutorial/authentication' },
+            { text: 'Lego Studio', link: '/tutorial/studio' },
+            { text: 'CDN Usage', link: '/tutorial/cdn-usage' },
+            { text: 'Lifecycle Hooks', link: '/tutorial/lifecycle' },
+            { text: 'Large Apps', link: '/tutorial/directory-structure' },
+            { text: 'Server Side Blocks', link: '/tutorial/server-side' },
+            { text: 'TypeScript', link: '/tutorial/typescript' },
+            { text: 'Testing', link: '/tutorial/testing' },
           ]
         }
       ],

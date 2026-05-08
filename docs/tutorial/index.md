@@ -1,51 +1,112 @@
-# Tutorial: Build a Task Tracker
+# What is Lego?
 
-Six chapters. By the end you'll have a working task-tracker with reactive blocks, a sidebar that doesn't reload between pages, persistent storage that survives refresh, an admin route guarded by middleware, and a "task editor" panel that loads on demand. About 250 lines of script across the whole app.
+LegoDOM is a tiny, zero-dependency JavaScript library for building reactive Web Components directly in the browser.
 
-If that sounds like a lot, you'll be surprised how little code it takes. The point of this tutorial isn't to make you type a lot. It's to walk you through enough patterns that the next time you sit down with LegoDOM, you already know which tool reaches for which problem.
+## The Philosophy
 
-Every snippet on this track runs against the current LegoDOM source. No skipped steps, no hidden setup. Copy what you see and it will run.
+LegoDOM is built on a simple belief: **the DOM is not your enemy**.
 
-## What you'll build
+Modern frameworks introduced virtual DOMs and compilation steps to solve problems that arose from trying to make the DOM do things it wasn't designed for. Lego takes a different approach it embraces the DOM and Web Components as they were intended to be used.
 
+## Key Principles
+
+### 1. Mental Model Simplicity
+
+There are no new concepts to learn. If you know:
+- HTML
+- JavaScript objects
+- Basic DOM events
+
+You already know Lego.
+
+### 2. No Build Step Required
+
+Drop a `<script>` tag in your HTML and you're ready to go. Build tools are optional, not mandatory.
+
+### 3. True Reactivity
+
+Change an object → the DOM updates. That's it. No `setState`, no `dispatch`, no `computed properties` to configure.
+
+```js
+// This just works
+block.state.count++;
 ```
-┌─────────────────────────────────────────────┐
-│  Tracker         All  Work  Personal  Admin │
-├──────────┬──────────────────────────────────┤
-│  search  │  ☐  Finish quarterly report     │
-│   ↓      │  ☑  Review pull requests        │
-│  filter  │  ☐  Update project roadmap      │
-│   ↓      │                                  │
-│  add     │  3 of 5 remaining               │
-└──────────┴──────────────────────────────────┘
-```
 
-Specifically:
+### 4. Web Standards First
 
-- A persistent shell. The sidebar and search bar never reload between page changes.
-- Routes (`/`, `/work`, `/personal`, `/admin`) that swap only the content area.
-- Tasks stored in `localStorage` with cross-tab sync.
-- An `/admin` route protected by middleware.
-- A task editor that loads on demand the first time you click a task.
+Lego uses:
+- **Web Components** - Standard custom elements
+- **Shadow DOM** - Native encapsulation
+- **ES6 Proxies** - For reactivity
+- **Template literals** - For templating
 
-## What you should already know
+No proprietary APIs. Everything is built on web standards.
 
-- HTML, CSS, and modern JavaScript (`async`/`await`, getters, the spread operator).
-- The shape of a `package.json` and how to run an `npm` script.
+## When to Use Lego
 
-You do **not** need prior experience with React, Vue, Svelte, or Web Components. If you have it, a few moments in this tutorial will feel weirdly easy. That's the point.
+### ✅ Lego is Great For:
 
-## Chapters
+- **Applications of any scale** - From prototypes to enterprise systems with hundreds of blocks
+- **Multi-domain applications** - HRIS, CRM, Finance, Planning systems with complex business logic
+- **Embedded widgets** that need to work anywhere without conflicts
+- **Progressive enhancement** of existing sites
+- **Teams that value simplicity** over framework complexity
+- **Projects requiring full control** with zero dependencies
+- **Learning** how reactive systems work under the hood
 
-| # | Page | Topic |
-|---|---|---|
-| 1 | [Project setup](./01-project-setup) | Scaffold, file layout, dev server |
-| 2 | [Your first block](./02-your-first-block) | `.lego` files, reactivity, directives |
-| 3 | [Routing & layouts](./03-adding-routes) | `Lego.route`, `b-target`, the persistent shell |
-| 4 | [Persistence & forms](./04-multi-page-app) | `$db`, two-way binding, cross-tab sync |
-| 5 | [State & guards](./05-state-and-globals) | `Lego.globals`, route middleware, error boundaries |
-| 6 | [Dynamic mounting](./06-dynamic-mounting) | `b-mount`, `$mount`, lazy `manifest` |
+### ⚠️ Consider Alternatives If:
 
-::: tip Prefer no build step?
-Skim [CDN Usage](/guide/cdn-usage) instead. Every concept here applies; you just declare blocks with `<template b-id>` directly in your HTML instead of in `.lego` files.
+- You need a massive ecosystem of pre-built UI blocks (though LegoDOM blocks are easy to build)
+- Your team is already deeply invested in React/Vue/Angular and migration isn't justified
+- You require TypeScript with full type inference (LegoDOM works with TS but doesn't provide built-in types)
+
+::: tip SSC vs SSR
+LegoDOM supports **SSC (Server-Side Blocks)** - you can render blocks on the server and hydrate them on the client. This is simpler and more efficient than traditional SSR frameworks that require complex hydration strategies.
 :::
+
+## How small is it?
+
+The runtime is split across `src/core/`, `src/directives/`, `src/features/`, and `src/utils/`, each module focused, well-commented, and readable in one sitting. Zero runtime dependencies. The Vite plugin is the only optional `peerDependency` (`fast-glob` is the lone dev-time dependency for block discovery).
+
+Reading the source end-to-end is a feasible weekend project, and a great way to internalize how reactivity and surgical routing actually work.
+
+## What Makes It Different?
+
+| Aspect | Lego | Traditional Frameworks |
+|--------|--------|----------------------|
+| **Reactivity** | Direct object mutation | setState / dispatch / ref() |
+| **Templates** | HTML with <code v-pre>[[ ]]</code> | JSX / template syntax |
+| **Styles** | Shadow DOM (native) | CSS-in-JS / scoped CSS |
+| **Build** | Optional | Required |
+| **Learning Curve** | Hours | Days/Weeks |
+|**Philosophy** | Embrace the platform | Abstract the platform |
+
+## Coming from React or Svelte?
+
+If you already know React or Svelte, here's how LegoDOM concepts map to what you know:
+
+| What You Know | LegoDOM Equivalent | Example |
+|---|---|---|
+| Component | **Block** | `<template b-id="my-block">` or `.lego` file |
+| JSX / Svelte template | **Template** with `[[ ]]` interpolation | `<p>[[ message ]]</p>` |
+| `useState` / `let` (Svelte) | **Direct assignment** (Proxy reactivity) | `this.count++` |
+| `useEffect` / `onMount` | **`mounted()`** lifecycle hook | `mounted() { this.fetchData() }` |
+| `props` / `export let` | **`b-logic`** attribute (scoped props) | `<child b-logic="{ name: parentName }">` |
+| `children` / `<slot>` | **Native `<slot>`** (Shadow DOM) | `<slot name="header"></slot>` |
+| Context / stores | **`Lego.globals`** + **`$registry()`** | `global.user.name` / `$registry('store')` |
+| React Router / SvelteKit routes | **`Lego.route()`** + **`b-target`** | `Lego.route('/users/:id', 'user-page')` |
+| Error Boundary | **`b-error`** attribute | `<my-block b-error="error-fallback">` |
+| `useRef` / `bind:this` | **`b-var`** + **`$vars`** | `<input b-var="nameInput">` → `$vars.nameInput` |
+| `.map()` for lists | **`b-for`** directive | `<li b-for="item in items">[[ item ]]</li>` |
+| Ternary in JSX / `{#if}` | **`b-if`** / **`b-show`** | `<p b-if="isLoggedIn">Welcome</p>` |
+| `onChange` / `on:input` | **`@input`** / **`b-sync`** | `<input b-sync="name">` |
+| CSS Modules / scoped styles | **Shadow DOM** (automatic) | Styles in `<style>` are scoped by default |
+| Redux / Svelte stores | **`$db`** (persistent) or **`Lego.globals`** (shared) | `$db('theme').default('light')` |
+
+::: tip Key Difference
+In React and Svelte, you explicitly tell the framework about state changes (`setState`, `$:`, etc.). In LegoDOM, you just mutate your data directly, `this.count++`, and the framework detects the change automatically via ES6 Proxies.
+:::
+
+## Next Steps
+
+Ready to dive in? Head to the [Getting Started](/tutorial/getting-started) page to build your first Lego block in under 5 minutes.

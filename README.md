@@ -90,7 +90,7 @@ This scaffolds a complete project with Vite, the LegoDOM plugin, and a sample co
 ## 🔗 Links
 
 - 📖 [Full Documentation](https://rayattack.github.io/legodom/)
-- 🚀 [Quick Start Guide](https://rayattack.github.io/legodom/guide/quick-start)
+- 🚀 [Quickstart](https://rayattack.github.io/legodom/quickstart/)
 - 🔌 [Vite Plugin Setup](https://rayattack.github.io/legodom/api/vite-plugin)
 - 🧪 [Example Showcase](https://rayattack.github.io/legodom/examples/)
 

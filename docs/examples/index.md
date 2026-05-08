@@ -100,5 +100,5 @@ Try these examples directly in your browser:
 ## Next Steps
 
 - Check the [API Reference](/api/)
-- Read the [Guide](/guide/)
+- Read the [Guide](/quickstart/)
 - View the [source code](https://github.com/rayattack/Lego)

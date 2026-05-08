@@ -405,5 +405,5 @@ Lego.route('/users/:id', 'user-profile');
 ## Next Steps
 
 - See [Todo App Example](/examples/todo-app)
-- Learn about [Routing Guide](/guide/routing)
+- Learn about [Routing Guide](/tutorial/routing)
 - Try [Form Validation Example](/examples/form)

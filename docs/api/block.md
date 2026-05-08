@@ -31,7 +31,7 @@ Lego.block(
 `Lego.block()`:
 
 1. Creates a `<template>` element, stamps the metadata attributes (`b-id`, `b-stylesheets`, `b-cascade`, `b-error`, `b-props`), and stores it in the registry under `tagName`.
-2. Stores `logic` keyed by `tagName` (the script tier of the [three-tier merge](/guide/blocks#data-merging-the-three-tiers)).
+2. Stores `logic` keyed by `tagName` (the script tier of the [three-tier merge](/tutorial/blocks#data-merging-the-three-tiers)).
 3. Registers `tagName` as a custom element (no-op if already registered).
 4. If `tagName` was previously defined, all live instances are unsnapped and re-snapped, this is the HMR / re-definition path.
 

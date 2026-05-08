@@ -208,6 +208,6 @@ Use `b-show` to conditionally display error messages:
 
 ## Next Steps
 
-- See [Directives Guide](/guide/directives) for all available directives
-- Learn about [Persistence](/guide/persistence) to save form data across sessions
+- See [Directives Guide](/tutorial/directives) for all available directives
+- Learn about [Persistence](/tutorial/persistence) to save form data across sessions
 - Try the [Todo App](/examples/todo-app) example

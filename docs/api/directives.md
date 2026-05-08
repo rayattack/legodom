@@ -227,7 +227,7 @@ The expression is evaluated against the parent block's state, so you can pass sc
 <child-card b-logic="{ user: currentUser, onSelect: pick }"></child-card>
 ```
 
-Merge order (last wins): script logic → template `b-logic` → instance `b-logic`. See [Blocks](/guide/blocks#data-merging-the-three-tiers).
+Merge order (last wins): script logic → template `b-logic` → instance `b-logic`. See [Blocks](/tutorial/blocks#data-merging-the-three-tiers).
 
 ## b-props
 
@@ -268,7 +268,7 @@ Defines an error boundary. When a descendant block crashes during render, mount,
 <user-dashboard b-error="critical-error"></user-dashboard>
 ```
 
-The fallback receives `$error: { message, stack, component }` injected as initial state. See the [Error Handling guide](/guide/error-handling) for boundary cascade rules and recursion limits.
+The fallback receives `$error: { message, stack, component }` injected as initial state. See the [Error Handling guide](/tutorial/error-handling) for boundary cascade rules and recursion limits.
 
 ## b-stylesheets
 
