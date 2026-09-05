@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+**Component contract**
+- Reactive props: `b-props="name, count: Number = 0, tags: Array = []"` declares props with optional types and defaults. Parents bind them with `:prop="expr"` (kebab-case maps to camelCase) and the child re-renders when the expression changes. Plain attributes on declared props are coerced by type. Declared props always exist on state; a Boolean with no attribute is `false`.
+- `Lego.block(tag, { template, logic, styles, cascade, error, props, shadow, form })` options form. The positional form still works.
+- Shadow DOM opt-out: `shadow: false` (or `<template b-shadow="false">`) renders into the element itself, emulates default and named slots by moving the original children once at mount, and scopes the block's `<style>` by prefixing selectors with the tag name.
+- Form participation: `form: true` (or `<template b-form>`) makes the element form-associated and exposes `$form` with `setValue`, `setValidity`, `reportValidity`, `checkValidity`. A `value` state key is kept in sync with the form value.
+- Lifecycle: `updated()` now runs synchronously after each flush, once per block per flush; the 50ms debounce is gone. New `beforeUpdate()`, `errorCaptured(err, info)` (return `false` to stop the error before any boundary), and `$loading` while an async `mounted()` is pending. A flush drains work scheduled during the flush, so a parent writing a child's prop reaches the DOM in the same frame.
+
+**Server rendering**
+- New entry `lego-dom/server`: `createRenderer()` with `define`, `defineLegoFile`, and `renderToString(tag, { props, globals, route, slots, attrs })`. Pure Node, no DOM, zero dependencies, hand-written HTML parser for the template subset. Lifecycle hooks are not run on the server.
+- Output carries the hydration contract: `b-hydrate` on block hosts, `<template shadowrootmode="open">` for shadow blocks, `<!--b-if: expr-->` for false branches, `<!--b-for: item in list-->` plus `data-b-key` on rows, and all `b-*`, `@*` and `:*` attributes preserved as authored.
+
 **Reactivity core rewritten around effects**
 - Dependencies now belong to the effect that read them (a binding, a computed, a watcher), not to the host element. An object shared by two blocks updates both. `Lego.globals` is an ordinary reactive object; the source-text scan for `global.x` is gone.
 - Dependency sets are cleared on every run, so a binding stops re-running on keys it no longer reads.
