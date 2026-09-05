@@ -105,6 +105,7 @@ export default defineConfig({
             { text: 'Lifecycle Hooks', link: '/tutorial/lifecycle' },
             { text: 'Large Apps', link: '/tutorial/directory-structure' },
             { text: 'Server Side Blocks', link: '/tutorial/server-side' },
+            { text: 'Server-Side Rendering', link: '/tutorial/ssr' },
             { text: 'TypeScript', link: '/tutorial/typescript' },
             { text: 'Testing', link: '/tutorial/testing' },
           ]

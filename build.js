@@ -31,8 +31,23 @@ async function build() {
     sourcemap: isDev,
   });
 
-  // 3. Copy TypeScript declarations
+  // 3. Server build (lego-dom/server). Node only, and deliberately not
+  // minified: this runs on the author's server, where a readable stack trace
+  // is worth more than a few kilobytes.
+  await esbuild.build({
+    entryPoints: ['src/server/index.js'],
+    bundle: true,
+    format: 'esm',
+    platform: 'node',
+    target: 'node20',
+    outfile: 'dist/lego.server.mjs',
+    minify: false,
+    sourcemap: isDev,
+  });
+
+  // 4. Copy TypeScript declarations
   fs.copyFileSync('src/lego.d.ts', 'dist/lego.d.ts');
+  fs.copyFileSync('src/server/index.d.ts', 'dist/lego.server.d.ts');
 
   console.log('Build complete! 🧱');
 }

@@ -18,6 +18,10 @@
       "require": "./dist/lego.min.js",
       "default": "./dist/lego.min.js"
     },
+    "./server": {
+      "import": "./dist/lego.server.mjs",
+      "types": "./dist/lego.server.d.ts"
+    },
     "./vite-plugin": "./vite-plugin.js"
   },
   "keywords": [

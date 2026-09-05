@@ -8,7 +8,7 @@ LegoDOM (npm: `lego-dom`) is a zero-dependency web components framework (~18 KB 
 
 ## Commands
 
-- **Build**: `node build.js` (outputs `dist/lego.min.js` IIFE + `dist/lego.mjs` ESM + `dist/lego.d.ts`). Use `node build.js --dev` for sourcemaps.
+- **Build**: `node build.js` (outputs `dist/lego.min.js` IIFE + `dist/lego.mjs` ESM + `dist/lego.server.mjs` Node ESM + `dist/lego.d.ts` + `dist/lego.server.d.ts`). Use `node build.js --dev` for sourcemaps.
 - **Test**: `npx vitest run` (all tests) or `npx vitest run tests/<name>.test.js` (single test)
 - **Docs dev**: `npx vitepress dev docs`
 
@@ -66,6 +66,18 @@ Each directive exports an object with `name`, `scan()`, `execute()`, and `destro
 - **`dom.js`** — `escapeHTML()`, `findAncestor()` (traverses shadow DOM boundaries), `resolveTargets()`, `syncModelValue()`.
 - **`helpers.js`** — Config, `mergeDescriptors()` (preserves getters/setters), delimiter handling (`[[]]` or `{{}}`), `camelCase`/`kebabCase` for prop-to-attribute naming.
 - **`glob.js`** — Minimal glob-to-RegExp matcher used by the Vite plugin for `.lego` discovery, so the package has no runtime dependencies.
+
+### Server Renderer (`src/server/`)
+
+Shipped as a separate package entry, `lego-dom/server`, built to `dist/lego.server.mjs` (ESM, `platform: 'node'`, not minified). Renders blocks to HTML strings with no DOM. Imports only the pure utilities (`expression.js`, `parser-utils.js`, `helpers.js`, `lru-cache.js`); importing anything from `core/` or `features/` would drag in `document`.
+
+- **`index.js`**: `createRenderer({ syntax, sanitize })` returning `define` / `defineLegoFile` / `renderToString` / `has` / `names`. Owns the definition registry, the per-renderer delimiters, the `self` to `:host` CSS rewrite, `b-props` parsing and the slot map. `defineLegoFile` is the only place the server compiles source text (`new Function` on the `.lego` script section's default export), matching `src/core/parser.js`.
+- **`render.js`**: The render walk. Same directive semantics as `src/core/renderer.js` plus `src/directives/`, expressed as a pure string-producing recursion. Expressions go through the same `compile()` the client uses, so identifier resolution order is identical. `MAX_BLOCK_DEPTH` (32) caps block composition.
+- **`html.js`**: Hand-written HTML parser and serializer for the template subset: attributes (quoted, unquoted, valueless), void elements, raw-text elements (`style`/`script`/`textarea`/`title`), comments, self-closing syntax. Entities are not decoded; authored source round-trips verbatim, and escaping (`escapeText` / `escapeAttr`) is applied only to values the renderer computes. Strict by default, `{ lenient: true }` for the sanitizer.
+- **`css.js`**: Block style scoping. Shadow blocks get the `self` to `:host` rewrite `lifecycle.js` does at mount. Light DOM blocks get every top-level selector prefixed with the tag name (per entry in a selector list; a selector naming `self` becomes the bare tag name instead of doubling), recursing into `@media`/`@supports`/`@container`/`@layer` and leaving `@keyframes`/`@font-face` alone. A rule splitter, not a CSS parser: preludes are rewritten, declaration bodies are copied through.
+- **`sanitize.js`**: Server twin of `defaultSanitize` in `src/utils/dom.js`, applied over the parse tree instead of a live DOM. Keep the two rule sets in step.
+
+Output contract (consumed by the client hydration engine): hosts carry `b-hydrate` and `b-id`; shadow blocks emit `<template shadowrootmode="open">` with the `<style>` first; light DOM blocks emit `<style data-lego-style="tag-name">` for de-duplication; `b-if` false becomes `<!--b-if: EXPR-->`; `b-for` becomes `<!--b-for: item in list-->` plus clones carrying `data-b-key`. Nested block props layer as logic defaults, then `b-logic`, then declared plain attributes, then `:prop`. No `b-`, `@` or `:` attribute is ever stripped. Lifecycle hooks are never called. Documented in `docs/tutorial/ssr.md`.
 
 ### Vite Plugin (`vite-plugin.js`)
 
