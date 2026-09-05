@@ -139,7 +139,7 @@ export function generateBlockCall(parsed) {
   }
 
   // Generate the Lego.block call
-  return `Lego.block('${blockName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, '${stylesAttr}', '${cascadeAttr}', '${errorAttr}', '${propsAttr || ''}');`;
+  return `Lego.block('${blockName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, ${JSON.stringify(stylesAttr)}, ${JSON.stringify(cascadeAttr)}, ${JSON.stringify(errorAttr)}, ${JSON.stringify(propsAttr || '')});`;
 }
 
 /**

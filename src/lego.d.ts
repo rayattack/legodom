@@ -4,7 +4,50 @@ export interface LegoConfig {
   metrics: Record<string, any>;
   syntax: 'brackets' | 'mustache';
   onError: (err: Error, type: string, el?: HTMLElement) => void;
+  /**
+   * Sanitizer for `b-html.safe`. Receives raw HTML, returns cleaned HTML.
+   * Set to `DOMPurify.sanitize` (or equivalent) for production; null falls
+   * back to a small built-in sanitizer.
+   */
+  sanitize?: ((html: string) => string) | null;
+  /**
+   * Opt-in stricter runtime safety: re-throws undefined-identifier
+   * ReferenceErrors instead of silently rendering an empty string, and
+   * drops dangerous-scheme (`javascript:`/`data:text/html`/`vbscript:`)
+   * values on URL-sink attributes (href/src/action/formaction/srcdoc/
+   * xlink:href/data).
+   */
+  strict?: boolean;
+  /**
+   * Restricts `config.loader` auto-discovery to matching tag names. A
+   * console warning is emitted once if `loader` is set without this.
+   */
+  loaderAllowlist?:
+    | string
+    | RegExp
+    | ((tagName: string) => boolean)
+    | Array<string | RegExp | ((tagName: string) => boolean)>
+    | null;
 }
+
+export type LegoManifestHeaders = Record<string, string | (() => string)>;
+
+export interface LegoManifestGroup {
+  base?: string;
+  suffix?: boolean | string;
+  headers?: LegoManifestHeaders;
+  credentials?: RequestCredentials;
+  /** Array style: `legos: ['user-card']` fetched from `${base}${name}${suffix}`. */
+  legos?: string[];
+  /** Map style: `map: { 'user-card': '/blocks/user-card.lego' }`. */
+  map?: Record<string, string>;
+}
+
+export type LegoManifest =
+  | string
+  | { url: string; headers?: LegoManifestHeaders; credentials?: RequestCredentials }
+  | LegoManifestGroup
+  | LegoManifestGroup[];
 
 export interface LegoGlobals {
   $route: {
@@ -34,6 +77,8 @@ export interface LegoInitOptions {
   styles?: Record<string, string>;
   loader?: (tagName: string) => Promise<string> | string | void;
   studio?: boolean;
+  /** Pre-register lazy-loaded blocks from a manifest (URL, inline group(s), or an auth-wrapped URL). */
+  manifest?: LegoManifest;
 }
 
 export interface Lego {

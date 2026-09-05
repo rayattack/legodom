@@ -98,6 +98,7 @@ export const bFor = {
           // the parent block, not the detached child clone.
           child._loopBindings = scanForBindings(child, contextEl);
         }
+        child._loopSyncInputs = [child, ...child.querySelectorAll('*')].filter(el => findSyncAttr(el));
       } else {
         // Keep index current so event handlers and b-sync resolve the right item
         child._loopCtx.index = i;
@@ -141,8 +142,7 @@ export const bFor = {
         }
       }
 
-      const syncInputs = [child, ...child.querySelectorAll('*')].filter(el => findSyncAttr(el));
-      syncInputs.forEach(input => {
+      child._loopSyncInputs.forEach(input => {
         const attr = findSyncAttr(input);
         const path = attr.value;
         if (path.startsWith(`${itemName}.`)) {

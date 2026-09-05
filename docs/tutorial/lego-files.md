@@ -16,10 +16,7 @@ The #1 question developers ask: **"I have a `.lego` file, now where do I put my 
 // src/app.js, The control center of your app
 
 import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks'; // Plugin still uses this name for now
-
-// 1. Register all .lego files automatically
-registerBlocks();
+import 'virtual:lego-blocks'; // 1. Auto-registers all .lego files
 
 // 2. Define your routes
 Lego.route('/', 'home-page');           // home-page.lego
@@ -206,10 +203,7 @@ In your `src/app.js`:
 
 ```js
 import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks';
-
-// Auto-register all discovered blocks
-registerBlocks();
+import 'virtual:lego-blocks'; // auto-registers all discovered blocks
 
 // Now all .lego blocks are available!
 ```

@@ -28,7 +28,9 @@ const logicCache = new LRUCache(500);
 //     is mostly defence-in-depth here since `constructor` stays blocked
 //     in STRICT; without `.constructor` no Function-escape chain
 //     completes anyway.
-const STRICT_BLOCK = /\b(eval|import|constructor|__proto__)\b/;
+// Reflect/getPrototypeOf/setPrototypeOf/defineProperty/getOwnPropertyDescriptor:
+// stopgap against Object.getPrototypeOf(x).polluted = 1-style pollution.
+const STRICT_BLOCK = /\b(eval|import|constructor|__proto__|Reflect|getPrototypeOf|setPrototypeOf|defineProperty|getOwnPropertyDescriptor)\b/;
 const SOFT_BLOCK = /(?<![\w.$])(class|module|prototype)(?![\w$])/;
 
 export const safeEval = (expr, context, throwError = true) => {

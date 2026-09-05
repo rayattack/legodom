@@ -57,11 +57,13 @@ Since the server generates the `.lego` file, it can inject data before sending i
 **Example (Backend Pseudocode):**
 
 ```python
+import json
+
 # GET /blocks/user-card ("Flask-like" syntax)
 @app.route('/blocks/user-card')
 def get_user_card():
     user = db.get_current_user()
-    
+
     # We bake the data right into the template!
     return f"""
     <template>
@@ -72,13 +74,23 @@ def get_user_card():
     </template>
     
     <script>
-       export default {
-         name: "{user.name}", 
-         balance: {user.balance}
-       }
+       export default {{
+         name: {json.dumps(user.name)},
+         balance: {json.dumps(user.balance)}
+       }}
     </script>
     """
 ```
+
+> **Always JSON-encode server data before splicing it into generated
+> `<script>` content. Never string-format it in.** `json.dumps(...)`
+> (or your language's JSON-safe equivalent, e.g. `JSON.stringify` in
+> Node) closes the string-breakout: a raw f-string/format call lets a
+> `user.name` containing a `"` or `\` escape the string literal, and a
+> `</script>` splices arbitrary code straight into the module the
+> browser runs via `new Function`. This is server-generated content
+> reaching client-side execution. Treat it with the same care as any
+> other HTML/JS templating that mixes user data with markup.
 
 The browser receives a block that **already has the data**. No second API call needed!
 

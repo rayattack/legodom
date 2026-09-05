@@ -57,18 +57,24 @@ export const findSyncAttr = (node) =>
  * `Lego.config.sanitize = DOMPurify.sanitize` (or equivalent).
  */
 const DANGEROUS_TAGS = new Set(['script', 'iframe', 'object', 'embed', 'link', 'meta', 'base', 'style']);
-const URL_ATTRS = new Set(['href', 'src', 'xlink:href', 'action', 'formaction', 'srcdoc', 'data']);
+export const URL_ATTRS = new Set(['href', 'src', 'xlink:href', 'action', 'formaction', 'srcdoc', 'data']);
 
-export const defaultSanitize = (html) => {
-  if (typeof html !== 'string' || html === '') return html;
-  if (typeof document === 'undefined') return html;
-  const tpl = document.createElement('template');
-  tpl.innerHTML = html;
-  const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_ELEMENT);
+export const isDangerousUrl = (value) => {
+  if (typeof value !== 'string') return false;
+  const v = value.trim().toLowerCase();
+  return v.startsWith('javascript:') || v.startsWith('data:text/html') || v.startsWith('vbscript:');
+};
+
+// Recurses into nested <template>.content — a TreeWalker treats a <template>
+// as a leaf otherwise, so declarative-Shadow-DOM payloads inside one would
+// survive sanitization untouched.
+const sanitizeRoot = (root) => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
   const toRemove = [];
   let node;
   while (node = walker.nextNode()) {
-    if (DANGEROUS_TAGS.has(node.tagName.toLowerCase())) {
+    const tag = node.tagName.toLowerCase();
+    if (DANGEROUS_TAGS.has(tag)) {
       toRemove.push(node);
       continue;
     }
@@ -80,15 +86,26 @@ export const defaultSanitize = (html) => {
         node.removeAttribute(attr.name);
         continue;
       }
-      if (URL_ATTRS.has(name)) {
-        const v = attr.value.trim().toLowerCase();
-        if (v.startsWith('javascript:') || v.startsWith('data:text/html') || v.startsWith('vbscript:')) {
-          node.removeAttribute(attr.name);
-        }
+      if (URL_ATTRS.has(name) && isDangerousUrl(attr.value)) {
+        node.removeAttribute(attr.name);
       }
+    }
+    if (tag === 'template') {
+      // Declarative Shadow DOM isn't a supported b-html.safe input.
+      node.removeAttribute('shadowrootmode');
+      node.removeAttribute('shadowroot');
+      sanitizeRoot(node.content);
     }
   }
   toRemove.forEach(n => n.remove());
+};
+
+export const defaultSanitize = (html) => {
+  if (typeof html !== 'string' || html === '') return html;
+  if (typeof document === 'undefined') return html;
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  sanitizeRoot(tpl.content);
   return tpl.innerHTML;
 };
 

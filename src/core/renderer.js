@@ -4,7 +4,7 @@ import { config, resolve, createRegex, getDelimiters } from '../utils/helpers.js
 import { safeEval } from '../utils/safe-eval.js';
 import { findErrorBoundary, renderErrorBlock, handleError } from '../features/error.js';
 import { directives } from '../directives/index.js';
-import { findSyncAttr } from '../utils/dom.js';
+import { findSyncAttr, URL_ATTRS, isDangerousUrl } from '../utils/dom.js';
 import { setTracking, clearTracking } from './tracking.js';
 
 export const bind = (container, blockRoot, loopCtx = null) => {
@@ -310,6 +310,10 @@ const runBinding = (b, state, contextEl, track = true) => {
       if (b.node.textContent !== out) b.node.textContent = out;
     } else if (b.type === 'attr') {
       const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
+      if (config.strict && URL_ATTRS.has(b.attrName.toLowerCase()) && isDangerousUrl(out)) {
+        if (b.node.hasAttribute(b.attrName)) b.node.removeAttribute(b.attrName);
+        return;
+      }
       if (b.node.getAttribute(b.attrName) !== out) {
         b.node.setAttribute(b.attrName, out);
         if (b.attrName === 'class') b.node.className = out;

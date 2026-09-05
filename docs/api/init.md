@@ -144,9 +144,7 @@ Step 4 means inline templates are upgraded **after** routes are matched, useful 
 ```js
 // src/app.js
 import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks';
-
-registerBlocks();
+import 'virtual:lego-blocks';
 
 Lego.route('/',          'home-page');
 Lego.route('/users/:id', 'user-page');

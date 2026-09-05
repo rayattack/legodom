@@ -13,16 +13,16 @@ To keep sanity, we categorize Blocks into **four tiers**.
 
 | Type | Role | Knows About | Example |
 | :--- | :--- | :--- | :--- |
-| **Core** | Reusable UI primitives | Its own visuals & interactions | `block-avatar`, `block-dropdown`, `block-button` |
-| **Widget** | Core aggregator | Combines core blocks, local state | `widget-user-card`, `widget-search-bar` |
-| **Page** | Business logic & layout | Data, APIs, domain state | `page-dashboard`, `page-login` |
+| **Brick** | Reusable UI primitives | Its own visuals & interactions | `avatar-brick`, `dropdown-brick`, `button-brick` |
+| **Widget** | Brick aggregator | Combines bricks, local state | `user-card-widget`, `search-bar-widget` |
+| **Page** | Business logic & layout | Data, APIs, domain state | `dashboard-page`, `login-page` |
 | **Shell** | Top-level container | Layout, routing, slotting | `app-shell`, `admin-shell` |
 
 ## The Key Distinction
 
-**Core Blocks** are generic and reusable. They don't know about your business domain.
+**Bricks** are generic and reusable. They don't know about your business domain.
 
-**Widgets** combine core blocks into richer UI. They may have local state but stay reusable.
+**Widgets** combine bricks into richer UI. They may have local state but stay reusable.
 
 **Pages** are feature-specific. They know about your APIs, data models, and workflows.
 
@@ -30,8 +30,8 @@ To keep sanity, we categorize Blocks into **four tiers**.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Core Blocks                │  Widgets                      │
-│  ───────────                │  ───────                      │
+│  Bricks                     │  Widgets                      │
+│  ──────                     │  ───────                      │
 │  "How does a dropdown       │  "How does a user card        │
 │   work?"                    │   display an avatar and       │
 │                             │   a name together?"           │
@@ -57,23 +57,23 @@ To keep sanity, we categorize Blocks into **four tiers**.
 > I have an avatar. When I click it, it opens a file picker. When the file changes, it POSTs to `/v1/avatars`. What is it?
 
 **The "Lego Way" Solution:**
-Split this into core blocks and a page.
+Split this into a brick and a page.
 
-### 1. Core Block: The Avatar
+### 1. Brick: The Avatar
 **Role:** Just the visuals. Circular crop, fallback, size classes.
 
 ```html
-<!-- block-avatar.lego -->
+<!-- avatar-brick.lego -->
 <template>
   <img class="avatar" src="[[ src ]]" alt="[[ alt ]]">
 </template>
 ```
 
-### 2. Core Block: The File Trigger
+### 2. Brick: The File Trigger
 **Role:** Generic interaction. Wraps content and makes it clickable to open a file dialog.
 
 ```html
-<!-- block-file-trigger.lego -->
+<!-- file-trigger-brick.lego -->
 <template>
   <div @click="openPicker()">
     <slot></slot>
@@ -83,10 +83,10 @@ Split this into core blocks and a page.
 ```
 
 ### 3. Page: Profile Settings
-**Role:** The feature. Assembles the core blocks and owns the API call.
+**Role:** The feature. Assembles the bricks and owns the API call.
 
 ```html
-<!-- page-profile-settings.lego -->
+<!-- profile-settings-page.lego -->
 <script>
 export default {
   // Only this page knows about /v1/avatars
@@ -100,34 +100,34 @@ export default {
 
 <template>
   <h2>Your Profile</h2>
-  <block-file-trigger @file-selected="uploadAvatar">
-    <block-avatar src="[[ user.avatarUrl ]]"></block-avatar>
-  </block-file-trigger>
+  <file-trigger-brick @file-selected="uploadAvatar">
+    <avatar-brick src="[[ user.avatarUrl ]]"></avatar-brick>
+  </file-trigger-brick>
 </template>
 ```
 
 ## The Definitions
 
-### Core Blocks
+### Bricks
 Reusable UI primitives. They handle visuals and generic interactions.
 
 - **State:** Visual/UI only. "Is dropdown open?", "Is button hovered?"
 - **Communication:** Uses `$emit()` to broadcast events. **Never makes API calls.**
-- **Examples:** `block-avatar`, `block-button`, `block-dropdown`, `block-modal`, `block-file-trigger`
+- **Examples:** `avatar-brick`, `button-brick`, `dropdown-brick`, `modal-brick`, `file-trigger-brick`
 
 ### Widgets
-Combinations of core blocks into richer, reusable UI units.
+Combinations of bricks into richer, reusable UI units.
 
-- **State:** Local/presentational. Combines core blocks with some coordination logic.
+- **State:** Local/presentational. Combines bricks with some coordination logic.
 - **Communication:** Uses `$emit()` and props via `b-data`. **No API calls.**
-- **Examples:** `widget-user-card`, `widget-search-bar`, `widget-toolbar`
+- **Examples:** `user-card-widget`, `search-bar-widget`, `toolbar-widget`
 
 ### Pages
-Feature-specific blocks. They orchestrate widgets and core blocks, own business logic.
+Feature-specific blocks. They orchestrate widgets and bricks, own business logic.
 
 - **State:** Domain-specific. Owns data fetched from APIs.
 - **Responsibility:** Knows *what* data it owns and *what* outcome it must produce.
-- **Examples:** `page-dashboard`, `page-login`, `page-profile-settings`
+- **Examples:** `dashboard-page`, `login-page`, `profile-settings-page`
 
 ### Shells
 Top-level layout containers. They define the page structure and routing slots.
@@ -140,24 +140,24 @@ Top-level layout containers. They define the page structure and routing slots.
 
 ```text
 src/
-├── core/
-│   ├── block-avatar.lego
-│   ├── block-button.lego
-│   ├── block-dropdown.lego
-│   ├── block-modal.lego
-│   └── block-file-trigger.lego
+├── bricks/
+│   ├── avatar-brick.lego
+│   ├── button-brick.lego
+│   ├── dropdown-brick.lego
+│   ├── modal-brick.lego
+│   └── file-trigger-brick.lego
 ├── widgets/
-│   ├── widget-user-card.lego
-│   ├── widget-search-bar.lego
-│   └── widget-toolbar.lego
+│   ├── user-card-widget.lego
+│   ├── search-bar-widget.lego
+│   └── toolbar-widget.lego
 ├── pages/
 │   ├── auth/
-│   │   ├── page-login.lego
-│   │   └── page-register.lego
+│   │   ├── login-page.lego
+│   │   └── register-page.lego
 │   ├── hris/
-│   │   ├── page-employees.lego
-│   │   └── page-payroll.lego
-│   └── page-dashboard.lego
+│   │   ├── employees-page.lego
+│   │   └── payroll-page.lego
+│   └── dashboard-page.lego
 ├── shells/
 │   ├── app-shell.lego
 │   └── admin-shell.lego
@@ -168,7 +168,7 @@ src/
 
 | Question | Answer |
 | :--- | :--- |
-| Is it a reusable UI primitive? | **Core Block** |
-| Does it combine core blocks into a richer unit? | **Widget** |
+| Is it a reusable UI primitive? | **Brick** |
+| Does it combine bricks into a richer unit? | **Widget** |
 | Does it make API calls or own domain state? | **Page** |
 | Is it a top-level layout with routing? | **Shell** |

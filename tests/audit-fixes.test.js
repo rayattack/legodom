@@ -247,6 +247,22 @@ describe('Audit fix #3: b-html.safe sanitizes content', () => {
     expect(html).toContain('<b>kept</b>');
   });
 
+  it('audit fix #42: b-html.safe strips dangerous content nested inside a declarative-Shadow-DOM <template>', async () => {
+    Lego.block('safe-dsd', '<div b-html.safe="markup"></div>', {
+      markup:
+        '<template shadowrootmode="open"><img src=x onerror="alert(1)"></template>' +
+        '<b>kept</b>'
+    });
+    win.document.body.innerHTML = '<safe-dsd></safe-dsd>';
+    await flush(20);
+    const el = win.document.querySelector('safe-dsd');
+    const div = el.shadowRoot.querySelector('div');
+    const html = div.innerHTML;
+    expect(html).not.toContain('onerror');
+    expect(html).not.toMatch(/shadowrootmode|shadowroot/i);
+    expect(html).toContain('<b>kept</b>');
+  });
+
   it('b-html.safe respects user-provided config.sanitize', async () => {
     Lego.config.sanitize = (s) => '[CLEANED]' + s.replace(/<[^>]+>/g, '');
     try {
@@ -1159,6 +1175,43 @@ describe('Audit fix #19: b-for reuses the per-child scope object', () => {
   });
 });
 
+describe('Audit fix #45: b-for caches each child\'s sync-input list instead of re-scanning per render', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => { win.document.body.innerHTML = ''; });
+
+  it('does not call querySelectorAll on reused pool children across re-renders', async () => {
+    Lego.block(
+      'for-sync-scan',
+      '<ul><li b-for="item in items" b-key="id"><input b-sync="item.label"></li></ul>',
+      { items: [{ id: 1, label: 'A' }, { id: 2, label: 'B' }] }
+    );
+    win.document.body.innerHTML = '<for-sync-scan></for-sync-scan>';
+    await flush(30);
+
+    const host = win.document.querySelector('for-sync-scan');
+    const lis = [...host.shadowRoot.querySelectorAll('li')];
+    expect(lis.every(li => Array.isArray(li._loopSyncInputs))).toBe(true);
+
+    const qsaSpy = vi.spyOn(win.Element.prototype, 'querySelectorAll');
+    // Mutate a field to force the loop to re-iterate without changing keys.
+    host.state.items[0].label = 'A!';
+    host.state.items[1].label = 'B!';
+    await flush(30);
+
+    expect(qsaSpy).not.toHaveBeenCalled();
+    qsaSpy.mockRestore();
+
+    // Sync read-back still resolves against the correct item.
+    const input = host.shadowRoot.querySelector('li input');
+    expect(input.value).toBe('A!');
+  });
+});
+
 describe('Audit fix #24: el.state = X is a shallow merge (with one-time warning)', () => {
   let win, Lego, warnSpy;
   beforeEach(async () => {
@@ -1475,6 +1528,43 @@ describe('Audit fix #23: safeEval blocklist allows benign property access', () =
   });
 });
 
+describe('Audit fix #41: safeEval blocklist stopgap against prototype-pollution helpers', () => {
+  let win, Lego, warnSpy;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+    win.document.body.innerHTML = '';
+  });
+
+  it('blocks Object.getPrototypeOf/setPrototypeOf/defineProperty/getOwnPropertyDescriptor and Reflect', async () => {
+    Lego.block(
+      'proto-pollution',
+      '<div class="r">' +
+        '[[ Object.getPrototypeOf(obj) ]]/' +
+        '[[ Object.setPrototypeOf(obj, null) ]]/' +
+        '[[ Object.defineProperty(obj, "x", {}) ]]/' +
+        '[[ Object.getOwnPropertyDescriptor(obj, "x") ]]/' +
+        '[[ Reflect.get(obj, "x") ]]' +
+      '</div>',
+      { obj: {} }
+    );
+    win.document.body.innerHTML = '<proto-pollution></proto-pollution>';
+    await flush(20);
+
+    const host = win.document.querySelector('proto-pollution');
+    expect(host.shadowRoot.querySelector('.r').textContent).toBe('////');
+    const warnings = warnSpy.mock.calls.filter(args =>
+      args.some(a => typeof a === 'string' && a.includes('Blocked dangerous'))
+    );
+    expect(warnings.length).toBeGreaterThanOrEqual(5);
+  });
+});
+
 describe('Audit fix #26: Lego.config.strict surfaces missing template variables', () => {
   let win, Lego;
   beforeEach(async () => {
@@ -1517,5 +1607,57 @@ describe('Audit fix #26: Lego.config.strict surfaces missing template variables'
     // ReferenceError instead of being silently swallowed.
     const target = host.shadowRoot || host;
     expect(target.querySelector('strict-err')).toBeTruthy();
+  });
+});
+
+describe('Audit fix #43: attribute interpolation scheme-guards URL sinks under Lego.config.strict', () => {
+  let win, Lego;
+  beforeEach(async () => {
+    win = setupDom();
+    Lego = win.Lego;
+    await Lego.init(win.document.body);
+  });
+  afterEach(() => {
+    if (Lego && Lego.config) Lego.config.strict = false;
+    win.document.body.innerHTML = '';
+  });
+
+  it('default behaviour: a javascript: URL still renders into href (unchanged, industry-standard gap)', async () => {
+    Lego.block('url-default', '<a href="[[ url ]]">go</a>', { url: 'javascript:alert(1)' });
+    win.document.body.innerHTML = '<url-default></url-default>';
+    await flush(20);
+
+    const host = win.document.querySelector('url-default');
+    expect(host.shadowRoot.querySelector('a').getAttribute('href')).toBe('javascript:alert(1)');
+  });
+
+  it('strict mode: a javascript:/data:/vbscript: URL is dropped from a dangerous attribute', async () => {
+    Lego.config.strict = true;
+    Lego.block('url-strict', '<a href="[[ url ]]">go</a>', { url: 'javascript:alert(1)' });
+    win.document.body.innerHTML = '<url-strict></url-strict>';
+    await flush(20);
+
+    const host = win.document.querySelector('url-strict');
+    expect(host.shadowRoot.querySelector('a').hasAttribute('href')).toBe(false);
+  });
+
+  it('strict mode: a normal URL on a dangerous attribute still renders', async () => {
+    Lego.config.strict = true;
+    Lego.block('url-strict-ok', '<a href="[[ url ]]">go</a>', { url: '/dashboard' });
+    win.document.body.innerHTML = '<url-strict-ok></url-strict-ok>';
+    await flush(20);
+
+    const host = win.document.querySelector('url-strict-ok');
+    expect(host.shadowRoot.querySelector('a').getAttribute('href')).toBe('/dashboard');
+  });
+
+  it('strict mode: non-URL attributes are untouched even with javascript:-looking text', async () => {
+    Lego.config.strict = true;
+    Lego.block('url-strict-title', '<a title="[[ note ]]">go</a>', { note: 'javascript:not-a-link' });
+    win.document.body.innerHTML = '<url-strict-title></url-strict-title>';
+    await flush(20);
+
+    const host = win.document.querySelector('url-strict-title');
+    expect(host.shadowRoot.querySelector('a').getAttribute('title')).toBe('javascript:not-a-link');
   });
 });

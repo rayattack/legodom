@@ -8,6 +8,7 @@ interface LegoConfig {
   debug:         boolean;
   onError:       (err: Error, type: string, el?: Element) => void;
   sanitize:      ((html: string) => string) | null;
+  strict:        boolean;
   metrics:       { onRenderStart?: (el) => void; onRenderEnd?: (el) => void };
   loader?:       (tag: string) => string | Promise<string> | void;
   loaderAllowlist?: string | RegExp | Function | (string | RegExp | Function)[] | null;
@@ -88,6 +89,22 @@ Lego.config.sanitize = (html) => DOMPurify.sanitize(html);
 
 The base `b-html` directive (without the `.safe` modifier) **never** sanitizes, only use it on trusted content.
 
+## strict
+
+- **Type**: `boolean`
+- **Default**: `false`
+
+Opt-in stricter runtime safety, off by default so a template typo or an intentionally dynamic URL doesn't change behavior in an app that hasn't asked for it. Turns on two checks:
+
+- **Undefined template variables throw.** By default, `[[ usre.email ]]` (a typo) silently renders as an empty string. With `strict` on, the `ReferenceError` re-throws instead, bubbling to the nearest [error boundary](/api/directives#b-error) (or `config.onError` if there isn't one), so the typo surfaces the first time the page renders instead of shipping a blank field to production.
+- **Dangerous-scheme URLs are dropped from URL-sink attributes.** Interpolating into `href`, `src`, `action`, `formaction`, `srcdoc`, `xlink:href`, or `data` normally writes whatever the expression evaluates to, straight through. A value like `javascript:alert(1)` (e.g. reflected from `global.$route.query`) would then render as a live link, the same gap React and Vue have for plain attribute bindings. With `strict` on, a `javascript:`/`vbscript:`/`data:text/html` value on one of those attributes is dropped instead of rendered.
+
+```js
+Lego.config.strict = true;
+```
+
+Turn this on in development to catch typos early, and consider it in production for apps that render attacker-influenced state (route params/query, user-generated content) into URL attributes.
+
 ## metrics
 
 - **Type**: `{ onRenderStart?: (el) => void; onRenderEnd?: (el) => void }`
@@ -146,6 +163,7 @@ import DOMPurify from 'dompurify';
 import * as Sentry from '@sentry/browser';
 
 Lego.config.sanitize = DOMPurify.sanitize;
+Lego.config.strict = true;
 Lego.config.loaderAllowlist = /^app-/;
 Lego.config.onError = (err, type, el) => {
   Sentry.captureException(err, { tags: { lego_type: type, tag: el?.tagName } });

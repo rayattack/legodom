@@ -35,10 +35,9 @@ Two things to remember about this layout:
 
 ```js
 import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks';
+import 'virtual:lego-blocks';
 import './style.css';
 
-registerBlocks();
 Lego.init();
 ```
 

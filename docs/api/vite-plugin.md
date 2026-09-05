@@ -30,15 +30,13 @@ interface LegoPluginOptions {
 
 ## Virtual module
 
-The plugin exposes a virtual import that, when called, ensures every discovered `.lego` file is registered:
+The plugin exposes a virtual import that ensures every discovered `.lego` file is registered:
 
 ```js
-import registerBlocks from 'virtual:lego-blocks';
-
-registerBlocks();
+import 'virtual:lego-blocks';
 ```
 
-Internally the virtual module is a list of side-effect imports, pulling them in is what runs the `Lego.block(...)` calls. `registerBlocks()` is mostly a no-op kept around for ergonomics; you could equally well delete the call as long as you keep the import.
+Internally it's just a list of side-effect imports, pulling them in is what runs the `Lego.block(...)` calls. The module also has a default export, `registerBlocks()`, kept for back-compat. It's a no-op, so calling it is optional.
 
 ## What `.lego` files compile to
 
@@ -116,8 +114,6 @@ If you have blocks under multiple directories, register them by importing from o
 
 ```js
 // src/app.js
-import registerBlocks from 'virtual:lego-blocks';
+import 'virtual:lego-blocks';
 import './blocks-extra/admin.lego';
-
-registerBlocks();
 ```

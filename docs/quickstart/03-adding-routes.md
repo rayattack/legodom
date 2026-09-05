@@ -117,10 +117,8 @@ Update `src/app.js`:
 
 ```js
 import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks';
+import 'virtual:lego-blocks';
 import './style.css';
-
-registerBlocks();
 
 Lego.route('/',         'task-list');
 Lego.route('/work',     'work-tasks');

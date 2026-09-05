@@ -11,9 +11,7 @@ Quick answers to the most common LegoDOM questions.
 ```javascript
 // src/app.js
 import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks';
-
-registerBlocks();
+import 'virtual:lego-blocks';
 
 // Define routes HERE ⭐
 Lego.route('/', 'home-page');
@@ -29,7 +27,7 @@ Everything related to app configuration belongs in your entry file:
 
 | What | Where |
 |------|-------|
-| Block registration | `registerBlocks()` |
+| Block registration | `import 'virtual:lego-blocks'` |
 | Route definitions | `Lego.route(...)` |
 | Global state init | `Lego.globals.user = null` |
 | Engine start | `Lego.init()` |
@@ -53,7 +51,7 @@ Check these common issues:
 1. **No route defined**, Did you add `Lego.route('/', 'my-block')`?
 2. **Missing `<lego-router>`**, Your HTML needs `<lego-router></lego-router>`
 3. **Wrong block name**, Filename `user-card.lego` → block `<user-card>`
-4. **Not registered**, Did you call `registerBlocks()` before `init()`?
+4. **Not registered**, Did you `import 'virtual:lego-blocks'` before `init()`?
 
 ### Why do block names need hyphens?
 

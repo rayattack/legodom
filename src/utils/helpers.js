@@ -16,7 +16,11 @@ export const config = {
   // Auto-discovery (config.loader): if set, only tag names matching this
   // pattern (or any of these patterns when given an array) will be fetched.
   // Default null = no allowlist; a console warning is emitted on first use.
-  loaderAllowlist: null
+  loaderAllowlist: null,
+  // Opt-in stricter runtime safety: re-throws undefined-identifier
+  // ReferenceErrors instead of rendering '', and drops dangerous-scheme
+  // (javascript:/data:text/html/vbscript:) values on URL-sink attributes.
+  strict: false
 };
 
 /**

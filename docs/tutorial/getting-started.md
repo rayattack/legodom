@@ -8,80 +8,104 @@ Check out our **[Step-by-Step Tutorial](/quickstart/)**, build a full multi-page
 
 ## Installation
 
-### Option 1 (HTML): CDN (No Build Tools)
+### Option 1 (Lego Files): Create LegoDOM App (Recommended)
 
-The fastest way to try Lego is via CDN:
+LegoDOM's native format is the **`.lego` Single File Block**, a `<script>` for state, a `<template>` for markup, and optionally a `<style>` for scoped CSS:
 
 ```html v-pre
-<!DOCTYPE html>
-<html>
-<head>
-  <title>My Lego App</title>
-</head>
-<body>
-  <my-block></my-block>
+<!-- src/my-block.lego -->
+<script>
+export default {
+  count: 0
+}
+</script>
 
-  <script src="https://unpkg.com/lego-dom"></script>
-  <template b-id="my-block" b-logic="{ count: 0 }">
-    <h1>Hello Lego!</h1>
-    <button @click="count++">Click me</button>
-    <p v-pre>Count: [[ count ]]</p>
-  </template>
-</body>
-</html>
-```
-
-That's it! Open this HTML file in any browser and it works.
-
-### Option 2 (JS): npm
-
-For projects using npm:
-
-```bash
-npm install lego-dom
-```
-
-Then import it:
-
-```js v-pre
-import { Lego } from 'lego-dom';
-
-Lego.block('my-block', `
+<template>
   <h1>Hello Lego!</h1>
   <button @click="count++">Click me</button>
   <p>Count: [[ count ]]</p>
-`, {
-  count: 0
-});
+</template>
 ```
 
-### Option 3 (Lego Files): Create LegoDOM App (Recommended)
+That's the whole component. The filename (`my-block.lego`) becomes its tag name (`<my-block>`).
 
-For real-world apps, use **`create-legodom`** to scaffold a complete project with everything configured:
+To write blocks like this, scaffold a project with **`create-legodom`**, it sets up Vite, the LegoDOM plugin, and HMR for you:
 
-```bash
+::: code-group
+
+```bash [npm]
 npm create legodom@latest my-lego-app
 cd my-lego-app
 npm install
 npm run dev
 ```
 
-This sets up:
-- ✅ Vite with the LegoDOM plugin pre-configured
-- ✅ Sample `.lego` component following best practices
-- ✅ Proper project structure and dependencies
-- ✅ Hot Module Replacement (HMR) ready
+```bash [pnpm]
+pnpm create legodom my-lego-app
+cd my-lego-app
+pnpm install
+pnpm dev
+```
+
+```bash [yarn]
+yarn create legodom my-lego-app
+cd my-lego-app
+yarn install
+yarn dev
+```
+
+```bash [bun]
+bun create legodom my-lego-app
+cd my-lego-app
+bun install
+bun dev
+```
+
+:::
+
+`create-legodom` already wires up your entry file (`src/app.js`) to auto-register every `.lego` file and start the engine:
+
+```js
+import { Lego } from 'lego-dom';
+import 'virtual:lego-blocks'; // auto-registers every .lego file
+
+Lego.init(); // starts the engine
+```
+
+See [Lego Files](/tutorial/lego-files) for the full format (styles, routes, globals) and [The Lego Object](/tutorial/the-lego-object) for everything `Lego.init()` can do.
 
 <details>
 <summary>Manual Setup (Alternative)</summary>
 
 You can also set up manually with Vite:
 
-```bash
+::: code-group
+
+```bash [npm]
 npm create vite@latest my-lego-app -- --template vanilla
 cd my-lego-app
 npm install lego-dom
 ```
+
+```bash [pnpm]
+pnpm create vite my-lego-app --template vanilla
+cd my-lego-app
+pnpm add lego-dom
+```
+
+```bash [yarn]
+yarn create vite my-lego-app --template vanilla
+cd my-lego-app
+yarn add lego-dom
+```
+
+```bash [bun]
+bun create vite my-lego-app --template vanilla
+cd my-lego-app
+bun add lego-dom
+```
+
+:::
 
 Then configure `vite.config.js`:
 
@@ -95,22 +119,70 @@ export default defineConfig({
 ```
 </details>
 
-### The Runtime Engine
+### Option 2 (HTML): CDN (No Build Tools)
 
-::: tip Auto-configured with create-legodom
-If you used `create-legodom`, this is already set up in `src/app.js`!
+The fastest way to try Lego is via CDN:
+
+```html v-pre
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Lego App</title>
+</head>
+<body>
+  <my-block></my-block>
+
+  <template b-id="my-block" b-logic="{ count: 0 }">
+    <h1>Hello Lego!</h1>
+    <button @click="count++">Click me</button>
+    <p v-pre>Count: [[ count ]]</p>
+  </template>
+
+  <script src="https://unpkg.com/lego-dom"></script>
+  <script>
+    Lego.init();
+  </script>
+</body>
+</html>
+```
+
+That's it! Open this HTML file in any browser and it works.
+
+### Option 3 (JS): Template Literals
+
+If you're integrating into an existing build without the Vite plugin, define blocks directly in JS instead of `.lego` files:
+
+::: code-group
+
+```bash [npm]
+npm install lego-dom
+```
+
+```bash [pnpm]
+pnpm add lego-dom
+```
+
+```bash [yarn]
+yarn add lego-dom
+```
+
+```bash [bun]
+bun add lego-dom
+```
+
 :::
 
-You must initialize the Lego engine in your entry file (`src/app.js`):
-
-```js
+```js v-pre
 import { Lego } from 'lego-dom';
-import registerBlocks from 'virtual:lego-blocks';
 
-// 1. Register SFCs
-registerBlocks();
+Lego.block('my-block', `
+  <h1>Hello Lego!</h1>
+  <button @click="count++">Click me</button>
+  <p>Count: [[ count ]]</p>
+`, {
+  count: 0
+});
 
-// 2. Start the Engine
 Lego.init();
 ```
 
@@ -178,11 +250,11 @@ For extensive information, see [Directives](/tutorial/directives).
 
 ## What You've Learned
 
-- ✅ How to install LegoDOM
-- ✅ The 3 different ways to create blocks
-- ✅ The basics of templates, state, and events
-- ✅ A sneak peek into the world of directives
-- ✅ The use of the `Lego.init()` to kickstart LegoDOM.
+- How to install LegoDOM
+- The 3 different ways to create blocks
+- The basics of templates, state, and events
+- A sneak peek into the world of directives
+- The use of the `Lego.init()` to kickstart LegoDOM.
 
 ## Next Steps
 

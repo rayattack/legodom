@@ -1,10 +1,39 @@
 # Quick Start
 
-The fastest way to get started with Lego is using the CDN. No build tools required!
+Let's create the same simple counter block three different ways.
 
 ## Your First Block
 
-Let's create a simple counter block.
+### Using .lego Files (with Vite)
+
+Create `src/click-counter.lego` (the Vite plugin discovers anything matching `**/*.lego` under `src/`):
+
+```html
+<script>
+export default {
+  message: 'Welcome!',
+  count: 0,
+  increment() {
+    this.count++;
+  }
+}
+</script>
+
+<template>
+  <h2>[[ message ]]</h2>
+  <p>Count: [[ count ]]</p>
+  <button @click="increment()">Click Me!</button>
+</template>
+
+<style>
+  self {
+    display: block;
+    padding: 2rem;
+  }
+</style>
+```
+
+The Vite plugin automatically discovers and registers it!
 
 ### Using HTML
 
@@ -50,6 +79,9 @@ In HTML `<style>` goes inside `<template></template>` tags but in Lego Files the
 <click-counter b-logic="{ message: 'Bienvenido!' }"></click-counter>
 
 <script src="https://unpkg.com/lego-dom"></script>
+<script>
+  Lego.init();
+</script>
 ```
 
 
@@ -77,6 +109,8 @@ Lego.block('click-counter', `
     this.count++;
   }
 });
+
+Lego.init();
 ```
 
 Then use it in your HTML:
@@ -84,37 +118,6 @@ Then use it in your HTML:
 ```html
 <click-counter></click-counter>
 ```
-
-### Using .lego Files (with Vite)
-
-Create `src/click-counter.lego` (the Vite plugin discovers anything matching `**/*.lego` under `src/`):
-
-```html
-<script>
-export default {
-  message: 'Welcome!',
-  count: 0,
-  increment() {
-    this.count++;
-  }
-}
-</script>
-
-<template>
-  <h2>[[ message ]]</h2>
-  <p>Count: [[ count ]]</p>
-  <button @click="increment()">Click Me!</button>
-</template>
-
-<style>
-  self {
-    display: block;
-    padding: 2rem;
-  }
-</style>
-```
-
-The Vite plugin automatically discovers and registers it!
 
 ## Next Steps
 
