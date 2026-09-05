@@ -3,7 +3,9 @@ import { resolveTargets } from '../utils/dom.js';
 import { globals } from '../core/globals.js';
 
 let snapFn = null;
-export const setSnap = (fn) => { snapFn = fn; };
+let unsnapFn = null;
+// `unsnapFn` is optional so existing single-argument callers keep working.
+export const setSnap = (fn, unsnap = null) => { snapFn = fn; unsnapFn = unsnap; };
 
 export const routes = [];
 
@@ -59,6 +61,11 @@ export const _matchRoute = async (targetQueries = null, contextEl = null) => {
     targets.forEach(t => {
       if (!t) return;
       if (!isCurrent()) return;
+      // Same ordering guarantee as $mount: the outgoing page's unmounted()
+      // must run before the incoming page's mounted(), and the custom
+      // element's disconnect teardown is deferred by a microtask. unsnap is
+      // idempotent, so that deferred call becomes a no-op.
+      if (unsnapFn) [...t.children].forEach(child => unsnapFn(child));
       t.innerHTML = '';
       const child = document.createElement(match.tagName);
       t.appendChild(child);

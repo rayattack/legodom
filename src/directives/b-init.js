@@ -1,4 +1,5 @@
 import { safeEval } from '../utils/safe-eval.js';
+import { guardResult } from '../features/error.js';
 
 
 export const bInit = {
@@ -12,10 +13,16 @@ export const bInit = {
     }
   },
 
-  execute: ({ binding, state, global }) => {
-    if (!binding.initialized) {
-      binding.initialized = true;
-      safeEval(binding.expr, { state, global, self: binding.node });
-    }
+  execute: ({ binding, state, global, helpers }) => {
+    if (binding.initialized) return;
+    binding.initialized = true;
+    // A synchronous throw propagates to render()'s handler; an async
+    // rejection would otherwise escape entirely, so route it explicitly.
+    const owner = (helpers && helpers.contextEl) || binding.node;
+    guardResult(
+      safeEval(binding.expr, { state, global, self: binding.node }),
+      owner,
+      'b-init'
+    );
   }
 }

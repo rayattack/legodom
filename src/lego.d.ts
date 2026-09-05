@@ -133,6 +133,13 @@ export interface Lego {
    */
   getActiveBlocksCount(): number;
 
+  /**
+   * Await the next render flush. Resolves once the batcher has committed
+   * the DOM for the pending batch, or after the next animation frame when
+   * nothing is queued. Does not wait for the debounced `updated()` hook.
+   */
+  nextTick(): Promise<void>;
+
   db(key: string): any;
 }
 

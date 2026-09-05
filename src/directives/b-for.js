@@ -8,6 +8,8 @@ import { syncModelValue, findSyncAttr } from '../utils/dom.js';
 // generate and collision-free across the lifetime of the page.
 let _itemIdCounter = 0;
 
+const reportInnerError = (err) => console.error('[Lego] Error in b-for inner binding:', err);
+
 export const bFor = {
   name: 'b-for',
   scan(node, { checkGlobal, pendingOperations }) {
@@ -38,9 +40,9 @@ export const bFor = {
   },
 
   execute({ binding, state, global, helpers }) {
-    const { bind, scanForBindings, runBinding } = helpers;
-    if (!bind || !runBinding) {
-      console.error('[Lego] b-for directive missing required helpers: bind, runBinding');
+    const { bind, scanForBindings, runBinding, runBindings } = helpers;
+    if (!bind || !runBinding || !runBindings) {
+      console.error('[Lego] b-for directive missing required helpers: bind, runBinding, runBindings');
       return;
     }
 
@@ -132,14 +134,14 @@ export const bFor = {
       // the item reference). Reads during their execution are tracked under
       // the outer b-for binding, so item-property mutations trigger a full
       // loop re-iteration.
+      //
+      // runBindings applies the same two-phase split the main render pass
+      // uses, so a `<select b-sync>` inside a row still runs after the
+      // b-for that fills it with options. The error callback preserves the
+      // previous per-binding isolation: one bad row binding does not stop
+      // the rest of the row.
       if (child._loopBindings) {
-        for (const b of child._loopBindings) {
-          try {
-            runBinding(b, localScope, contextEl, false);
-          } catch (err) {
-            console.error('[Lego] Error in b-for inner binding:', err);
-          }
-        }
+        runBindings(child._loopBindings, localScope, contextEl, false, reportInnerError);
       }
 
       child._loopSyncInputs.forEach(input => {

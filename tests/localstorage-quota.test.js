@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 
 describe('LocalStorage Quota Fix', () => {
-  let window, document, Lego, originalSetItem;
+  let window, document, Lego, restore;
 
   beforeEach(async () => {
     const dom = new JSDOM(`<!DOCTYPE html><body></body>`, {
@@ -23,18 +23,11 @@ describe('LocalStorage Quota Fix', () => {
     global.HTMLElement = window.HTMLElement;
     global.MutationObserver = window.MutationObserver;
     global.customElements = window.customElements;
-    global.Blob = window.Blob || class Blob {
-      constructor(parts) {
-        this.size = parts.reduce((acc, part) => acc + (part.length || 0), 0);
-      }
-    };
     window.requestAnimationFrame = (cb) => setTimeout(cb, 16);
 
     global.localStorage = window.localStorage;
     window.localStorage.clear();
-
-    // Store original
-    originalSetItem = window.localStorage.setItem.bind(window.localStorage);
+    restore = null;
 
     const mainJs = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
     window.eval(mainJs);
@@ -43,28 +36,45 @@ describe('LocalStorage Quota Fix', () => {
   });
 
   afterEach(() => {
+    if (restore) restore();
     window.localStorage.clear();
-    // Restore original if mocked
-    if (originalSetItem) {
-      window.localStorage.setItem = originalSetItem;
-    }
   });
 
-  it('should handle QuotaExceededError gracefully', async () => {
-    let quotaErrorCount = 0;
-    let firstCallFailed = false;
+  /**
+   * JSDOM's Storage is a Proxy: assigning `localStorage.setItem = fn` stores
+   * an *item* named "setItem" instead of overriding the method, so the mock
+   * never runs. Patch the prototype instead and hand back a restorer.
+   */
+  const patchStorage = ({ failOn }) => {
+    const originalSet = window.Storage.prototype.setItem;
+    const originalRemove = window.Storage.prototype.removeItem;
+    const removed = [];
 
-    // Mock setItem to fail first time, succeed after eviction
-    window.localStorage.setItem = function (key, value) {
-      if (!firstCallFailed && key === 'test.quota') {
-        firstCallFailed = true;
+    window.Storage.prototype.setItem = function (key, value) {
+      if (key === failOn) {
         const err = new Error('QuotaExceededError');
         err.name = 'QuotaExceededError';
         throw err;
       }
-      // Call original for other keys or retry
-      return originalSetItem(key, value);
+      return originalSet.call(this, key, value);
     };
+    window.Storage.prototype.removeItem = function (key) {
+      removed.push(key);
+      return originalRemove.call(this, key);
+    };
+
+    restore = () => {
+      window.Storage.prototype.setItem = originalSet;
+      window.Storage.prototype.removeItem = originalRemove;
+      restore = null;
+    };
+    return { removed };
+  };
+
+  it('reports QuotaExceededError through config.onError and abandons the write', async () => {
+    const reported = [];
+    Lego.config.onError = (err, type, key) => reported.push({ err, type, key });
+    patchStorage({ failOn: 'test.quota' });
 
     Lego.block('quota-test', '<span>[[ value ]]</span>', {
       value: Lego.db('test.quota').default('init')
@@ -74,34 +84,24 @@ describe('LocalStorage Quota Fix', () => {
     await flush(10);
 
     const el = document.querySelector('quota-test');
-
-    // This should trigger QuotaExceededError first, then retry
     el.state.value = 'large-data';
     await flush();
 
-    // Should have recovered (value set on retry)
-    const stored = window.localStorage.getItem('test.quota');
-    expect(stored).toBeDefined();
+    // The write is abandoned; the app is told, and nothing was persisted.
+    expect(window.localStorage.getItem('test.quota')).toBeNull();
+    expect(reported.length).toBeGreaterThan(0);
+    expect(reported[0].type).toBe('quota');
+    expect(reported[0].key).toBe('test.quota');
+    expect(reported[0].err.name).toBe('QuotaExceededError');
   });
 
-  it('should evict oldest keys when quota exceeded', async () => {
-    // Pre-populate with old Lego keys
+  it('should not evict any keys when quota is exceeded', async () => {
+    // Keys the removed FIFO eviction pass would previously have deleted.
     window.localStorage.setItem('lego:old1', JSON.stringify('data1'));
     window.localStorage.setItem('lego:old2', JSON.stringify('data2'));
     window.localStorage.setItem('lego:old3', JSON.stringify('data3'));
 
-    // Simulate QuotaExceededError
-    let callCount = 0;
-    const originalSet = window.localStorage.setItem.bind(window.localStorage);
-    window.localStorage.setItem = function (key, value) {
-      if (key === 'test.new' && callCount === 0) {
-        callCount++;
-        const err = new Error('QuotaExceededError');
-        err.name = 'QuotaExceededError';
-        throw err;
-      }
-      return originalSet(key, value);
-    };
+    const { removed } = patchStorage({ failOn: 'test.new' });
 
     Lego.block('evict-test', '<div>[[ data ]]</div>', {
       data: Lego.db('test.new').default('new-value')
@@ -112,30 +112,19 @@ describe('LocalStorage Quota Fix', () => {
 
     const el = document.querySelector('evict-test');
     el.state.data = 'x'.repeat(1000); // Large update
-
     await flush();
 
-    // New key should be saved
-    const newData = window.localStorage.getItem('test.new');
-    expect(newData).toBeDefined();
+    expect(removed).toEqual([]);
+    expect(window.localStorage.getItem('lego:old1')).toBe(JSON.stringify('data1'));
+    expect(window.localStorage.getItem('lego:old2')).toBe(JSON.stringify('data2'));
+    expect(window.localStorage.getItem('lego:old3')).toBe(JSON.stringify('data3'));
   });
 
-  it('should not evict non-Lego keys', async () => {
-    // Add non-Lego key
+  it('should not touch keys owned by the rest of the app', async () => {
     window.localStorage.setItem('user:preference', 'keep-me');
-    window.localStorage.setItem('lego:old', 'evict-me');
+    window.localStorage.setItem('lego:old', 'keep-me-too');
 
-    let callCount = 0;
-    const originalSet = window.localStorage.setItem.bind(window.localStorage);
-    window.localStorage.setItem = function (key, value) {
-      if (key === 'lego:test.protected' && callCount === 0) {
-        callCount++;
-        const err = new Error('QuotaExceededError');
-        err.name = 'QuotaExceededError';
-        throw err;
-      }
-      return originalSet(key, value);
-    };
+    patchStorage({ failOn: 'test.protected' });
 
     Lego.block('protect-test', '<div>[[ val ]]</div>', {
       val: Lego.db('test.protected').default('value')
@@ -148,13 +137,18 @@ describe('LocalStorage Quota Fix', () => {
     el.state.val = 'new';
     await flush();
 
-    // User preference should still exist
     expect(window.localStorage.getItem('user:preference')).toBe('keep-me');
+    expect(window.localStorage.getItem('lego:old')).toBe('keep-me-too');
   });
 
   it('should handle storage errors other than quota', async () => {
-    window.localStorage.setItem = function () {
+    const originalSet = window.Storage.prototype.setItem;
+    window.Storage.prototype.setItem = function () {
       throw new Error('DOMException: SecurityError');
+    };
+    restore = () => {
+      window.Storage.prototype.setItem = originalSet;
+      restore = null;
     };
 
     Lego.block('error-test', '<div>[[ val ]]</div>', {

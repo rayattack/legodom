@@ -1,5 +1,6 @@
 import { safeEval } from "../utils/safe-eval.js";
 import { scanForAttribute } from "../utils/helpers.js";
+import { handleError, guardResult } from "../features/error.js";
 
 export const bEnter = {
   name: 'b-enter',
@@ -8,22 +9,28 @@ export const bEnter = {
     return { modifiers }
   }),
 
-  execute: ({ binding, state, global }) => {
+  execute: ({ binding, state, global, helpers }) => {
     if (binding.observer || binding.done) return;
+    // Captured now: the observer callback fires long after execute returns.
+    const owner = (helpers && helpers.contextEl) || binding.node;
 
     const observer = new IntersectionObserver((entries, io) => {
       const entry = entries[0];
-      if (entry.isIntersecting) {
-        try {
-          safeEval(binding.expr, { state, global, self: binding.node });
-        } catch (err) {
-          console.error('[Lego] Error in b-enter handler:', err);
-        }
-        if (binding.modifiers.includes('once')) {
-          io.disconnect();
-          binding.observer = null;
-          binding.done = true;
-        }
+      if (!entry.isIntersecting) return;
+      try {
+        // guardResult covers `b-enter="loadMore()"` returning a promise.
+        guardResult(
+          safeEval(binding.expr, { state, global, self: binding.node }),
+          owner,
+          'b-enter'
+        );
+      } catch (err) {
+        handleError(err, owner, 'b-enter');
+      }
+      if (binding.modifiers.includes('once')) {
+        io.disconnect();
+        binding.observer = null;
+        binding.done = true;
       }
     });
 

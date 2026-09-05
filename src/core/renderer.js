@@ -2,7 +2,7 @@ import { registry, forPools, itemIdMap, getPrivateData, globalSubscribers, globa
 import { globals } from './globals.js';
 import { config, resolve, createRegex, getDelimiters } from '../utils/helpers.js';
 import { safeEval } from '../utils/safe-eval.js';
-import { findErrorBoundary, renderErrorBlock, handleError } from '../features/error.js';
+import { findErrorBoundary, renderErrorBlock, handleError, guardResult } from '../features/error.js';
 import { directives } from '../directives/index.js';
 import { findSyncAttr, URL_ATTRS, isDangerousUrl } from '../utils/dom.js';
 import { setTracking, clearTracking } from './tracking.js';
@@ -74,7 +74,13 @@ export const bind = (container, blockRoot, loopCtx = null) => {
                 const item = list[loopCtx.index];
                 evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
               }
-              safeEval(attr.value, { state: evalScope, global: globals, self: child, event, $event: event }, true);
+              // guardResult: an `async` handler returns a rejected promise
+              // rather than throwing, so the catch below never sees it.
+              guardResult(
+                safeEval(attr.value, { state: evalScope, global: globals, self: child, event, $event: event }, true),
+                blockRoot,
+                'event-handler'
+              );
             } catch (err) {
               handleError(err, blockRoot, 'event-handler');
             }
@@ -300,6 +306,7 @@ const runBinding = (b, state, contextEl, track = true) => {
           bind,
           scanForBindings,
           runBinding,
+          runBindings,
           contextEl
         }
       });
@@ -324,6 +331,54 @@ const runBinding = (b, state, contextEl, track = true) => {
   }
 };
 
+/**
+ * A directive may declare `phase: 'post'` to opt out of document-order
+ * execution and run after every other binding in the same pass. Used by
+ * b-sync, whose target value depends on DOM (b-for generated <option>s)
+ * that later bindings create.
+ */
+const isPostBinding = (b) => {
+  const directive = directives[b.type];
+  return !!(directive && directive.phase === 'post');
+};
+
+/**
+ * Run a binding list in two phases: document order first, then everything a
+ * directive marked `phase: 'post'`. Accepts an Array or a Set (the
+ * dirty-binding path hands us a Set).
+ *
+ * The post list is allocated lazily so the common case (no post bindings on
+ * this node) stays allocation free, which matters because b-for calls this
+ * once per row per render.
+ *
+ * `onError`, when supplied, isolates each binding: a throw is reported and
+ * the remaining bindings still run. Without it a throw propagates to the
+ * caller (render() turns it into a boundary/onError report for the block).
+ */
+export const runBindings = (bindings, state, contextEl, track = true, onError = null) => {
+  let post = null;
+  const run = (b) => {
+    if (!onError) {
+      runBinding(b, state, contextEl, track);
+      return;
+    }
+    try {
+      runBinding(b, state, contextEl, track);
+    } catch (err) {
+      onError(err, b);
+    }
+  };
+  bindings.forEach(b => {
+    if (isPostBinding(b)) {
+      if (!post) post = [];
+      post.push(b);
+      return;
+    }
+    run(b);
+  });
+  if (post) post.forEach(run);
+};
+
 export const render = (el) => {
   if (config.debug) console.log('[Lego Trace] render() called for:', el.tagName);
   const state = el._studs;
@@ -344,9 +399,9 @@ export const render = (el) => {
     if (data.dirtyBindings && data.dirtyBindings.size > 0) {
       const dirty = data.dirtyBindings;
       data.dirtyBindings = null;
-      dirty.forEach(b => runBinding(b, state, el));
+      runBindings(dirty, state, el);
     } else {
-      data.bindings.forEach(b => runBinding(b, state, el));
+      runBindings(data.bindings, state, el);
     }
   } catch (err) {
     handleError(err, el, 'render');

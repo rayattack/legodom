@@ -66,7 +66,7 @@ LegoDOM supports **SSC (Server-Side Blocks)** - you can render blocks on the ser
 
 ## How small is it?
 
-The runtime is split across `src/core/`, `src/directives/`, `src/features/`, and `src/utils/`, each module focused, well-commented, and readable in one sitting. Zero runtime dependencies. The Vite plugin is the only optional `peerDependency` (`fast-glob` is the lone dev-time dependency for block discovery).
+The runtime is split across `src/core/`, `src/directives/`, `src/features/`, and `src/utils/`, each module focused, well-commented, and readable in one sitting. Zero runtime dependencies, and zero dev-time ones for block discovery: the Vite plugin walks the filesystem itself. Vite is the only optional `peerDependency`.
 
 Reading the source end-to-end is a feasible weekend project, and a great way to internalize how reactivity and surgical routing actually work.
 

@@ -3,6 +3,13 @@ import { syncModelValue, findSyncAttr } from '../utils/dom.js';
 
 export const bSync = {
   name: 'b-sync',
+  // Runs after every other binding on the block. A `<select b-sync="pick">`
+  // whose <option> list is produced by a b-for sits *before* that b-for in
+  // document order, so in a single ordered pass the select's value would be
+  // assigned while it still had no matching option and the assignment would
+  // be silently discarded. The 'post' phase defers b-sync until the DOM its
+  // value depends on exists.
+  phase: 'post',
   scan(node, { checkGlobal }) {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const attr = findSyncAttr(node);

@@ -57,8 +57,13 @@ export const mount = (tagName, target, props) => {
   targets.forEach(t => {
     if (!t) return;
 
-    // Setting innerHTML triggers disconnectedCallback on existing custom
-    // element children, which calls unsnap() automatically.
+    // Tear the outgoing blocks down synchronously. Setting innerHTML does
+    // fire disconnectedCallback, but that teardown is deferred by a
+    // microtask (see core/element.js) so the replacement's mounted() would
+    // otherwise run before the old block's unmounted(). Apps that close a
+    // resource in unmounted and reopen it in mounted depend on that order.
+    // unsnap is idempotent, so the deferred call is a harmless no-op.
+    if (_unsnap) [...t.children].forEach(child => _unsnap(child));
     t.innerHTML = '';
 
     if (!tagName) return; // Just clearing

@@ -25,7 +25,7 @@ interface LegoPluginOptions {
 | Option | Default | Effect |
 |---|---|---|
 | `blocksDir` | `'./src'` | Root for auto-discovery, resolved against `vite.root`. |
-| `include` | `['**/*.lego']` | Glob(s) (passed to `fast-glob`) for which files count as blocks. |
+| `include` | `['**/*.lego']` | Glob(s) for which files count as blocks. Matched with a built-in matcher supporting `**`, `*` and `?`. |
 | `importPath` | `'lego-dom'` | Module specifier emitted at the top of each transformed `.lego` file (override only if you've aliased `lego-dom`). |
 
 ## Virtual module
@@ -108,7 +108,7 @@ There's no special HMR boundary you have to declare, saving a `.lego` file is en
 
 ## Block discovery
 
-`fast-glob` walks `blocksDir` for the `include` patterns. Only files imported (directly or via the virtual module) end up in the bundle, discovery just guarantees the glob is materialized.
+The plugin walks `blocksDir` with `fs.promises.readdir` and keeps the files matching the `include` patterns. There is no glob dependency: patterns are compiled by the plugin's own matcher, which supports `**`, `*` and `?` (no brace expansion, character classes or negation). Only files imported (directly or via the virtual module) end up in the bundle, discovery just guarantees the glob is materialized.
 
 If you have blocks under multiple directories, register them by importing from outside `blocksDir`:
 

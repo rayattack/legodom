@@ -4,7 +4,6 @@ import { globalBatcher } from '../core/batcher.js';
 const dbBindings = new Map(); // storageKey -> Set<{target, prop, el, batcher}>
 const dbTimers = new Map();   // storageKey -> timerId
 const dbMetadata = new WeakMap(); // target -> { prop: { key, debounce } }
-const storageKeys = new Map(); // key -> { timestamp, size }
 // Audit fix #31: reverse index so cleanupDbBindings(el) is O(entries-for-el)
 // instead of O(total-entries × keys). Each value carries the storage key
 // alongside the entry so we can locate the entry's set in O(1).
@@ -17,79 +16,30 @@ const dbBindingsByEl = new WeakMap(); // el -> Set<{ key, entry }>
 // across tabs. While this flag is set, handleDbUpdate is a no-op.
 let _suppressDbWrite = false;
 
-// Storage quota management (FIFO eviction).
-// `storageKeys` is a private tracker — every entry was written by us via
-// scheduleSave, so the keys here are by definition Lego-managed. They are
-// stored under the same name used in localStorage (no prefix) so eviction
-// can call removeItem(key) directly.
-const evictOldestKeys = (bytesNeeded) => {
-  const entries = Array.from(storageKeys.entries())
-    .sort((a, b) => a[1].timestamp - b[1].timestamp); // Oldest first
-
-  let freedBytes = 0;
-  const evicted = [];
-
-  for (const [key, meta] of entries) {
-    if (freedBytes >= bytesNeeded) break;
-
-    try {
-      localStorage.removeItem(key);
-      freedBytes += meta.size;
-      evicted.push(key);
-      storageKeys.delete(key);
-    } catch (e) {
-      console.error(`[Lego] Failed to evict ${key}:`, e);
-    }
-  }
-
-  return evicted;
-};
-
+// Storage quota handling.
+//
+// This used to free space by deleting the oldest keys Lego had written.
+// That was unsafe on two counts: the tracker only survived for the lifetime
+// of the page (so after a reload nothing was evictable and the write failed
+// anyway), and everything it did delete was real, user-visible persisted
+// state that some other part of the app was relying on. Silently destroying
+// one feature's data to make room for another's is never the right default.
+// The quota is now reported and the write is abandoned; the application
+// decides what to shed.
 const scheduleSave = (key, value, debounce) => {
   if (config.debug) console.log('[Lego Trace] scheduleSave', key, value, debounce);
   if (dbTimers.has(key)) clearTimeout(dbTimers.get(key));
   const save = () => {
+    dbTimers.delete(key);
     try {
-      const serialized = JSON.stringify(value);
-      const sizeBytes = new Blob([serialized]).size;
-
-      // Attempt write
-      localStorage.setItem(key, serialized);
-
-      // Track for eviction under the same name used in localStorage.
-      storageKeys.set(key, {
-        timestamp: Date.now(),
-        size: sizeBytes
-      });
-
-      dbTimers.delete(key);
+      localStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
       if (e.name === 'QuotaExceededError') {
         console.warn(`[Lego] Storage quota exceeded for key: ${key}`);
-
-        // Attempt eviction and retry
-        try {
-          const serialized = JSON.stringify(value);
-          const sizeBytes = new Blob([serialized]).size;
-          const evicted = evictOldestKeys(sizeBytes * 2); // Free 2x needed space
-
-          if (evicted.length > 0) {
-            if (config.debug) console.log(`[Lego] Evicted ${evicted.length} old keys, retrying save`);
-            localStorage.setItem(key, serialized);
-
-            storageKeys.set(key, {
-              timestamp: Date.now(),
-              size: sizeBytes
-            });
-          } else {
-            config.onError(new Error(`Storage quota exceeded and no keys available for eviction`), 'quota', key);
-          }
-        } catch (retryErr) {
-          config.onError(new Error(`Critical: Could not save ${key} even after eviction`), 'quota-critical', key);
-        }
-      } else {
-        console.error(`[Lego] Storage Error (${key}):`, e);
+        config.onError(e, 'quota', key);
+        return;
       }
+      console.error(`[Lego] Storage Error (${key}):`, e);
     }
   };
   if (debounce > 0) {
@@ -138,7 +88,6 @@ export const dbFactory = (key) => {
     delete() {
       try {
         localStorage.removeItem(key);
-        storageKeys.delete(key);
 
         // Notify all bindings
         if (dbBindings.has(key)) {

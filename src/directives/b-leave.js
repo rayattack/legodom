@@ -1,28 +1,38 @@
 import { safeEval } from "../utils/safe-eval.js";
 import { scanForAttribute } from "../utils/helpers.js";
+import { handleError, guardResult } from "../features/error.js";
 
 
 export const bLeave = {
   name: 'b-leave',
   scan: node => scanForAttribute('b-leave', node),
 
-  execute: ({ binding, state, global }) => {
+  execute: ({ binding, state, global, helpers }) => {
     if (binding.observer || binding.done) return;
+    // Captured now: the observer callback fires long after execute returns.
+    const owner = (helpers && helpers.contextEl) || binding.node;
 
     const observer = new IntersectionObserver((entries, io) => {
       const entry = entries[0];
-      if (entry.isIntersecting) binding.activated = true;
-      if (!entry.isIntersecting && binding.activated) {
-        try {
-          safeEval(binding.expr, { state, global, self: binding.node });
-        } catch (err) {
-          console.error('[Lego] Error in b-leave handler:', err);
-        }
-        if (binding.modifiers.includes('once')) {
-          io.disconnect();
-          binding.observer = null;
-          binding.done = true;
-        }
+      if (entry.isIntersecting) {
+        binding.activated = true;
+        return;
+      }
+      if (!binding.activated) return;
+      try {
+        // guardResult covers `b-leave="save()"` returning a promise.
+        guardResult(
+          safeEval(binding.expr, { state, global, self: binding.node }),
+          owner,
+          'b-leave'
+        );
+      } catch (err) {
+        handleError(err, owner, 'b-leave');
+      }
+      if (binding.modifiers.includes('once')) {
+        io.disconnect();
+        binding.observer = null;
+        binding.done = true;
       }
     })
 

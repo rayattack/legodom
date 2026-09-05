@@ -1,6 +1,6 @@
 import { globalBatcher } from './batcher.js';
 import { proxyCache, privateData } from './registry.js';
-import { config, isNode } from '../utils/helpers.js';
+import { config, isReactiveTarget } from '../utils/helpers.js';
 import { isDbDescriptor, initializeDbProp, handleDbUpdate } from '../features/persistence.js';
 import { trackRead, getReaders } from './tracking.js';
 
@@ -19,7 +19,11 @@ import { trackRead, getReaders } from './tracking.js';
  * @returns {Proxy} A reactive proxy of `obj`
  */
 export const reactive = (obj, el, batcher = globalBatcher) => {
-  if (obj === null || typeof obj !== 'object' || isNode(obj)) return obj;
+  // Arrays, plain objects and ordinary class instances are safe to wrap.
+  // Built-ins with internal slots (Set/Map/Date/Promise/RegExp/typed arrays
+  // and friends) are returned raw so their methods keep a compatible
+  // receiver. See isReactiveTarget.
+  if (!isReactiveTarget(obj)) return obj;
   if (proxyCache.has(obj)) return proxyCache.get(obj);
 
   // Hydrate $db descriptors
@@ -44,9 +48,9 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
       // other state) appear to depend only on themselves and the renderer
       // would fall back to a full pass on every mutation.
       const val = Reflect.get(t, k, receiver);
-      if (val !== null && typeof val === 'object' && !isNode(val)) {
-        return reactive(val, el, batcher);
-      }
+      // Same gate as above: nested built-ins are handed back untouched so
+      // `state.tags.size` / `state.when.getTime()` keep working.
+      if (isReactiveTarget(val)) return reactive(val, el, batcher);
       return val;
     },
     set: (t, k, v, receiver) => {

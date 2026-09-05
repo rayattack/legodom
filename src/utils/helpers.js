@@ -108,6 +108,38 @@ export const resolve = (path, obj) => {
 
 export const isNode = (val) => typeof Node !== 'undefined' && val instanceof Node;
 
+/**
+ * Decide whether a value may be wrapped in a reactive Proxy.
+ *
+ * Arrays qualify, and so does anything reporting the default `[object
+ * Object]` tag: plain objects, null-prototype objects, and ordinary class
+ * instances (a `new Store()` held in state stays reactive).
+ *
+ * Everything else is handed back raw. Built-ins that carry internal slots
+ * announce themselves through `Symbol.toStringTag` or a spec-level branch
+ * in `Object.prototype.toString` (Set, Map, WeakMap/WeakSet, Date, Promise,
+ * RegExp, Error, ArrayBuffer, typed arrays, Blob, File, FormData, URL, ...).
+ * Their methods read those slots off `this`, and `this` would be the Proxy,
+ * so calling `tags.size` or `map.get(k)` through a wrapper throws
+ * "Method ... called on incompatible receiver".
+ *
+ * The toString tag is also cross-realm safe, unlike comparing against this
+ * realm's `Object.prototype`: block logic frequently originates in another
+ * realm (a JSDOM window vs. the Node realm, an iframe, a worker).
+ *
+ * Note: a class using `#private` fields is still unsupported in state, for
+ * the same receiver reason. That predates this predicate.
+ *
+ * @param {any} val - candidate value
+ * @returns {boolean} true when `val` is safe to wrap
+ */
+export const isReactiveTarget = (val) => {
+  if (val === null || typeof val !== 'object') return false;
+  if (isNode(val)) return false;
+  if (Array.isArray(val)) return true;
+  return Object.prototype.toString.call(val) === '[object Object]';
+};
+
 
 export const scanForAttribute = (name, node, context) => {
   if (node.nodeType !== Node.ELEMENT_NODE) return;

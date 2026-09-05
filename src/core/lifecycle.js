@@ -9,7 +9,7 @@ import { parseJSObject } from '../utils/safe-eval.js';
 import { reactive } from './reactive.js';
 import { bind, render } from './renderer.js';
 import { applyStyles } from './stylesheets.js';
-import { findErrorBoundary, renderErrorBlock, handleError } from '../features/error.js';
+import { findErrorBoundary, renderErrorBlock, handleError, guardResult } from '../features/error.js';
 import { _go } from '../features/router.js';
 
 // Audit fix #24: `el.state = X` performs a shallow merge (Object.assign),
@@ -141,7 +141,9 @@ export const snap = (el) => {
     // can read any state the parent sets during mounted().
     if (typeof el._studs.mounted === 'function') {
       try {
-        el._studs.mounted.call(el._studs);
+        // guardResult: an `async mounted()` rejects instead of throwing, so
+        // the catch below would never see it.
+        guardResult(el._studs.mounted.call(el._studs), el, 'mounted');
       } catch (e) {
         handleError(e, el, 'mounted');
       }
@@ -171,7 +173,7 @@ export const unsnap = (el) => {
   // 1. Call unmounted lifecycle hook first
   if (el._studs && typeof el._studs.unmounted === 'function') {
     try {
-      el._studs.unmounted.call(el._studs);
+      guardResult(el._studs.unmounted.call(el._studs), el, 'unmounted');
     } catch (e) {
       handleError(e, el, 'unmounted');
     }

@@ -114,3 +114,28 @@ export const handleError = (err, contextEl, contextType) => {
     else _errorDepth.set(key, next);
   }
 };
+
+/**
+ * Route an async rejection into the same place a synchronous throw goes.
+ *
+ * Lifecycle hooks, `@event` handlers and directive expressions are all
+ * invoked inside a try/catch. That catch never sees the failure of an
+ * `async` function: the call returns a rejected promise instead of
+ * throwing, so neither the error boundary nor `config.onError` fires and
+ * the page dies with an unhandled rejection instead. Pass every such call
+ * result through here.
+ *
+ * Non-thenable results (the overwhelmingly common case) pass straight
+ * through, so this is a single typeof check on the hot path.
+ *
+ * @param {any} result - return value of the user-supplied function
+ * @param {HTMLElement} el - element used to locate the error boundary
+ * @param {string} contextType - label forwarded to config.onError
+ * @returns {any} `result`, unchanged
+ */
+export const guardResult = (result, el, contextType) => {
+  if (result && typeof result.then === 'function') {
+    result.then(undefined, (err) => handleError(err, el, contextType));
+  }
+  return result;
+};

@@ -144,7 +144,7 @@
   },
   "$db Persistence": {
     "prefix": "$db",
-    "description": "LegoDOM IndexedDB persistence descriptor",
+    "description": "LegoDOM localStorage persistence descriptor",
     "body": [
       "${1:property}: \\$db('${2:key}', ${3:defaultValue})"
     ]

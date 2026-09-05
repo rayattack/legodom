@@ -4,8 +4,9 @@
  */
 
 import { parseLego, generateBlockCall, validateLego } from './src/utils/parser-utils.js';
+import { globToRegExp } from './src/utils/glob.js';
 import path from 'path';
-import fg from 'fast-glob';
+import fs from 'fs';
 import { transform } from 'esbuild';
 
 const VIRTUAL_MODULE_ID = 'virtual:lego-blocks';
@@ -34,13 +35,29 @@ export default function legoPlugin(options = {}) {
     return path.resolve(root, blocksDir);
   };
 
+  // Replaces fast-glob so the published package keeps zero runtime
+  // dependencies. `include` is matched against paths relative to the search
+  // root, using forward slashes on every platform.
+  const patterns = (Array.isArray(include) ? include : [include]).map(globToRegExp);
+
   const scanFiles = async () => {
     const searchPath = getSearchPath();
     try {
-      legoFiles = await fg(include, {
-        cwd: searchPath,
-        absolute: true
+      const entries = await fs.promises.readdir(searchPath, {
+        recursive: true,
+        withFileTypes: true
       });
+
+      legoFiles = entries
+        .filter(entry => entry.isFile())
+        // Dirent.parentPath is Node 21+; .path is the Node 20 spelling.
+        .map(entry => path.join(entry.parentPath || entry.path, entry.name))
+        .filter(absolute => {
+          const relative = path.relative(searchPath, absolute).split(path.sep).join('/');
+          return patterns.some(re => re.test(relative));
+        })
+        .sort();
+
       return legoFiles;
     } catch (err) {
       console.warn(`[vite-plugin-lego] Could not scan for .lego files in ${searchPath}:`, err.message);
@@ -127,7 +144,6 @@ if (import.meta.hot) {
       // Handle individual .lego files
       if (id.endsWith('.lego') || id.includes('.lego?')) {
         const filePath = id.split('?')[0];
-        const fs = await import('fs');
         const content = fs.readFileSync(filePath, 'utf-8');
 
         // [FIX] Return empty module for empty files to prevent validation error

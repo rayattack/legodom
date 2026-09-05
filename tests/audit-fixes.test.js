@@ -561,7 +561,7 @@ describe('Audit fix #30: cross-tab storage listener is idempotent', () => {
   });
 });
 
-describe('Audit fix: $db quota eviction actually frees localStorage', () => {
+describe('Phase 1 fix #8: $db never evicts other keys on quota', () => {
   let win, Lego;
   beforeEach(async () => {
     win = setupDom();
@@ -574,11 +574,11 @@ describe('Audit fix: $db quota eviction actually frees localStorage', () => {
     win.localStorage.clear();
   });
 
-  it('removeItem is called with the real key on quota retry, freeing space', async () => {
-    // Two blocks writing to two keys. First we let `older` save normally
-    // (so it's in the tracker). Then we trigger a QuotaExceededError on
-    // `newer`'s first write — eviction must remove the actual `older`
-    // localStorage entry, not a phantom prefixed name.
+  it('reports the quota error and leaves every other key intact', async () => {
+    // Previously this path deleted the oldest Lego-written keys to make room
+    // and retried. That destroyed persisted data owned by other parts of the
+    // app, so the behaviour was removed: the quota is reported and the write
+    // is abandoned.
     Lego.block('q-older', '<span>[[ v ]]</span>', { v: Lego.db('older').default('init') });
     Lego.block('q-newer', '<span>[[ v ]]</span>', { v: Lego.db('newer').default('init') });
 
@@ -613,22 +613,29 @@ describe('Audit fix: $db quota eviction actually frees localStorage', () => {
       return origRemove.call(this, k);
     };
 
+    const origOnError = Lego.config.onError;
+    const reported = [];
+    Lego.config.onError = (err, type, key) => reported.push({ err, type, key });
+
     try {
       const newer = win.document.querySelector('q-newer');
       newer.state.v = 'new-data';
       await flush(40);
 
-      // Eviction targeted the real key (not a `lego:older` phantom).
       expect(quotaThrown).toBe(true);
-      expect(removed).toContain('older');
-      expect(removed).not.toContain('lego:older');
-      // Retry succeeded.
-      expect(win.localStorage.getItem('newer')).toBe(JSON.stringify('new-data'));
-      // And the evicted key is actually gone from storage.
-      expect(win.localStorage.getItem('older')).toBeNull();
+      // No eviction of any kind.
+      expect(removed).toEqual([]);
+      expect(win.localStorage.getItem('older')).toBe(JSON.stringify('old-data'));
+      // The failed write is abandoned, and the app is told about it.
+      expect(win.localStorage.getItem('newer')).toBeNull();
+      expect(reported).toHaveLength(1);
+      expect(reported[0].type).toBe('quota');
+      expect(reported[0].key).toBe('newer');
+      expect(reported[0].err.name).toBe('QuotaExceededError');
     } finally {
       win.Storage.prototype.setItem = origSet;
       win.Storage.prototype.removeItem = origRemove;
+      Lego.config.onError = origOnError;
     }
   });
 });

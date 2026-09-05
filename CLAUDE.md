@@ -49,7 +49,7 @@ Each directive exports an object with `name`, `scan()`, `execute()`, and `destro
 
 ### Features (`src/features/`)
 
-- **`persistence.js`** — `$db('key')` API for IndexedDB/localStorage with cross-tab sync, debounce, and quota management (FIFO eviction).
+- **`persistence.js`** — `$db('key')` API backed by **localStorage only** (no IndexedDB), with cross-tab sync via the `storage` event, per-key debounce, and quota reporting: a `QuotaExceededError` is surfaced through `config.onError(err, 'quota', key)` and the write is abandoned. Lego never evicts keys.
 - **`router.js`** — Regex path matching with params, middleware, `$go()` navigation.
 - **`error.js`** — Hierarchical error boundaries with fallback UI rendering.
 

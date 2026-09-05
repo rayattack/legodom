@@ -1,6 +1,7 @@
-import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData, snapState, globalSubscribers, globalKeySubscribers } from './core/registry.js';
+import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData, globalSubscribers, globalKeySubscribers } from './core/registry.js';
 import { bProps } from './directives/b-props.js';
 import { snap, unsnap } from './core/lifecycle.js';
+import { createBlockElementClass } from './core/element.js';
 import { render, bind } from './core/renderer.js';
 import { reactive } from './core/reactive.js';
 import { createBatcher, globalBatcher } from './core/batcher.js';
@@ -9,14 +10,14 @@ import { setStyleConfig, loadStylesheets, styleRegistry, definitionCascades } fr
 import { config, mergeDescriptors } from './utils/helpers.js';
 import { defineLegoFile } from './core/parser.js';
 import { dbFactory, initCrossTabSync, handleDbUpdate } from './features/persistence.js';
-import { _go, routes, setSnap as setRouterSnap, _matchRoute, setSnap, findRoute } from './features/router.js';
+import { _go, routes, setSnap as setRouterSnap, _matchRoute, findRoute } from './features/router.js';
 import { setErrorHandlers, findErrorBoundary } from './features/error.js';
 import { mount, setMountHandlers } from './features/mount.js';
 
 // Dependency Injection Setup
 globalBatcher.setHandler(render);
 setErrorHandlers(snap, render);
-setRouterSnap(snap);
+setRouterSnap(snap, unsnap);
 setMountHandlers(snap, unsnap);
 
 // Initialize Globals
@@ -52,6 +53,44 @@ const globalState = reactive({
 
 setGlobals(globalState);
 
+// Router wiring. Previously these listeners were installed inside init()
+// and only when `routes.length > 0` at that moment, so any route registered
+// after init (async bootstrap, code-split page module, a plugin) silently
+// never matched. Installation is now idempotent and independent of when the
+// first route shows up.
+let _routerListenersInstalled = false;
+let _initCompleted = false;
+
+const ensureRouterListeners = () => {
+  if (_routerListenersInstalled) return;
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  _routerListenersInstalled = true;
+
+  window.addEventListener('popstate', (event) => {
+    const targets = event.state?.legoTargets || null;
+    _matchRoute(targets);
+  });
+
+  document.addEventListener('submit', e => {
+    if (e.target.hasAttribute('b-action')) {
+      e.preventDefault();
+    }
+  });
+
+  document.addEventListener('click', e => {
+    const path = e.composedPath();
+    const link = path.find(el => el.tagName === 'A' && (el.hasAttribute('b-target') || el.hasAttribute('b-link')));
+    if (!link) return;
+    e.preventDefault();
+    const href = link.getAttribute('href');
+    const targetAttr = link.getAttribute('b-target');
+    const targets = targetAttr ? targetAttr.split(/\s+/).filter(Boolean) : [];
+
+    const shouldPush = link.getAttribute('b-link') !== 'false';
+    globalState.$go(href, ...targets).get(shouldPush);
+  });
+};
+
 const Lego = {
   db: dbFactory,
   snap,
@@ -85,15 +124,7 @@ const Lego = {
 
     if (!customElements.get(tagName)) {
       try {
-        customElements.define(tagName, class extends HTMLElement {
-          connectedCallback() {
-            if (snapState.locked) return;
-            if (registry[tagName]) snap(this);
-          }
-          disconnectedCallback() {
-            unsnap(this);
-          }
-        });
+        customElements.define(tagName, createBlockElementClass(tagName));
       } catch (e) {
         console.warn(`[Lego] Failed to register web component ${tagName}:`, e);
         // Audit fix #37: roll back the registry / supporting maps so a failed
@@ -123,6 +154,13 @@ const Lego = {
       });
     }
   },
+  /**
+   * Await the next render flush. Resolves once the batcher has committed
+   * the DOM for the pending batch (or, if nothing is pending, after the
+   * next animation frame). Does not wait for the debounced updated() hook.
+   * @returns {Promise<void>}
+   */
+  nextTick: () => globalBatcher.nextTick(),
   getActiveBlocksCount: () => activeBlocks.size,
   getLegos: () => Object.keys(registry),
   config,
@@ -145,7 +183,19 @@ const Lego = {
       if (match === '*') return '.*';
       return '\\' + match;
     });
-    routes.push({ path, regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware });
+    const entry = { path, regex: new RegExp(`^${regexPath}$`), tagName, paramNames, middleware };
+    routes.push(entry);
+
+    // Registered after init: nobody else will wire the listeners or run the
+    // initial match for us. Identity check on the resolved route means we
+    // only re-render when *this* route is the one that matches the current
+    // location (findRoute takes the first match, and `entry` was appended
+    // last, so an earlier route winning means nothing changed).
+    if (!_initCompleted) return;
+    ensureRouterListeners();
+    if (typeof window === 'undefined') return;
+    const current = findRoute(window.location.pathname);
+    if (current && current.match === entry) _matchRoute();
   },
   debug: {
     stylesheets: (el) => {
@@ -188,15 +238,7 @@ const Lego = {
       if (cascade) definitionCascades.set(tagName, cascade.split(/\s+/).filter(Boolean));
 
       if (!customElements.get(tagName)) {
-        customElements.define(tagName, class extends HTMLElement {
-          connectedCallback() {
-            if (snapState.locked) return;
-            if (registry[tagName]) snap(this);
-          }
-          disconnectedCallback() {
-            unsnap(this);
-          }
-        });
+        customElements.define(tagName, createBlockElementClass(tagName));
       }
     });
 
@@ -260,65 +302,60 @@ const Lego = {
         return;
       }
 
-      customElements.define(tagName, class extends HTMLElement {
-        async connectedCallback() {
-          if (registry[tagName]) {
-            if (!snapState.locked) snap(this);
-            return;
-          }
-
-          if (!Lego._fetching) Lego._fetching = new Set();
-          if (!Lego._pendingLazy) Lego._pendingLazy = {};
-          if (Lego._fetching.has(tagName)) {
-            if (!Lego._pendingLazy[tagName]) Lego._pendingLazy[tagName] = new Set();
-            Lego._pendingLazy[tagName].add(this);
-            return;
-          }
-          Lego._fetching.add(tagName);
-
-          try {
-            const method = url.startsWith('POST:') ? 'POST' : 'GET';
-            const cleanUrl = url.replace(/^POST:/, '');
-
-            // Resolve headers at runtime (just-in-time)
-            const headers = resolveHeaders(config.headers);
-
-            const fetchOpts = {
-              method,
-              headers,
-              credentials: config.credentials
-            };
-
-            const req = await fetch(cleanUrl, fetchOpts);
-            if (!req.ok) {
-              throw new Error(`HTTP ${req.status} loading block "${tagName}" from ${cleanUrl}`);
-            }
-            const content = await req.text();
-
-            Lego.defineLegoFile(content, `${tagName}.lego`);
-
-            if (registry[tagName]) snap(this);
-
-            // Snap all elements that connected while the fetch was in progress
-            const pending = Lego._pendingLazy[tagName];
-            if (pending) {
-              pending.forEach(el => {
-                if (el.isConnected && registry[tagName] && !getPrivateData(el).snapped) {
-                  snap(el);
-                }
-              });
-              delete Lego._pendingLazy[tagName];
-            }
-          } catch (e) {
-            console.error(`[Lego] Failed to load manifest block ${tagName}:`, e);
-          } finally {
-            Lego._fetching.delete(tagName);
-          }
+      // Fetch-on-first-connect. Shared lifecycle (snap on connect, deferred
+      // unsnap on disconnect) comes from createBlockElementClass; this
+      // callback only runs when the block is not registered yet.
+      const loadBlock = async (host) => {
+        if (!Lego._fetching) Lego._fetching = new Set();
+        if (!Lego._pendingLazy) Lego._pendingLazy = {};
+        if (Lego._fetching.has(tagName)) {
+          if (!Lego._pendingLazy[tagName]) Lego._pendingLazy[tagName] = new Set();
+          Lego._pendingLazy[tagName].add(host);
+          return;
         }
-        disconnectedCallback() {
-          unsnap(this);
+        Lego._fetching.add(tagName);
+
+        try {
+          const method = url.startsWith('POST:') ? 'POST' : 'GET';
+          const cleanUrl = url.replace(/^POST:/, '');
+
+          // Resolve headers at runtime (just-in-time)
+          const headers = resolveHeaders(config.headers);
+
+          const fetchOpts = {
+            method,
+            headers,
+            credentials: config.credentials
+          };
+
+          const req = await fetch(cleanUrl, fetchOpts);
+          if (!req.ok) {
+            throw new Error(`HTTP ${req.status} loading block "${tagName}" from ${cleanUrl}`);
+          }
+          const content = await req.text();
+
+          Lego.defineLegoFile(content, `${tagName}.lego`);
+
+          if (registry[tagName]) snap(host);
+
+          // Snap all elements that connected while the fetch was in progress
+          const pending = Lego._pendingLazy[tagName];
+          if (pending) {
+            pending.forEach(el => {
+              if (el.isConnected && registry[tagName] && !getPrivateData(el).snapped) {
+                snap(el);
+              }
+            });
+            delete Lego._pendingLazy[tagName];
+          }
+        } catch (e) {
+          console.error(`[Lego] Failed to load manifest block ${tagName}:`, e);
+        } finally {
+          Lego._fetching.delete(tagName);
         }
-      });
+      };
+
+      customElements.define(tagName, createBlockElementClass(tagName, { lazyLoader: loadBlock }));
     };
 
     if (options.manifest) {
@@ -467,33 +504,9 @@ const Lego = {
       Lego.route('/_/studio/:block', 'lego-studio');
     }
 
-    if (routes.length > 0) {
-      window.addEventListener('popstate', (event) => {
-        const targets = event.state?.legoTargets || null;
-        _matchRoute(targets);
-      });
-
-      document.addEventListener('submit', e => {
-        if (e.target.hasAttribute('b-action')) {
-          e.preventDefault();
-        }
-      })
-
-      document.addEventListener('click', e => {
-        const path = e.composedPath();
-        const link = path.find(el => el.tagName === 'A' && (el.hasAttribute('b-target') || el.hasAttribute('b-link')));
-        if (link) {
-          e.preventDefault();
-          const href = link.getAttribute('href');
-          const targetAttr = link.getAttribute('b-target');
-          const targets = targetAttr ? targetAttr.split(/\s+/).filter(Boolean) : [];
-
-          const shouldPush = link.getAttribute('b-link') !== 'false';
-          globalState.$go(href, ...targets).get(shouldPush);
-        }
-      });
-      _matchRoute();
-    }
+    ensureRouterListeners();
+    _initCompleted = true;
+    if (routes.length > 0) _matchRoute();
 
     initCrossTabSync();
   }
