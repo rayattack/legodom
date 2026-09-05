@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LegoDOM (npm: `lego-dom`) is a zero-dependency web components framework (~10kb gzipped) that turns standard HTML `<template>` tags into reactive, encapsulated custom elements. It uses direct DOM updates (no virtual DOM), ES6 Proxy-based reactivity, and Shadow DOM for encapsulation.
+LegoDOM (npm: `lego-dom`) is a zero-dependency web components framework (~18 KB gzipped) that turns standard HTML `<template>` tags into reactive, encapsulated custom elements. It uses direct DOM updates (no virtual DOM), ES6 Proxy-based reactivity, and Shadow DOM for encapsulation.
 
 ## Commands
 
@@ -26,9 +26,10 @@ Entry point is `src/index.js` which wires up dependency injection between module
 
 - **`src/core/effect.js`** — The dependency graph. `createEffect`/`track`/`trigger`, plus `computed` and `watch`. Pure: no DOM, no framework imports. Deps belong to the effect that read them and are re-collected on every run.
 - **`src/core/reactive.js`** — Deep proxy wrapper. `get`/`has`/`ownKeys` track, `set`/`deleteProperty` trigger. Knows nothing about elements or the batcher. Detects `$db` descriptors for persistence integration.
-- **`src/core/renderer.js`** — `render()`, `bind()`, `scanForBindings()`, `updateNodeBindings()`. Handles text/attribute interpolation (`[[expr]]` or `{{expr}}`), event listeners (`@click`, `@keydown.enter.prevent`), and directive execution.
+- **`src/core/renderer.js`** — `render()`, `bind()`, `scanForBindings()`, `runBindings()`. Handles text/attribute interpolation (`[[expr]]` or `{{expr}}`), event listeners (`@click`, `@keydown.enter.prevent`), and directive execution.
 - **`src/core/lifecycle.js`** — `snap()` (mount: clone template, attach shadow DOM, merge logic tiers, call `mounted()`) and `unsnap()` (unmount: call `unmounted()`, cleanup).
-- **`src/core/batcher.js`** — RAF-based update queue with deduplication. Handles pending updates added during batch processing.
+- **`src/core/batcher.js`** — RAF-based update queue with deduplication. Handles pending updates added during batch processing. Exposes `nextTick()`.
+- **`src/core/element.js`** — `createBlockElementClass()`, the single custom element class behind every block. Teardown on disconnect is deferred by a microtask so DOM moves do not destroy block state.
 - **`src/core/registry.js`** — Global stores: `registry` (template defs), `proxyCache`/`privateData`/`forPools` (WeakMaps), `activeBlocks`, `legoFileLogic`.
 - **`src/core/globals.js`** — Shared reactive global state (`Lego.globals`). An ordinary `reactive()` object: bindings that read `global.x` subscribe by reading it.
 - **`src/core/stylesheets.js`** — Constructable stylesheets and cascade mode handling.
@@ -46,7 +47,7 @@ Each directive exports an object with `name`, `scan()`, `execute()`, and `destro
 | `b-html` | Raw HTML insertion |
 | `b-sync` | Two-way binding for form inputs |
 | `b-init` | Run expression once on mount |
-| `b-enter`/`b-leave` | CSS transition hooks |
+| `b-enter`/`b-leave` | Viewport enter/exit hooks via IntersectionObserver |
 
 ### Features (`src/features/`)
 
@@ -61,6 +62,7 @@ Each directive exports an object with `name`, `scan()`, `execute()`, and `destro
 - **`parser-utils.js`** — Parses `.lego` SFC format (`<template>`, `<script>`, `<style>` sections) into `Lego.block()` calls.
 - **`dom.js`** — `escapeHTML()`, `findAncestor()` (traverses shadow DOM boundaries), `resolveTargets()`, `syncModelValue()`.
 - **`helpers.js`** — Config, `mergeDescriptors()` (preserves getters/setters), delimiter handling (`[[]]` or `{{}}`).
+- **`glob.js`** — Minimal glob-to-RegExp matcher used by the Vite plugin for `.lego` discovery, so the package has no runtime dependencies.
 
 ### Vite Plugin (`vite-plugin.js`)
 

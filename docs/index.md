@@ -4,7 +4,7 @@ layout: home
 hero:
   name: LegoDOM
   text: Build components. Use them as HTML.
-  tagline: Reactive web components with no imports, no virtual DOM, and no required build step. About 14 KB gzipped.
+  tagline: Reactive web components with no imports, no virtual DOM, and no required build step. About 18 KB gzipped.
   image:
     src: /logo.svg
     alt: LegoDOM

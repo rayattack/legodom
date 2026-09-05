@@ -1,5 +1,33 @@
 # Changelog
 
+## [Unreleased]
+
+**Reactivity core rewritten around effects**
+- Dependencies now belong to the effect that read them (a binding, a computed, a watcher), not to the host element. An object shared by two blocks updates both. `Lego.globals` is an ordinary reactive object; the source-text scan for `global.x` is gone.
+- Dependency sets are cleared on every run, so a binding stops re-running on keys it no longer reads.
+- Rows inside `b-for` react individually: changing one item's field re-runs only that row's bindings.
+- Author getters are cached computeds: they recompute only when something they read changes. A getter that reads nothing reactive is constant after its first evaluation.
+- New: `this.$watch(source, cb)`, `Lego.watch(source, cb)`, `Lego.effect(fn)`, `Lego.nextTick()`.
+- Writes to keys no binding has read no longer force a whole-block render.
+
+**Template expressions are compiled, not evaluated**
+- `[[ ]]`, directive expressions, `@event` handlers and `b-logic` object literals go through a tokenizer, parser and closure compiler. No `new Function`, no `with()`. Templates run under a CSP without `unsafe-eval`.
+- Expressions cannot reach `window`, `document`, `fetch` or any host global. A fixed allowlist (`Math`, `JSON`, `Date`, `Array`, `Object`, `Promise`, `Set`, `Map`, `Intl`, and a few more) is available. `new` works on those constructors.
+- `__proto__` is denied everywhere. `constructor` and `prototype` are denied only when the read would yield a function, so data fields with those names render.
+- `$event` now resolves in handlers. Unsupported: statements, block bodies, regex literals, spread, destructuring. `b-logic` method shorthand with a statement body falls back to `Function()` with a one-time warning.
+- The sandbox is CSP and prototype-pollution protection, not a trust boundary for untrusted templates: `self` and `$element` are DOM nodes.
+
+**Correctness fixes**
+- Built-ins with internal slots (`Set`, `Map`, `Date`, `Promise`, typed arrays, and others) are no longer proxied, so their methods work in state. Plain objects, arrays and class instances stay reactive.
+- Async `mounted()`, `unmounted()`, `updated()`, event handlers and directive expressions route rejections into error boundaries and `config.onError`.
+- Moving a block in the DOM (a `b-for` reorder, an `appendChild`) no longer destroys its state; teardown is deferred by a microtask. `$mount` and the router still run the outgoing block's `unmounted()` before the incoming block's `mounted()`.
+- `b-sync` runs after the bindings that populate its element, so a `<select>` whose options come from `b-for` keeps its value.
+- Routes registered after `Lego.init()` now work.
+- `$db` never evicts other keys on a storage quota error; it reports through `config.onError(err, 'quota', key)` and abandons the write.
+- `fast-glob` is no longer a runtime dependency.
+
+**Bundle**: about 18 KB gzipped, up from 14 KB. The expression compiler accounts for nearly all of the increase.
+
 ## [2.1.4] - 2026-01-26
 
 **Major Architecture Upgrade: Native Web Components**
