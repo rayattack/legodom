@@ -32,9 +32,6 @@ export const itemIdMap = new WeakMap();
 // Active block tracking
 export const activeBlocks = new Set();
 
-// Global state subscribers
-export const globalSubscribers = new Set();
-
 // Private data accessor
 export const getPrivateData = (el) => {
   if (!privateData.has(el)) {

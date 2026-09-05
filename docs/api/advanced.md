@@ -41,7 +41,7 @@ Steps:
 2. Remove all event listeners attached via `@event` and `b-sync`.
 3. Disconnect `IntersectionObserver` instances from `b-enter` / `b-leave`.
 4. Clean up `$db` bindings on the element.
-5. Drop the element from `activeBlocks` and `globalSubscribers`.
+5. Drop the element from `activeBlocks`, and stop its binding effects, watchers and computeds.
 6. Break circular refs (`$element`, `$vars`, `$emit`, `$parent`, `$route`, `$go`, `$mount`).
 7. Recursively unsnap child blocks.
 

@@ -3,8 +3,7 @@ import { scanForAttribute } from '../utils/helpers.js';
 
 export const bIf = {
   name: 'b-if',
-  scan: (node, { checkGlobal, getPrivateData }) => scanForAttribute('b-if', node, (attr, node) => {
-    checkGlobal(attr.value);
+  scan: (node, { getPrivateData }) => scanForAttribute('b-if', node, (attr, node) => {
     const anchor = document.createComment(`b-if: ${attr.value}`);
     const data = getPrivateData(node);
     data.anchor = anchor;

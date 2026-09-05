@@ -5,10 +5,7 @@ import { mount } from '../features/mount.js';
 export const bMount = {
   name: 'b-mount',
 
-  scan: (node, { checkGlobal }) => scanForAttribute('b-mount', node, (attr) => {
-    checkGlobal(attr.value);
-    return { _lastTag: null };
-  }),
+  scan: node => scanForAttribute('b-mount', node, () => ({ _lastTag: null })),
 
   execute({ binding, state, global }) {
     const { node, expr } = binding;

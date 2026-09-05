@@ -37,14 +37,19 @@ export const safeEval = (expr, context, throwError = true) => {
   try {
     const fn = compile(expr);
 
+    // $route, $params and $db are accessors, not values. Reading them off
+    // `globals` eagerly would happen on every expression evaluation, which
+    // would make every binding in the application a dependency of the route
+    // object and re-run the lot on each navigation. As getters, only the
+    // expressions that actually name them subscribe.
     const helpers = {
       $ancestors: (tag) => findAncestor(context.self, tag),
       $registry: (tag) => sharedStates.get(tag.toLowerCase()),
       $element: context.self,
-      $route: globals.$route,
-      $params: globals.$route?.params || {},
+      get $route() { return globals.$route; },
+      get $params() { return globals.$route?.params || {}; },
       $go: (path, ...targets) => _go(path, ...targets)(context.self),
-      $db: globals.$db,
+      get $db() { return globals.$db; },
       $mount: (tagName, target, props) => mount(tagName, target, props),
       $emit: (name, detail) => {
         context.self.dispatchEvent(new CustomEvent(name, {

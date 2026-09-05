@@ -2,10 +2,9 @@ import { safeEval } from '../utils/safe-eval.js';
 
 export const bShow = {
   name: 'b-show',
-  scan(node, { checkGlobal }) {
+  scan(node) {
     if (node.nodeType === Node.ELEMENT_NODE && node.hasAttribute('b-show')) {
       const expr = node.getAttribute('b-show');
-      checkGlobal(expr);
       return { type: 'b-show', node, expr };
     }
   },

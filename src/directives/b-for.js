@@ -10,13 +10,36 @@ let _itemIdCounter = 0;
 
 const reportInnerError = (err) => console.error('[Lego] Error in b-for inner binding:', err);
 
+/**
+ * Detach a pooled row from the dependency graph. Its bindings own effects
+ * that hold the row's scope and its item, so a row leaving the pool has to
+ * stop them or a later mutation of the removed item would still schedule it.
+ *
+ * Stopping is not enough on its own. A row binding can already be sitting in
+ * the host block's dirty set when, in the same frame, the loop runs first and
+ * evicts its row: render() would then reach a binding with no effect, build a
+ * fresh one against the block's state rather than the row's scope, and run it
+ * on a detached node, where the item identifier no longer resolves. Marking
+ * the binding dead makes runBinding skip it. The mark is final: a key that
+ * comes back gets a fresh clone and a fresh scan, so these binding objects
+ * are never reused.
+ */
+const stopRow = (node) => {
+  if (!node._loopBindings) return;
+  node._loopBindings.forEach(b => {
+    b.dead = true;
+    if (!b.effect) return;
+    b.effect.stop();
+    b.effect = null;
+  });
+};
+
 export const bFor = {
   name: 'b-for',
-  scan(node, { checkGlobal, pendingOperations }) {
+  scan(node, { pendingOperations }) {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const match = node.getAttribute('b-for')?.match(/^\s*(\w+)\s+in\s+([\s\S]+?)\s*$/);
     if (match) {
-      checkGlobal(match[2]);
       const anchor = document.createComment(`b-for: ${match[1]} in ${match[2].trim()}`);
 
       // Defer DOM modification to avoid breaking TreeWalker
@@ -83,6 +106,7 @@ export const bFor = {
       }
       currentKeys.add(key);
       let child = pool.get(key);
+      const isNewRow = !child;
       if (!child) {
         child = template.cloneNode(true);
         child.removeAttribute('b-for');
@@ -91,14 +115,12 @@ export const bFor = {
         child._loopCtx = { name: itemName, listName, index: i };
         bind(child, contextEl, child._loopCtx);
         // Scan the child for inner directives (b-if, b-show, b-html, b-mount,
-        // b-enter, b-leave, b-init, nested b-for). The main scanForBindings
-        // skips nodes inside b-for via isInsideBoundary, so without this
-        // pass those directives never bind. We scan once per child and
-        // re-execute them with the loop's local scope on each render.
+        // b-enter, b-leave, b-init, nested b-for). The block's own scan stops
+        // at the b-for boundary, so without this pass those directives never
+        // bind. We scan once per row; each binding then owns an effect bound
+        // to this row's scope.
         if (scanForBindings) {
-          // Pass contextEl so any `global` reads inside the loop subscribe
-          // the parent block, not the detached child clone.
-          child._loopBindings = scanForBindings(child, contextEl);
+          child._loopBindings = scanForBindings(child);
         }
         child._loopSyncInputs = [child, ...child.querySelectorAll('*')].filter(el => findSyncAttr(el));
       } else {
@@ -115,42 +137,53 @@ export const bFor = {
       if (!localScope) {
         child._loopScope = localScope = Object.create(state);
       }
+      // A row only needs re-running when the loop itself moved it: a new
+      // row, a different item under the same key, or a new index. A change
+      // *inside* an item reaches the row's own bindings directly, through
+      // the effects they own, without the loop hearing about it at all.
+      const moved = isNewRow || child._loopItem !== item || child._loopIndex !== i;
       localScope[itemName] = item;
       localScope.$index = i;
+      child._loopItem = item;
+      child._loopIndex = i;
 
       // Audit fix #15: iterate the pre-scanned bindings directly instead of
       // walking the whole subtree per render. _loopBindings is in document
       // order (directive on a parent comes before its descendants' text/attr
       // bindings), so b-if/b-html swap-in or wipe-out happens before the
-      // inner text bindings run — same ordering the previous
+      // inner text bindings run, the same ordering the previous
       // directives-first / updateNodeBindings-second split provided. Text
       // and attr bindings use `b.template` captured at scan time, so they
       // also pick up correctly after a b-if swap restores a stashed subtree
-      // (the binding still references the original — and now re-attached —
-      // node).
+      // (the binding still references the original, now re-attached, node).
       //
-      // track=false: inner-loop bindings can't be re-run individually (their
-      // localScope is ephemeral — a per-binding dirty path would have lost
-      // the item reference). Reads during their execution are tracked under
-      // the outer b-for binding, so item-property mutations trigger a full
-      // loop re-iteration.
+      // Each row binding gets its own effect on this first run, closed over
+      // this row's persistent `_loopScope`. From then on the row reacts by
+      // itself: mutating `items[0].title` re-runs one text binding in row 0
+      // and nothing else.
       //
       // runBindings applies the same two-phase split the main render pass
       // uses, so a `<select b-sync>` inside a row still runs after the
       // b-for that fills it with options. The error callback preserves the
       // previous per-binding isolation: one bad row binding does not stop
       // the rest of the row.
-      if (child._loopBindings) {
-        runBindings(child._loopBindings, localScope, contextEl, false, reportInnerError);
+      if (moved && child._loopBindings) {
+        runBindings(child._loopBindings, localScope, contextEl, reportInnerError);
       }
 
-      child._loopSyncInputs.forEach(input => {
-        const attr = findSyncAttr(input);
-        const path = attr.value;
-        if (path.startsWith(`${itemName}.`)) {
-          syncModelValue(input, resolve(path.split('.').slice(1).join('.'), list[i]));
-        }
-      });
+      // Kept outside the row effects on purpose: these reads would otherwise
+      // make the loop itself depend on item fields, which is exactly the
+      // coupling this phase removes. b-sync's own binding keeps the input in
+      // step with later edits to the item.
+      if (moved) {
+        child._loopSyncInputs.forEach(input => {
+          const attr = findSyncAttr(input);
+          const path = attr.value;
+          if (path.startsWith(`${itemName}.`)) {
+            syncModelValue(input, resolve(path.split('.').slice(1).join('.'), list[i]));
+          }
+        });
+      }
       renderedChildren.push(child);
     });
 
@@ -166,7 +199,10 @@ export const bFor = {
 
     // Remove stale nodes
     for (const [key, node] of pool.entries()) {
-      if (!currentKeys.has(key)) { node.remove(); pool.delete(key); }
+      if (currentKeys.has(key)) continue;
+      stopRow(node);
+      node.remove();
+      pool.delete(key);
     }
   },
 
@@ -175,6 +211,7 @@ export const bFor = {
     if (anchor && forPools.has(anchor)) {
       const pool = forPools.get(anchor);
       pool.forEach(node => {
+        stopRow(node);
         // Clean up listeners and directive bindings on each pool child and its descendants
         const nodes = [node, ...node.querySelectorAll('*')];
         nodes.forEach(n => {

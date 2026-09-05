@@ -1,4 +1,4 @@
-import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, globalSubscribers, globalKeySubscribers, privateData, snapState } from './registry.js';
+import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, privateData, snapState } from './registry.js';
 import { bProps } from '../directives/b-props.js';
 import { globals } from './globals.js';
 import { directives } from '../directives/index.js';
@@ -7,6 +7,7 @@ import { findAncestor } from '../utils/dom.js';
 import { cleanupDbBindings } from '../features/persistence.js';
 import { parseJSObject } from '../utils/safe-eval.js';
 import { reactive } from './reactive.js';
+import { computed, watch } from './effect.js';
 import { bind, render } from './renderer.js';
 import { applyStyles } from './stylesheets.js';
 import { findErrorBoundary, renderErrorBlock, handleError, guardResult } from '../features/error.js';
@@ -17,6 +18,48 @@ import { _go } from '../features/router.js';
 // assignment semantics (`=` looks like assignment, after all) discover
 // the actual behaviour without flooding logs in steady-state apps.
 let _stateAssignWarned = false;
+
+/**
+ * Turn author-written getters into cached computeds.
+ *
+ * A getter is derived state, and re-running it on every read is waste that
+ * shows up as soon as the body is non-trivial. Backing each one with a
+ * computed means it recomputes only when something it read actually changed,
+ * and the computed itself becomes the thing bindings depend on.
+ *
+ * Only accessors that came from the three logic tiers are converted. The
+ * framework's own `$parent` / `$route` / `$go` / `$mount` accessors on
+ * baseState must stay live: they read the DOM and the router, neither of
+ * which is reactive, so caching them would freeze them at their first value.
+ *
+ * `getProxy` is deferred because the state proxy does not exist yet at the
+ * point of conversion, and the original getter has to run with `this` bound
+ * to it or its own reads would never be tracked.
+ *
+ * @returns {Array} the computeds created, so unsnap can stop them
+ */
+const memoizeGetters = (baseState, sources, getProxy) => {
+  const authored = new Set();
+  sources.forEach(src => {
+    if (src) Object.getOwnPropertyNames(src).forEach(k => authored.add(k));
+  });
+
+  const owned = [];
+  authored.forEach(key => {
+    const desc = Object.getOwnPropertyDescriptor(baseState, key);
+    if (!desc || !desc.get) return;
+    const original = desc.get;
+    const cell = computed(() => original.call(getProxy() || baseState));
+    owned.push(cell);
+    Object.defineProperty(baseState, key, {
+      get() { return cell.value; },
+      set: desc.set,
+      enumerable: desc.enumerable,
+      configurable: true
+    });
+  });
+  return owned;
+};
 
 export const snap = (el) => {
   if (config.debug) console.log('[Lego Trace] snap() called for:', el.tagName);
@@ -57,6 +100,17 @@ export const snap = (el) => {
       $emit: (name, detail) => {
         el.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
       },
+      /**
+       * Run a callback when a piece of state changes, without going through
+       * the template. `source` is a dotted key path or a function receiving
+       * the state proxy. Stopped automatically on unmount; the returned stop
+       * function works before then.
+       */
+      $watch: (source, cb, options) => {
+        const stop = watch(source, cb, options, el._studs);
+        data.watchers.push(stop);
+        return stop;
+      },
       get $route() { return globals.$route },
       get $go() { return globals.$go },
       get $mount() { return globals.$mount }
@@ -73,6 +127,13 @@ export const snap = (el) => {
     }
 
     bProps.validate({ instanceLogic, state: baseState, tagName: name });
+
+    data.watchers = [];
+    data.computeds = memoizeGetters(
+      baseState,
+      [scriptLogic, templateLogic, instanceLogic],
+      () => el._studs
+    );
 
     el._studs = reactive(baseState, el);
 
@@ -201,11 +262,6 @@ export const unsnap = (el) => {
 
   // 4. Remove from active blocks tracking
   activeBlocks.delete(el);
-  globalSubscribers.delete(el);
-  // Audit fix #20: also drop el from each per-key subscriber set.
-  // Iterating the map is bounded by the number of distinct global keys
-  // ever subscribed (small in practice).
-  globalKeySubscribers.forEach(set => set.delete(el));
 
   // 5. Break circular references
   if (el._studs) {
@@ -238,6 +294,12 @@ export const unsnap = (el) => {
   if (data) {
     if (data.bindings) {
       data.bindings.forEach(binding => {
+        // Stop first: a directive's destroy() can mutate state, and a live
+        // effect would happily schedule a block that is on its way out.
+        if (binding.effect) {
+          binding.effect.stop();
+          binding.effect = null;
+        }
         const directive = directives[binding.type];
         if (directive && directive.destroy) {
           try {
@@ -251,6 +313,15 @@ export const unsnap = (el) => {
       });
       data.bindings = null;
     }
+    if (data.watchers) {
+      data.watchers.forEach(stop => stop());
+      data.watchers = null;
+    }
+    if (data.computeds) {
+      data.computeds.forEach(cell => cell.stop());
+      data.computeds = null;
+    }
+    data.dirtyBindings = null;
     data.anchor = null;
     privateData.delete(el);
   }

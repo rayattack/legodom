@@ -237,7 +237,6 @@ export const unsnap = (el) => {
 
   // 3. Remove from active blocks tracking
   activeBlocks.delete(el);
-  globalSubscribers.delete(el);
 
   // 4. Break circular references
   if (el._studs) {

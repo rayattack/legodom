@@ -1,11 +1,12 @@
-import { registry, forPools, itemIdMap, getPrivateData, globalSubscribers, globalKeySubscribers } from './registry.js';
+import { registry, forPools, itemIdMap, getPrivateData } from './registry.js';
 import { globals } from './globals.js';
 import { config, resolve, createRegex, getDelimiters } from '../utils/helpers.js';
 import { safeEval } from '../utils/safe-eval.js';
 import { findErrorBoundary, renderErrorBlock, handleError, guardResult } from '../features/error.js';
 import { directives } from '../directives/index.js';
 import { findSyncAttr, URL_ATTRS, isDangerousUrl } from '../utils/dom.js';
-import { setTracking, clearTracking } from './tracking.js';
+import { createEffect } from './effect.js';
+import { globalBatcher } from './batcher.js';
 
 export const bind = (container, blockRoot, loopCtx = null) => {
   const state = blockRoot._studs;
@@ -159,51 +160,21 @@ export const bind = (container, blockRoot, loopCtx = null) => {
   while (child = walker.nextNode()) bindNode(child);
 };
 
-export const scanForBindings = (container, subscriberTarget = null) => {
+export const scanForBindings = (container) => {
   // Audit fix #14: recursive walk that skips terminal-directive subtrees
   // (notably b-for) outright, instead of TreeWalker-descending then
   // climbing parents per node to detect the boundary. Eliminates the
-  // O(nodes × depth) `isInsideBoundary` scan and the wasted descent into
+  // O(nodes x depth) `isInsideBoundary` scan and the wasted descent into
   // b-for subtrees the parent block never owns. Closure invariants
-  // (delimiter, subscriber target, directive list) hoist out of the loop.
+  // (delimiter, directive list) hoist out of the loop.
+  //
+  // Nothing here inspects expression source text any more: which state or
+  // global keys a binding depends on is discovered at run time, by the
+  // effect that runs it.
   const bindings = [];
   const pendingOperations = [];
   const [delimStart] = getDelimiters();
-  const subscriberRoot = subscriberTarget || container.host || container;
   const directiveEntries = Object.entries(directives);
-
-  // Audit fix #20: extract the *top-level* global keys an expression
-  // touches and register the subscriber against each one. Falls back to
-  // the wildcard set when the access pattern is too dynamic to pin
-  // down (computed/bracket access, deep dotted paths — the proxy can't
-  // surface a top-level key from a nested mutation, so any nested-read
-  // subscriber must wake on every global change to stay correct).
-  const TOP_KEY = /\bglobal\.([\w$]+)([\w$.]*)/g;
-  const checkGlobal = (str) => {
-    if (!/\bglobal\b/.test(str)) return;
-    let useWildcard = false;
-    const keys = new Set();
-    let m;
-    TOP_KEY.lastIndex = 0;
-    while ((m = TOP_KEY.exec(str)) !== null) {
-      const tail = m[2] || '';
-      if (tail.includes('.')) { useWildcard = true; break; }
-      keys.add(m[1]);
-    }
-    // If the regex didn't match anything but `global` is in the string
-    // (e.g. `global['x']` or a computed access), play safe with the
-    // wildcard set.
-    if (keys.size === 0) useWildcard = true;
-    if (useWildcard) {
-      globalSubscribers.add(subscriberRoot);
-      return;
-    }
-    keys.forEach(k => {
-      let set = globalKeySubscribers.get(k);
-      if (!set) { set = new Set(); globalKeySubscribers.set(k, set); }
-      set.add(subscriberRoot);
-    });
-  };
 
   const visit = (node) => {
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -211,7 +182,6 @@ export const scanForBindings = (container, subscriberTarget = null) => {
       for (const [, implementation] of directiveEntries) {
         if (!implementation.scan) continue;
         const result = implementation.scan(node, {
-          checkGlobal,
           getPrivateData,
           pendingOperations,
           current: node
@@ -226,7 +196,6 @@ export const scanForBindings = (container, subscriberTarget = null) => {
 
       for (const attr of node.attributes) {
         if (attr.value.includes(delimStart)) {
-          checkGlobal(attr.value);
           bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
         }
       }
@@ -236,7 +205,6 @@ export const scanForBindings = (container, subscriberTarget = null) => {
       }
     } else if (node.nodeType === Node.TEXT_NODE) {
       if (node.textContent.includes(delimStart)) {
-        checkGlobal(node.textContent);
         bindings.push({ type: 'text', node, template: node.textContent });
       }
     }
@@ -252,13 +220,11 @@ export const scanForBindings = (container, subscriberTarget = null) => {
   if (container.nodeType === Node.ELEMENT_NODE) {
     for (const attr of container.attributes) {
       if (attr.value.includes(delimStart)) {
-        checkGlobal(attr.value);
         bindings.push({ type: 'attr', node: container, attrName: attr.name, template: attr.value });
       }
     }
   } else if (container.nodeType === Node.TEXT_NODE) {
     if (container.textContent.includes(delimStart)) {
-      checkGlobal(container.textContent);
       bindings.push({ type: 'text', node: container, template: container.textContent });
     }
   }
@@ -273,62 +239,84 @@ export const scanForBindings = (container, subscriberTarget = null) => {
 };
 
 /**
- * Execute a single binding against a given state scope. Extracted so b-for
- * can reuse the same path for per-item directive execution (so inner
- * b-if / b-show / b-html / b-mount / b-enter / b-leave work inside loops).
- *
- * Wraps execution with setTracking/clearTracking so the reactive proxy
- * records which (target, key) pairs this binding reads — enabling
- * fine-grained re-runs on subsequent state mutations (#16).
- *
- * `track=false` is used by b-for for inner-loop bindings: those bindings
- * receive a per-item localScope (Object.create(state) + item) and can't be
- * re-run individually on a mutation because we'd have lost which item their
- * scope referred to. Leaving tracking active under the *outer* b-for
- * binding means any state read during the loop becomes a dep of the b-for
- * binding, so a mutation triggers the whole loop to re-iterate. Coarser
- * than per-item reactivity but correct.
+ * The work a binding does: run its directive, or write its interpolated text
+ * or attribute. Always called from inside the binding's own effect, so every
+ * state, global or `$registry` read it performs becomes a dependency of that
+ * one binding.
  */
-const runBinding = (b, state, contextEl, track = true) => {
-  // Audit fix #9: bindings whose nodes were wiped (e.g. b-html replaced the
-  // surrounding subtree) are tagged dead during the wipe. Skip them so we
-  // don't write to detached nodes through the dirty-binding path.
-  if (b.dead) return;
-  if (track) setTracking(b, contextEl);
-  try {
-    const directive = directives[b.type];
-    if (directive) {
-      directive.execute({
-        binding: b,
-        state,
-        global: globals,
-        helpers: {
-          bind,
-          scanForBindings,
-          runBinding,
-          runBindings,
-          contextEl
-        }
-      });
+const executeBinding = (b, state, contextEl) => {
+  const directive = directives[b.type];
+  if (directive) {
+    directive.execute({
+      binding: b,
+      state,
+      global: globals,
+      helpers: {
+        bind,
+        scanForBindings,
+        runBinding,
+        runBindings,
+        contextEl
+      }
+    });
+    return;
+  }
+  if (b.type === 'text') {
+    const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
+    if (b.node.textContent !== out) b.node.textContent = out;
+    return;
+  }
+  if (b.type === 'attr') {
+    const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
+    if (config.strict && URL_ATTRS.has(b.attrName.toLowerCase()) && isDangerousUrl(out)) {
+      if (b.node.hasAttribute(b.attrName)) b.node.removeAttribute(b.attrName);
       return;
     }
-    if (b.type === 'text') {
-      const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
-      if (b.node.textContent !== out) b.node.textContent = out;
-    } else if (b.type === 'attr') {
-      const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
-      if (config.strict && URL_ATTRS.has(b.attrName.toLowerCase()) && isDangerousUrl(out)) {
-        if (b.node.hasAttribute(b.attrName)) b.node.removeAttribute(b.attrName);
-        return;
-      }
-      if (b.node.getAttribute(b.attrName) !== out) {
-        b.node.setAttribute(b.attrName, out);
-        if (b.attrName === 'class') b.node.className = out;
-      }
+    if (b.node.getAttribute(b.attrName) !== out) {
+      b.node.setAttribute(b.attrName, out);
+      if (b.attrName === 'class') b.node.className = out;
     }
-  } finally {
-    if (track) clearTracking();
   }
+};
+
+/**
+ * A changed dependency does not re-run the binding on the spot: it marks the
+ * binding dirty on its host block and asks the batcher for a frame. render()
+ * then runs exactly the dirty set, so a burst of mutations still costs one
+ * pass and DOM writes stay inside the frame.
+ */
+const scheduleBinding = (b, contextEl) => {
+  const data = getPrivateData(contextEl);
+  if (!data.dirtyBindings) data.dirtyBindings = new Set();
+  data.dirtyBindings.add(b);
+  globalBatcher.add(contextEl);
+};
+
+/**
+ * Execute a single binding, creating its effect on first use. Extracted so
+ * b-for can reuse the same path for per-item directive execution (so inner
+ * b-if / b-show / b-html / b-mount / b-enter / b-leave work inside loops).
+ *
+ * The effect closes over the scope the binding was first run with. For block
+ * bindings that is the block's state proxy; for b-for row bindings it is the
+ * row's persistent `_loopScope`, which is why a row can be re-run on its own
+ * without having lost which item it was showing.
+ */
+const runBinding = (b, state, contextEl) => {
+  // Audit fix #9: bindings whose nodes are gone are tagged dead by whoever
+  // removed them, either b-html replacing the surrounding subtree or b-for
+  // evicting a row from its pool. Skip them: they may still be sitting in
+  // the dirty set from a mutation made earlier in the same frame, and
+  // running one would write to a detached node and, worse, mint a fresh
+  // effect for it against the wrong scope.
+  if (b.dead) return;
+  if (!b.effect) {
+    b.effect = createEffect(
+      () => executeBinding(b, state, contextEl),
+      () => scheduleBinding(b, contextEl)
+    );
+  }
+  b.effect.run();
 };
 
 /**
@@ -355,15 +343,15 @@ const isPostBinding = (b) => {
  * the remaining bindings still run. Without it a throw propagates to the
  * caller (render() turns it into a boundary/onError report for the block).
  */
-export const runBindings = (bindings, state, contextEl, track = true, onError = null) => {
+export const runBindings = (bindings, state, contextEl, onError = null) => {
   let post = null;
   const run = (b) => {
     if (!onError) {
-      runBinding(b, state, contextEl, track);
+      runBinding(b, state, contextEl);
       return;
     }
     try {
-      runBinding(b, state, contextEl, track);
+      runBinding(b, state, contextEl);
     } catch (err) {
       onError(err, b);
     }
@@ -393,9 +381,10 @@ export const render = (el) => {
     const target = el.shadowRoot || el;
     if (!data.bindings) data.bindings = scanForBindings(target);
 
-    // Fine-grained re-render: if the proxy `set` recorded specific dirty
-    // bindings, run only those. Otherwise (initial render, untracked path,
-    // delete) run the full pass. dirtyBindings is consumed and cleared.
+    // Fine-grained re-render: a binding whose dependency changed put itself
+    // in the dirty set, so run only those and let each effect re-collect its
+    // deps. The full pass is the first render (which is what creates the
+    // effects) and any render asked for without a dirty set.
     if (data.dirtyBindings && data.dirtyBindings.size > 0) {
       const dirty = data.dirtyBindings;
       data.dirtyBindings = null;

@@ -1355,7 +1355,7 @@ describe('Audit fix #18: initial discovery walks the tree once, not twice', () =
   });
 });
 
-describe('Audit fix #20: globals tracking is per-key', () => {
+describe('Audit fix #20 (Phase 3): globals tracking is per-key', () => {
   let win, Lego;
   beforeEach(async () => {
     win = setupDom();
@@ -1391,7 +1391,7 @@ describe('Audit fix #20: globals tracking is per-key', () => {
     expect(bRenders).toBe(baselineB);
   });
 
-  it('nested global access (deep path) falls back to the wildcard subscriber', async () => {
+  it('nested global access is tracked at the key that changed, not the whole object', async () => {
     Lego.globals.user = { name: 'Ada' };
     Lego.globals.theme = 'light';
 
@@ -1403,13 +1403,15 @@ describe('Audit fix #20: globals tracking is per-key', () => {
     await flush(80);
 
     const baseline = nestedRenders;
-    // Nested reads use the wildcard set, so an unrelated top-level
-    // mutation also wakes them. Conservative but correct.
+    // Phase 3: reads are recorded by the effect that performs them, so a
+    // deep read subscribes to `user` and `user.name`, not to every global.
+    // Before, this fell back to a wildcard subscriber set and an unrelated
+    // top-level mutation woke the block anyway.
     Lego.globals.theme = 'dark';
     await flush(80);
-    expect(nestedRenders).toBeGreaterThan(baseline);
+    expect(nestedRenders).toBe(baseline);
 
-    // The deep mutation actually changes the DOM.
+    // The deep mutation still reaches the DOM.
     Lego.globals.user.name = 'Grace';
     await flush(80);
     expect(win.document.querySelector('reads-nested').shadowRoot.querySelector('div').textContent).toBe('Grace');

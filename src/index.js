@@ -1,4 +1,4 @@
-import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData, globalSubscribers, globalKeySubscribers } from './core/registry.js';
+import { registry, activeBlocks, legoFileLogic, sharedStates, getPrivateData } from './core/registry.js';
 import { bProps } from './directives/b-props.js';
 import { snap, unsnap } from './core/lifecycle.js';
 import { createBlockElementClass } from './core/element.js';
@@ -12,6 +12,7 @@ import { defineLegoFile } from './core/parser.js';
 import { dbFactory, initCrossTabSync, handleDbUpdate } from './features/persistence.js';
 import { _go, routes, setSnap as setRouterSnap, _matchRoute, findRoute } from './features/router.js';
 import { setErrorHandlers, findErrorBoundary } from './features/error.js';
+import { createEffect, watch as watchSource } from './core/effect.js';
 import { mount, setMountHandlers } from './features/mount.js';
 
 // Dependency Injection Setup
@@ -30,26 +31,17 @@ const browserRoute = {
   body: null
 };
 
-// Custom batcher for globals (audit fix #20): wake only the components
-// whose binding expressions actually read the mutated key, plus the
-// wildcard fallback set for subscribers that read globals through a
-// pattern we can't statically pin down (computed access, deep paths).
-const globalsBatcher = {
-  add(_el, key) {
-    if (key !== undefined) {
-      const keyed = globalKeySubscribers.get(key);
-      if (keyed) keyed.forEach(block => globalBatcher.add(block));
-    }
-    globalSubscribers.forEach(block => globalBatcher.add(block));
-  }
-};
-
+// Globals are an ordinary reactive object. A binding that reads
+// `global.x` records that read like any other, so a mutation wakes exactly
+// the bindings that read the key and nothing else. The old arrangement
+// (scan the expression source for `global.` and keep element subscriber
+// sets) is gone with the mechanism that needed it.
 const globalState = reactive({
   $route: browserRoute,
   $go: (path, ...targets) => _go(path, ...targets)(document.body),
   $mount: (tagName, target, props) => mount(tagName, target, props),
   $db: dbFactory
-}, typeof document !== 'undefined' ? document.body : null, globalsBatcher);
+});
 
 setGlobals(globalState);
 
@@ -117,7 +109,7 @@ const Lego = {
     try {
       const sharedState = {};
       mergeDescriptors(logic, sharedState);
-      sharedStates.set(tagName.toLowerCase(), reactive(sharedState, document.body));
+      sharedStates.set(tagName.toLowerCase(), reactive(sharedState));
     } catch (e) {
       config.onError(e, 'define', tagName);
     }
@@ -161,6 +153,22 @@ const Lego = {
    * @returns {Promise<void>}
    */
   nextTick: () => globalBatcher.nextTick(),
+  /**
+   * Run `fn` now and again whenever any reactive value it read changes.
+   * Useful against `Lego.globals` and `$registry` state, outside any block.
+   * @returns {Function} stop
+   */
+  effect: (fn) => {
+    const runner = createEffect(fn);
+    runner.run();
+    return () => runner.stop();
+  },
+  /**
+   * Watch a value and call back when it changes. `source` is a dotted key
+   * path read from `Lego.globals`, or a function receiving `Lego.globals`.
+   * @returns {Function} stop
+   */
+  watch: (source, cb, options) => watchSource(source, cb, options, globalState),
   getActiveBlocksCount: () => activeBlocks.size,
   getLegos: () => Object.keys(registry),
   config,

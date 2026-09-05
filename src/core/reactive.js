@@ -1,24 +1,23 @@
-import { globalBatcher } from './batcher.js';
-import { proxyCache, privateData } from './registry.js';
+import { proxyCache } from './registry.js';
 import { config, isReactiveTarget } from '../utils/helpers.js';
 import { isDbDescriptor, initializeDbProp, handleDbUpdate } from '../features/persistence.js';
-import { trackRead, getReaders } from './tracking.js';
-
+import { track, trigger, ITERATE_KEY } from './effect.js';
 
 /**
  * Creates a deeply reactive proxy for a state object.
- * 
- * - **Deep Reactivity:** Recursively wraps nested objects in proxies.
- * - **Subscriber Model:** Notifies the `el` (the html `block`) whenever a property changes.
- * - **Batching:** Uses the global batcher to deduplicate updates.
- * - **Persistence:** Automatically detects and hydrates `$db` descriptors.
- * 
+ *
+ * - **Deep reactivity:** nested objects and arrays are wrapped on first read.
+ * - **Effect-owned tracking:** every read is recorded against the effect that
+ *   is running (a binding, a computed, a watcher). The proxy knows nothing
+ *   about elements or the batcher, so one object can feed any number of
+ *   blocks and each of them wakes on its own.
+ * - **Persistence:** `$db` descriptors are hydrated once, up front.
+ *
  * @param {object} obj - The source of truth (state object)
- * @param {HTMLElement} el - The subscriber (html `block`) to re-render on change
- * @param {Batcher} [batcher=globalBatcher] - The update scheduler
+ * @param {HTMLElement} [el] - Owner used only to scope `$db` binding cleanup
  * @returns {Proxy} A reactive proxy of `obj`
  */
-export const reactive = (obj, el, batcher = globalBatcher) => {
+export const reactive = (obj, el) => {
   // Arrays, plain objects and ordinary class instances are safe to wrap.
   // Built-ins with internal slots (Set/Map/Date/Promise/RegExp/typed arrays
   // and friends) are returned raw so their methods keep a compatible
@@ -33,25 +32,32 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
 
     const desc = obj[k];
     if (isDbDescriptor(desc)) {
-      initializeDbProp(obj, k, desc, el, batcher);
+      initializeDbProp(obj, k, desc, el);
     }
   }
 
   const handler = {
     get: (t, k, receiver) => {
-      // Record (target, key) read for the currently-evaluating binding so
-      // future writes to this key only re-run dependent bindings.
-      trackRead(el, t, k);
-      // Pass receiver so getters see `this === proxy` — that way `this.x`
-      // inside a getter routes through the proxy's `get` and records `x`
-      // as a dep too. Without this, computed properties (getters reading
-      // other state) appear to depend only on themselves and the renderer
-      // would fall back to a full pass on every mutation.
+      track(t, k);
+      // Pass receiver so getters see `this === proxy`: `this.x` inside a
+      // getter then routes through this same trap and is recorded as a dep
+      // of whatever is running.
       const val = Reflect.get(t, k, receiver);
       // Same gate as above: nested built-ins are handed back untouched so
       // `state.tags.size` / `state.when.getTime()` keep working.
-      if (isReactiveTarget(val)) return reactive(val, el, batcher);
+      if (isReactiveTarget(val)) return reactive(val, el);
       return val;
+    },
+    // The expression compiler resolves every identifier with `name in scope`
+    // before reading it, so `has` is half of what makes templates reactive.
+    // It also covers author code writing `'key' in obj`.
+    has: (t, k) => {
+      track(t, k);
+      return Reflect.has(t, k);
+    },
+    ownKeys: (t) => {
+      track(t, ITERATE_KEY);
+      return Reflect.ownKeys(t);
     },
     set: (t, k, v, receiver) => {
       if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
@@ -71,36 +77,20 @@ export const reactive = (obj, el, batcher = globalBatcher) => {
         ? Reflect.set(t, k, v)
         : Reflect.set(t, k, v, receiver);
 
-      if (isSelf || isOwnProp) {
-        if (old !== v) {
-          // Fine-grained scheduling: tag dirty bindings so the next render
-          // only re-runs them. If no readers were tracked for (t, k), the
-          // batcher still runs render(el), which falls back to a full pass.
-          const readers = getReaders(el, t, k);
-          if (readers && readers.size > 0) {
-            const data = privateData.get(el);
-            if (data) {
-              if (!data.dirtyBindings) data.dirtyBindings = new Set();
-              readers.forEach(b => data.dirtyBindings.add(b));
-            }
-          }
-          // Pass the changed key as a second arg so the globals batcher
-          // can wake only key-specific subscribers (audit fix #20). The
-          // default globalBatcher.add(el) ignores the extra argument.
-          batcher.add(el, k);
-          handleDbUpdate(t, k, v);
-        }
-      }
+      // A write that landed on a child scope rather than on this target is
+      // not a state change: the loop scope owns it now.
+      if (!isSelf && !isOwnProp) return r;
+
+      const added = !isOwnProp;
+      if (!added && Object.is(old, v)) return r;
+      trigger(t, k, added ? 'add' : 'set');
+      handleDbUpdate(t, k, v);
       return r;
     },
     deleteProperty: (t, k) => {
-      // Mark all bindings reading this key dirty (deletion is structural —
-      // many readers may need to re-run); simplest sound option is a full
-      // re-render via the batcher fallback.
+      const had = Object.prototype.hasOwnProperty.call(t, k);
       const r = Reflect.deleteProperty(t, k);
-      const data = privateData.get(el);
-      if (data) data.dirtyBindings = null; // force full pass
-      batcher.add(el);
+      if (had && r) trigger(t, k, 'delete');
       return r;
     }
   };

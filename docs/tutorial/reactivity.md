@@ -90,7 +90,7 @@ This is why getters compose cleanly:
 
 The runtime sees the binding read `visible`; `visible`'s getter reads `tasks` and `filter`; both get recorded as dependencies of that one binding. Mutate any of them and the binding re-runs. You don't write the dependency list anywhere. The proxy is watching.
 
-There's also a fallback path. If you mutate a property *before* any binding has read it (initial setup, an untracked side path), the runtime can't know which bindings depend on it, so it does a full re-render of the block. Correct, just slightly more work than a fine-grained pass.
+Dependencies are owned by the binding, and they are re-collected on every run. A binding inside an `if` that stops reading `a` and starts reading `b` stops waking on `a` from that render onwards. Nothing accumulates.
 
 ::: tip Getter `this` is the proxy
 A common reactivity bug in other frameworks: a getter reads other state via `this.x`, but `this` is the raw object, not the reactive one, so the read isn't tracked. LegoDOM passes the proxy as the receiver, so getters that read other state still record dependencies. You can chain getters that read getters and tracking will follow.
@@ -112,20 +112,21 @@ You don't need a special API. Use a getter for derived state:
 <p>[[ fullName ]]</p>
 ```
 
-Getters re-run on every render that reads them. They're cheap when the work is cheap and tracked when the work touches state. Most computed values you'd reach for `useMemo` for in React are just getters here.
-
-If the computation is expensive and you only want to recompute on specific changes, a method plus a cached property gives you explicit control:
+Getters are cached. The runtime evaluates one the first time something reads it, remembers both the value and the state it touched while computing, and hands back the remembered value on every later read until one of those pieces of state actually changes. An expensive getter read by five bindings runs once, not five times, and a mutation elsewhere in state doesn't make it run at all. That's `useMemo`, without the dependency array and without you asking for it.
 
 ```js
 {
-  cachedSlug: '',
-  rebuildSlug() {
-    this.cachedSlug = expensiveSlugify(this.title);
-  }
+  title: '',
+  tags: [],
+  get slug() { return expensiveSlugify(this.title); }   // runs when `title` changes
 }
 ```
 
-Call `rebuildSlug()` from a setter on `title` or from `mounted()`, and read `cachedSlug` from your template. The runtime will only re-render bindings that read `cachedSlug` when you assign to it.
+Pushing to `tags` here does not re-run `slug`, because `slug` never read `tags`.
+
+::: warning A getter that reads nothing reactive is a constant
+Caching is keyed on what the getter read. `get now() { return Date.now(); }` reads no state, so nothing can ever invalidate it: it keeps the value from its first evaluation for the life of the block. Call a method instead when you want a fresh value every time.
+:::
 
 ## Reacting from outside the template
 
@@ -143,7 +144,24 @@ Three patterns, in order of how often you'll need them.
 
 `updated()` runs once per render cycle, on a ~50 ms trailing debounce. A burst of mutations from animations, websockets, or rapid input fires the hook once, not once per write. Use it for side effects that should follow the DOM, like animating a scroll position into place after the list grows.
 
-### Accessor pair for "react when *this* changes"
+### `$watch` for "react when *this* changes"
+
+```js
+{
+  count: 0,
+  query: '',
+  mounted() {
+    this.$watch('count', (next, prev) => console.log(next, prev));
+    this.$watch(s => s.query.trim(), q => this.search(q), { immediate: true });
+  }
+}
+```
+
+`$watch` takes a dotted key path or a function receiving the state proxy, and fires only when the value actually changes (compared with `Object.is`). It returns a stop function, and every watcher a block created is stopped for you when the block unmounts.
+
+Outside a block, `Lego.watch(source, cb)` does the same thing against `Lego.globals`, and `Lego.effect(fn)` re-runs `fn` whenever anything it read changes. Both return a stop function, and neither is stopped for you.
+
+An accessor pair still works too, and is the right shape when the reaction belongs to the write rather than to a subscriber:
 
 ```js
 {
@@ -158,7 +176,7 @@ Three patterns, in order of how often you'll need them.
 }
 ```
 
-The runtime preserves accessor descriptors when merging logic, so getters and setters survive the three-tier merge intact. Use this when one specific property is interesting and the rest aren't.
+The runtime preserves accessor descriptors when merging logic, so getters and setters survive the three-tier merge intact.
 
 ### Just call the method from the place that mutates
 
@@ -175,9 +193,9 @@ When you control the call site, you don't need a hook. Often this is the right a
 
 ## Sharing state across blocks
 
-Reactivity is per-block by design. A `<user-card>` and a `<task-list>` each have their own proxy bound to their own host element. Mutating one doesn't ripple to the other. That's intentional: a `[[ count ]]` change in one corner of the page can't cause a thousand other blocks to consider whether they need to re-render.
+Each block gets its own state object, so a `<user-card>` and a `<task-list>` don't see each other's data. What crosses the boundary is the *object*: hand the same object to two blocks and both track it, and a mutation through either one updates both. Bindings are what subscribe, not elements, so the other 998 blocks on the page are undisturbed.
 
-When you do want cross-block reactivity, three doors are open.
+When you want cross-block reactivity on purpose, three doors are open.
 
 ### Events, for child-to-parent
 
@@ -202,7 +220,7 @@ Lego.globals.user = { name: 'Alice' };
 <header>Hi, [[ global.user.name ]]</header>
 ```
 
-`Lego.globals` is itself a reactive proxy, with one twist: blocks subscribe to it automatically. The template scanner spots `global.x` references and adds the block to a subscriber set. Mutating `Lego.globals.user` re-renders only blocks that read from it. The other 999 blocks on the page don't care, and the runtime knows.
+`Lego.globals` is an ordinary reactive object, tracked exactly like block state: a binding that reads `global.user.name` depends on `user` and on that object's `name`, so mutating `Lego.globals.theme` leaves it alone. Nothing inspects your expression source to work this out; the read itself is the subscription.
 
 ### `$registry` for sibling reads
 
@@ -234,7 +252,7 @@ The trigger comparison, if you're coming from elsewhere:
 Two things to remember:
 
 1. **`this` is the proxy.** Reads are tracked, writes schedule. Everything follows from that.
-2. **Renders are surgical and per-block.** A mutation re-runs only the bindings that depend on the changed property, on the block that owns them. A thousand blocks on the page is the same cost as one when only one of them changes.
+2. **Renders are surgical.** A mutation re-runs the bindings that read the changed property, wherever they live: one row of a list, one block, or two blocks sharing an object. A thousand blocks on the page is the same cost as one when only one of them changes.
 
 You can build a serious app without reading the rest of this page again. When something doesn't update the way you expected, the answer is almost always "the binding didn't read that property" or "you replaced the array reference instead of mutating it".
 
@@ -245,10 +263,11 @@ You can build a serious app without reading the rest of this page again. When so
 | Update local state | `this.x = v` (anywhere inside the block) |
 | Compute a derived value | `get name() { return ... }` then `[[ name ]]` |
 | React after each render | `updated() { ... }` (debounced ~50 ms) |
-| React only when one property changes | Accessor pair: `get` + `set` |
+| React only when one property changes | `this.$watch('key', cb)`, or an accessor pair |
 | Talk to a parent block | `this.$emit('event', detail)` |
 | Share state across blocks | `Lego.globals.x = v`; read as `[[ global.x ]]` |
 | Read another block's shared state | `$registry('tag-name')` |
+| React to globals outside a block | `Lego.watch('key', cb)` / `Lego.effect(fn)` |
 | Re-render after a non-mutating array op | Assign back: `this.arr = this.arr.filter(...)` |
 
 That's the whole thing. Mutate normally; the runtime handles the bookkeeping.

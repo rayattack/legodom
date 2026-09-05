@@ -20,16 +20,17 @@ Entry point is `src/index.js` which wires up dependency injection between module
 
 **Initialization flow**: `Lego.init(root)` → register batcher with renderer → create reactive global state → auto-discover inline `<template b-id="...">` tags → setup routing (popstate/click handlers) → setup MutationObserver for auto-mounting components.
 
-**Render cycle**: State mutation (via Proxy) → batcher queues element → `requestAnimationFrame` deduplicates and calls `render()` → TreeWalker scans bindings → directives execute → `updated()` lifecycle hook fires (debounced 50ms).
+**Render cycle**: State mutation (via Proxy) → `trigger()` wakes the effects that read the key → each effect's scheduler marks its binding dirty on the host block and queues the element → `requestAnimationFrame` deduplicates and calls `render()` → only the dirty bindings re-run (each re-collecting its deps) → `updated()` lifecycle hook fires (debounced 50ms).
 
 ### Module Map
 
-- **`src/core/reactive.js`** — Deep proxy wrapper. Recursively wraps state objects, notifies batcher on set. Detects `$db` descriptors for persistence integration.
+- **`src/core/effect.js`** — The dependency graph. `createEffect`/`track`/`trigger`, plus `computed` and `watch`. Pure: no DOM, no framework imports. Deps belong to the effect that read them and are re-collected on every run.
+- **`src/core/reactive.js`** — Deep proxy wrapper. `get`/`has`/`ownKeys` track, `set`/`deleteProperty` trigger. Knows nothing about elements or the batcher. Detects `$db` descriptors for persistence integration.
 - **`src/core/renderer.js`** — `render()`, `bind()`, `scanForBindings()`, `updateNodeBindings()`. Handles text/attribute interpolation (`[[expr]]` or `{{expr}}`), event listeners (`@click`, `@keydown.enter.prevent`), and directive execution.
 - **`src/core/lifecycle.js`** — `snap()` (mount: clone template, attach shadow DOM, merge logic tiers, call `mounted()`) and `unsnap()` (unmount: call `unmounted()`, cleanup).
 - **`src/core/batcher.js`** — RAF-based update queue with deduplication. Handles pending updates added during batch processing.
-- **`src/core/registry.js`** — Global stores: `registry` (template defs), `proxyCache`/`privateData`/`forPools` (WeakMaps), `activeBlocks`, `legoFileLogic`, `globalSubscribers`.
-- **`src/core/globals.js`** — Shared reactive global state (`Lego.globals`). Elements using globals are tracked in `globalSubscribers`.
+- **`src/core/registry.js`** — Global stores: `registry` (template defs), `proxyCache`/`privateData`/`forPools` (WeakMaps), `activeBlocks`, `legoFileLogic`.
+- **`src/core/globals.js`** — Shared reactive global state (`Lego.globals`). An ordinary `reactive()` object: bindings that read `global.x` subscribe by reading it.
 - **`src/core/stylesheets.js`** — Constructable stylesheets and cascade mode handling.
 
 ### Directives (`src/directives/`)
@@ -83,4 +84,5 @@ The user has nvm installed so always use - nvm use 22 to get node and tools requ
 - **Anchor pattern**: `b-if` and `b-for` use comment nodes as DOM anchors to track insertion points without breaking TreeWalker traversal.
 - **WeakMap cleanup**: `privateData`, `proxyCache`, and `forPools` use WeakMaps so component metadata is garbage-collected with the element.
 - **Dependency injection**: Batcher receives the render function, error module receives snap/render, router receives snap — all wired in `index.js` to avoid circular imports.
-- **Scope isolation in loops**: `b-for` creates child scopes via `Object.create(state)` so loop items inherit parent state without mutation.
+- **Scope isolation in loops**: `b-for` creates child scopes via `Object.create(state)` so loop items inherit parent state without mutation. Each pooled row keeps its scope and owns the effects for its own bindings, so mutating one item re-runs one row.
+- **Effects own dependencies**: bindings, computeds and watchers are effects. Stop them (unsnap, b-for eviction, b-html wipe) or they keep receiving triggers.

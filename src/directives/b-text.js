@@ -2,10 +2,9 @@ import { resolve } from '../utils/helpers.js';
 
 export const bText = {
   name: 'b-text',
-  scan(node, { checkGlobal }) {
+  scan(node) {
     if (node.nodeType === Node.ELEMENT_NODE && node.hasAttribute('b-text')) {
       const path = node.getAttribute('b-text');
-      checkGlobal(path);
       return { type: 'b-text', node, path };
     }
   },

@@ -72,6 +72,31 @@ export interface LegoGlobals {
   [key: string]: any;
 }
 
+export interface LegoWatchOptions {
+  /** Call the callback once with the current value before any change. */
+  immediate?: boolean;
+}
+
+/** A dotted key path, or a getter receiving the object being watched. */
+export type LegoWatchSource<T = any> = string | ((scope: T) => any);
+
+export type LegoWatchCallback = (value: any, oldValue: any) => void;
+
+/**
+ * Helpers the runtime puts on every block's state, alongside the author's own
+ * keys. Reachable as `this.$watch(...)` inside block logic and as
+ * `el.state.$watch(...)` from outside.
+ */
+export interface LegoBlockState {
+  /**
+   * Run a callback when a piece of state changes, without going through the
+   * template. Stopped automatically when the block unmounts; the returned
+   * function stops it sooner.
+   */
+  $watch(source: LegoWatchSource, cb: LegoWatchCallback, options?: LegoWatchOptions): () => void;
+  [key: string]: any;
+}
+
 export interface LegoInitOptions {
   debug?: boolean;
   styles?: Record<string, string>;
@@ -139,6 +164,21 @@ export interface Lego {
    * nothing is queued. Does not wait for the debounced `updated()` hook.
    */
   nextTick(): Promise<void>;
+
+  /**
+   * Run `fn` immediately, then again whenever any reactive value it read
+   * changes. Intended for `Lego.globals` and `$registry` state outside a
+   * block; inside one, prefer `this.$watch`.
+   * @returns a function that stops the effect
+   */
+  effect(fn: () => void): () => void;
+
+  /**
+   * Watch a value on `Lego.globals` and call back when it changes. `source`
+   * is a dotted key path, or a function receiving `Lego.globals`.
+   * @returns a function that stops the watcher
+   */
+  watch(source: LegoWatchSource<LegoGlobals>, cb: LegoWatchCallback, options?: LegoWatchOptions): () => void;
 
   db(key: string): any;
 }

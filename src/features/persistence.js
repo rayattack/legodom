@@ -1,7 +1,7 @@
 import { config } from '../utils/helpers.js';
-import { globalBatcher } from '../core/batcher.js';
+import { proxyCache } from '../core/registry.js';
 
-const dbBindings = new Map(); // storageKey -> Set<{target, prop, el, batcher}>
+const dbBindings = new Map(); // storageKey -> Set<{target, prop}>
 const dbTimers = new Map();   // storageKey -> timerId
 const dbMetadata = new WeakMap(); // target -> { prop: { key, debounce } }
 // Audit fix #31: reverse index so cleanupDbBindings(el) is O(entries-for-el)
@@ -49,6 +49,41 @@ const scheduleSave = (key, value, debounce) => {
   }
 };
 
+/**
+ * Push a value into a bound state object through its reactive proxy.
+ *
+ * Writing to the raw target would be invisible: nothing would re-render, and
+ * the old code papered over that by hand-scheduling the element it happened
+ * to remember. Going through the proxy means every effect that reads the
+ * property wakes up, no matter which block, computed or watcher owns it.
+ * Before the object is ever read there is no proxy yet, and the raw write is
+ * the correct one.
+ */
+const writeThrough = (target, prop, value) => {
+  const holder = proxyCache.get(target) || target;
+  holder[prop] = value;
+};
+
+/**
+ * Fan a value out to every binding on a storage key. `handleDbUpdate` is
+ * suppressed for the duration: these writes are the propagation, and letting
+ * them re-enter would save the same value once per binding and, across tabs,
+ * ping-pong forever.
+ */
+const syncBindings = (key, value, exclude = null) => {
+  const entries = dbBindings.get(key);
+  if (!entries) return;
+  const wasSuppressed = _suppressDbWrite;
+  _suppressDbWrite = true;
+  try {
+    entries.forEach(({ target, prop }) => {
+      if (target !== exclude) writeThrough(target, prop, value);
+    });
+  } finally {
+    _suppressDbWrite = wasSuppressed;
+  }
+};
+
 export const dbFactory = (key) => {
   const descriptor = {
     __type: 'lego-db',
@@ -63,15 +98,7 @@ export const dbFactory = (key) => {
     // Runtime methods (return values/promises)
     set(value, debounce = 0) {
       scheduleSave(key, value, debounce);
-
-      // Trigger reactivity for all bindings
-      if (dbBindings.has(key)) {
-        dbBindings.get(key).forEach(({ target, prop, el, batcher }) => {
-          target[prop] = value;
-          if (el && batcher) batcher.add(el);
-        });
-      }
-
+      syncBindings(key, value);
       return value;
     },
 
@@ -88,14 +115,7 @@ export const dbFactory = (key) => {
     delete() {
       try {
         localStorage.removeItem(key);
-
-        // Notify all bindings
-        if (dbBindings.has(key)) {
-          dbBindings.get(key).forEach(({ target, prop, el, batcher }) => {
-            target[prop] = null;
-            if (el && batcher) batcher.add(el);
-          });
-        }
+        syncBindings(key, null);
         return true;
       } catch (e) {
         console.error(`[Lego] Failed to delete localStorage key "${key}":`, e);
@@ -109,7 +129,7 @@ export const dbFactory = (key) => {
 
 export const isDbDescriptor = (desc) => desc && desc.__type === 'lego-db';
 
-export const initializeDbProp = (obj, k, desc, el, batcher) => {
+export const initializeDbProp = (obj, k, desc, el) => {
   if (config.debug) console.log('[Lego Trace] Reactive DB Init:', k, desc);
 
   let val = desc._default;
@@ -129,7 +149,9 @@ export const initializeDbProp = (obj, k, desc, el, batcher) => {
 
   // Register for cross-tab updates
   if (!dbBindings.has(desc.key)) dbBindings.set(desc.key, new Set());
-  const entry = { target: obj, prop: k, el, batcher };
+  // `el` is kept only so cleanupDbBindings can find this entry again; the
+  // write path reaches the element through the proxy, not through here.
+  const entry = { target: obj, prop: k };
   dbBindings.get(desc.key).add(entry);
   if (el) {
     if (!dbBindingsByEl.has(el)) dbBindingsByEl.set(el, new Set());
@@ -140,27 +162,12 @@ export const initializeDbProp = (obj, k, desc, el, batcher) => {
 export const handleDbUpdate = (target, prop, value) => {
   if (_suppressDbWrite) return;
   const meta = dbMetadata.get(target);
-  if (meta && meta[prop]) {
-    const key = meta[prop].key;
-    scheduleSave(key, value, meta[prop].debounce);
-
-    // Sync other local bindings immediately (Same Tab).
-    // Suppress recursion: each `t[p] = value` runs through the proxy
-    // and would re-enter handleDbUpdate.
-    if (dbBindings.has(key)) {
-      _suppressDbWrite = true;
-      try {
-        dbBindings.get(key).forEach(({ target: t, prop: p, el, batcher }) => {
-          if (t !== target) {
-            t[p] = value;
-            if (el && batcher) batcher.add(el);
-          }
-        });
-      } finally {
-        _suppressDbWrite = false;
-      }
-    }
-  }
+  if (!meta || !meta[prop]) return;
+  const key = meta[prop].key;
+  scheduleSave(key, value, meta[prop].debounce);
+  // Sync the other bindings on this key in the same tab. The originating
+  // target is skipped: it already holds the value.
+  syncBindings(key, value, target);
 };
 
 export const cleanupDbBindings = (el) => {
@@ -193,15 +200,7 @@ export const initCrossTabSync = () => {
       // Suppress writes: the proxy `set` would otherwise re-save the value
       // we just received, which fires a storage event in the originating
       // tab, which fires this handler again -> ping-pong write loop.
-      _suppressDbWrite = true;
-      try {
-        dbBindings.get(e.key).forEach(({ target, prop, el, batcher }) => {
-          target[prop] = newValue;
-          if (el && batcher) batcher.add(el);
-        });
-      } finally {
-        _suppressDbWrite = false;
-      }
+      syncBindings(e.key, newValue);
     } catch (err) {
       console.warn(`[Lego] Cross-tab sync error:`, err);
     }
