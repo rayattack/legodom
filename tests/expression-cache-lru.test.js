@@ -28,6 +28,10 @@ global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 const libCode = fs.readFileSync(path.resolve(__dirname, '../dist/lego.min.js'), 'utf8');
 eval(libCode);
 
+// The 1200-expression sweep sleeps twice per iteration; under CI load it
+// takes 7 to 12 seconds, so the default 10s cap was a flake source.
+const LRU_SWEEP_TIMEOUT_MS = 30000;
+
 describe('Expression Cache LRU Fix', () => {
   beforeEach(async () => {
     document.body.innerHTML = '';
@@ -67,7 +71,7 @@ describe('Expression Cache LRU Fix', () => {
 
     // Verify app didn't crash or run out of memory
     expect(document.body.children.length).toBe(0);
-  }, 10000); // 10 second timeout
+  }, LRU_SWEEP_TIMEOUT_MS);
 
   it('should evict least recently used expressions', async () => {
     window.Lego.block('lru-test', '<span>[[value]]</span>');
