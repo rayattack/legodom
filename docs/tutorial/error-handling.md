@@ -41,12 +41,20 @@ The error fallback block receives a `$error` object with details about the crash
 
 ```html
 <!-- error-card.lego -->
+<script>
+  // Template expressions are sandboxed and cannot reach `window` or
+  // `location`. Anything that touches browser APIs belongs in script logic.
+  export default {
+    reload() { window.location.reload(); }
+  }
+</script>
+
 <template>
   <div class="error-card">
     <h3>Something went wrong</h3>
     <p>[[ $error.message ]]</p>
     <p class="component">Failed in: [[ $error.component ]]</p>
-    <button @click="location.reload()">Reload Page</button>
+    <button @click="reload()">Reload Page</button>
   </div>
 </template>
 

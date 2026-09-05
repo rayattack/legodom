@@ -7,13 +7,19 @@
   <script src="./main.js"></script>
 </head>
 
-<body @todo-added="() => {console.log('Todo added!')}">
+<body>
   <template b-id="todo-list" b-data="{
       title: 'My Todo List',
       items: [],
       newItem: '',
       mounted() {
         console.log('Todo list mounted!');
+      },
+      addItem() {
+        if (!this.newItem.trim()) return;
+        this.items.push({ text: `${this.newItem} - ${this.items.length + 1}`, done: false });
+        this.$emit('todo-added', { item: this.newItem });
+        this.newItem = '';
       }
     }">
     <style>
@@ -60,12 +66,7 @@
     <p>[[items.filter(t => !t.done).length]] of [[items.length]] items remaining</p>
     <div style="margin-bottom: 20px;">
       <input b-sync="newItem" placeholder="Add task..." class="input">
-      <button @click="() => {
-            if(!newItem.trim()) return;
-            items.push({text: `${newItem} - ${items.length + 1}`, done: false});
-            newItem = '';
-            $emit('todo-added', { item: newItem });
-          }">Add</button>
+      <button @click="addItem()">Add</button>
     </div>
 
     <div b-for="todo in items">

@@ -1457,7 +1457,11 @@ describe('Audit fix #31: cleanupDbBindings uses the reverse index', () => {
   });
 });
 
-describe('Audit fix #23: safeEval blocklist allows benign property access', () => {
+describe('Audit fix #23 (Phase 2): the parser distinguishes property reads from escapes', () => {
+  // Phase 2 replaced the STRICT/SOFT regex blocklist with a real parser, so
+  // "is this a dangerous word?" became "is this a dangerous *property name*
+  // or an unreachable global?". The safety outcomes below are what matter;
+  // the assertions that encoded the old regex tiering were updated.
   let win, Lego, warnSpy;
   beforeEach(async () => {
     win = setupDom();
@@ -1500,38 +1504,66 @@ describe('Audit fix #23: safeEval blocklist allows benign property access', () =
     expect(isBlocked()).toBe(false);
   });
 
-  it('still blocks bareword class / module / prototype keyword forms', async () => {
-    Lego.block(
-      'soft-blocked',
-      '<div class="r">[[ class ]]</div>',
-      {}
-    );
+  it('renders a data field literally named constructor', async () => {
+    // `constructor` and `prototype` are denied by the value they would yield,
+    // not by their name, so a record that happens to use one as a field reads
+    // normally while `{}.constructor` (a function) stays blocked.
+    Lego.block('ctor-field', '<span class="c">[[ project.constructor ]]</span>', {
+      project: { name: 'Hoover Dam', constructor: 'Six Companies' }
+    });
+    win.document.body.innerHTML = '<ctor-field></ctor-field>';
+    await flush(20);
+
+    const host = win.document.querySelector('ctor-field');
+    expect(host.shadowRoot.querySelector('.c').textContent).toBe('Six Companies');
+    expect(isBlocked()).toBe(false);
+  });
+
+  it('bareword class / module / prototype are simply unreachable identifiers', async () => {
+    // Changed in Phase 2. There is no blocklist warning any more: a bareword
+    // that is neither in scope nor an allowlisted global is a ReferenceError,
+    // which the default (non-strict) render path swallows to an empty string.
+    Lego.block('soft-blocked', '<div class="r">[[ class ]]|[[ module ]]</div>', {});
     win.document.body.innerHTML = '<soft-blocked></soft-blocked>';
     await flush(20);
 
-    expect(isBlocked()).toBe(true);
+    const host = win.document.querySelector('soft-blocked');
+    expect(host.shadowRoot.querySelector('.r').textContent).toBe('|');
   });
 
-  it('still blocks the constructor / __proto__ / eval / import escape vectors', async () => {
-    // These remain in the strict tier — even property-access form is
-    // dangerous because `obj.constructor.constructor("…")()` reaches
-    // Function. The renderer falls back to `?? ''`, so blocked output
-    // shows as the empty string and the warning fires.
+  it('still blocks the constructor / __proto__ escape vectors', async () => {
+    // Changed in Phase 2: `x.eval` is now an ordinary property read (there is
+    // no global `eval` in scope to reach, so the name carries no risk), while
+    // `obj.constructor` (a function) and `__proto__` stay denied. Two
+    // warnings, not three.
     Lego.block(
       'strict-blocked',
       '<div class="r">[[ obj.constructor ]]/[[ obj.__proto__ ]]/[[ x.eval ]]</div>',
-      { obj: {}, x: {} }
+      { obj: {}, x: { eval: 'plain-field' } }
     );
     win.document.body.innerHTML = '<strict-blocked></strict-blocked>';
     await flush(20);
 
     const host = win.document.querySelector('strict-blocked');
-    expect(host.shadowRoot.querySelector('.r').textContent).toBe('//');
-    // Each blocked expression triggers a warning.
+    expect(host.shadowRoot.querySelector('.r').textContent).toBe('//plain-field');
     const warnings = warnSpy.mock.calls.filter(args =>
       args.some(a => typeof a === 'string' && a.includes('Blocked dangerous'))
     );
-    expect(warnings.length).toBeGreaterThanOrEqual(3);
+    expect(warnings.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('blocks the full constructor escape chain', async () => {
+    Lego.block(
+      'escape-chain',
+      '<div class="r">[[ obj.constructor.constructor("return 1")() ]]</div>',
+      { obj: {} }
+    );
+    win.document.body.innerHTML = '<escape-chain></escape-chain>';
+    await flush(20);
+
+    const host = win.document.querySelector('escape-chain');
+    expect(host.shadowRoot.querySelector('.r').textContent).toBe('');
+    expect(isBlocked()).toBe(true);
   });
 });
 
@@ -1565,10 +1597,13 @@ describe('Audit fix #41: safeEval blocklist stopgap against prototype-pollution 
 
     const host = win.document.querySelector('proto-pollution');
     expect(host.shadowRoot.querySelector('.r').textContent).toBe('////');
+    // Changed in Phase 2: the four Object.* reflection helpers are denied
+    // property names (warned), while `Reflect` is not an allowlisted global
+    // at all, so it raises a swallowed ReferenceError instead of warning.
     const warnings = warnSpy.mock.calls.filter(args =>
       args.some(a => typeof a === 'string' && a.includes('Blocked dangerous'))
     );
-    expect(warnings.length).toBeGreaterThanOrEqual(5);
+    expect(warnings.length).toBeGreaterThanOrEqual(4);
   });
 });
 

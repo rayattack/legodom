@@ -194,57 +194,57 @@ The function loops through `data.bindings` and performs specific actions based o
 
 ## The `safeEval` Bridge & Security
 
-Located in `src/utils/safe-eval.js`, this is critical for security:
+`src/utils/safe-eval.js` is the renderer's door into expression evaluation, and
+`src/utils/expression.js` is what stands behind it. No template text is ever
+handed back to the JavaScript engine as source: there is no `eval`, and no
+`new Function` on the expression path.
+
+### The pipeline
+
+1. **Tokenizer** (`tokenize`) turns the source into tokens: numbers, strings,
+   template literals, identifiers, punctuators. It records each token's offset
+   so a syntax error can point at the character that broke.
+2. **Parser** (`parse`) is a precedence-climbing (Pratt style) parser producing a
+   small AST. It covers what templates actually need: member access and optional
+   chaining, calls, `new` on the allowlisted constructors, unary and binary
+   operators, ternaries, assignment and `++`/`--`, arrow functions with
+   expression bodies, array and object literals, template literals.
+3. **Compiler** (`compile`) walks the AST once and returns a closure
+   `(scope, ctx) => value`. The result is cached by source string in an
+   `LRUCache(1000)`, so a binding compiles once and then just runs.
 
 ```js
-// src/utils/safe-eval.js
-import { LRUCache } from './lru-cache.js';
-
-const exprCache = new LRUCache(500);
-
-export const safeEval = (expr, scope = {}, allowSideEffects = false) => {
-  if (typeof expr !== 'string') return expr;
-  
-  const cacheKey = expr.trim();
-  let fn = exprCache.get(cacheKey);
-  
-  if (!fn) {
-    const keys = Object.keys(scope);
-    try {
-      if (allowSideEffects) {
-        fn = new Function(...keys, expr);
-      } else {
-        fn = new Function(...keys, `return (${expr})`);
-      }
-      exprCache.set(cacheKey, fn);
-    } catch (e) {
-      console.error(`[Lego] Expression error: ${expr}`, e);
-      return '';
-    }
-  }
-  
-  const values = Object.keys(scope).map(k => scope[k]);
-  try {
-    return fn(...values);
-  } catch (e) {
-    console.error(`[Lego] Eval error: ${expr}`, e);
-    return '';
-  }
-};
+// src/core/renderer.js
+const out = b.template.replace(createRegex(), (_, k) =>
+  safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
 ```
 
-**Why not just `eval()`?**
+### What safeEval adds on top
 
-`eval()` executes code in the global scope, which is a massive security hole and performance killer.
+- The `$`-helpers (`$element`, `$route`, `$params`, `$go`, `$db`, `$mount`,
+  `$emit`, `$ancestors`, `$registry`), which shadow state by name.
+- Auto-invoke: a function-valued result is called only in event-handler context.
+- Error policy: `ReferenceError` is swallowed so one typo cannot blank a page,
+  unless `Lego.config.strict` is on. Everything else propagates to the error
+  boundary.
 
-**`safeEval` mitigations:**
+### What the sandbox does and does not guarantee
 
-1. **Function Constructor**: Uses `new Function()` which executes in a controlled scope, not global scope
-2. **Expression Caching**: LRU cache (from `src/utils/lru-cache.js`) prevents recompiling the same expressions
-3. **Scope Isolation**: Only the provided scope variables are accessible
-4. **No Global Access**: Cannot access `window`, `document`, etc. unless explicitly provided
+Identifier lookup is entirely the compiler's: helpers, then state, then the
+named context values (`global`, `self`, `event`, `$event`), then a fixed
+allowlist of safe globals (`Math`, `JSON`, `Date`, `Number`, `String`,
+`Boolean`, `Array`, `Object`, `parseInt`, `parseFloat`, `isNaN`, `isFinite`,
+the URI helpers, `console`, `Intl`, `Promise`, `Set`, `Map`, `RegExp`).
+Anything else is a `ReferenceError`, so `window`, `document`, `fetch`,
+`localStorage` and friends are simply not in scope. Property reads that would
+hand back a prototype or a constructor function are denied and warn.
 
-Note: This is not a complete sandbox (JavaScript has limitations here). For truly untrusted templates, server-side rendering is recommended.
+It guarantees three things: CSP compliance with no `unsafe-eval`, no accidental
+reach into host globals, and protection against prototype pollution. It is
+**not** a security boundary for untrusted template authors. `self` and
+`$element` are real DOM nodes, and any DOM node reaches `document` in two hops.
+Templates are code: treat them with the same trust you give the rest of your
+source.
 
 ## Performance Optimizations
 

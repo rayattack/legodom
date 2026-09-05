@@ -243,6 +243,58 @@ Can't declare variables:
 }
 ```
 
+### No Inline Function Bodies
+
+An arrow function is fine as a callback argument, but its body must be a single
+expression. A statement body belongs in a method:
+
+```html
+<!-- ❌ Doesn't work -->
+<button @click="() => { if (!draft) return; add(draft); draft = '' }">Add</button>
+
+<!-- ✅ Expression-bodied arrows are fine -->
+<li b-for="t in tasks.filter(t => !t.done)">[[ t.text ]]</li>
+
+<!-- ✅ Put statements in a method -->
+<button @click="add()">Add</button>
+```
+
+### No Browser Globals
+
+Expressions are evaluated by LegoDOM's own compiler, not by `eval`, and they
+cannot see the page's globals. `Math`, `JSON`, `Date`, `Number`, `String`,
+`Boolean`, `Array`, `Object`, `parseInt`, `parseFloat`, `isNaN`, `isFinite`,
+the URI encode/decode functions, `console`, `Intl`, `Promise`, `Set`, `Map`
+and `RegExp` are available. Everything else, `window`, `document`, `fetch`,
+`localStorage`, `location` and friends, raises a "not defined" error:
+
+```html
+<!-- ❌ Doesn't work -->
+<button @click="location.reload()">Reload</button>
+
+<!-- ✅ Touch browser APIs from script logic -->
+<button @click="reload()">Reload</button>
+```
+
+`new` works for those same allowlisted constructors, so
+`[[ new Date(order.placedAt).toLocaleDateString() ]]` is fine.
+
+### The Sandbox Is Not a Trust Boundary
+
+Be clear about what this buys you. Expressions are compiled by LegoDOM's own
+tokenizer, parser and closure compiler, which means:
+
+- your pages need no CSP `unsafe-eval`, because nothing is compiled from source
+  text at runtime,
+- a template cannot reach a host global by accident, and
+- reads that would hand back a prototype or a constructor are refused, so a
+  template cannot pollute `Object.prototype`.
+
+What it is **not** is a safe way to run templates written by someone you do not
+trust. `self` and `$element` are real DOM nodes, and any DOM node reaches
+`document` in two hops. Template source is source code: review it like the rest
+of your application, and never build a template out of user input.
+
 ## Best Practices
 
 ### 1. Keep Templates Simple

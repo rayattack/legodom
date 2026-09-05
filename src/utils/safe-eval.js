@@ -1,4 +1,4 @@
-import { LRUCache } from './lru-cache.js';
+import { compile } from './expression.js';
 import { findAncestor } from './dom.js';
 import { sharedStates } from '../core/registry.js';
 import { globals } from '../core/globals.js';
@@ -6,58 +6,36 @@ import { _go } from '../features/router.js';
 import { mount } from '../features/mount.js';
 import { getDelimiters, config } from './helpers.js';
 
-const expressionCache = new LRUCache(1000);
-const logicCache = new LRUCache(500);
+const MAX_REPORTED_SOURCE = 80;
 
-// Audit fix #23: split the blocklist into a strict tier and a "bareword
-// only" tier.
-//
-//   - STRICT covers patterns where the *property-access* form is itself a
-//     known sandbox-escape vector. `obj.constructor.constructor("…")()`
-//     and `obj.__proto__.constructor.…` reach Function regardless of
-//     whether they appear as bareword or member access, so we keep
-//     blocking those words wherever they show up. `eval` and `import`
-//     have no innocuous member-access form in template-shaped JS.
-//
-//   - SOFT covers identifiers that collide with the strict regex by
-//     accident — `item.class` (CSS class name field), `pkg.module`
-//     (string property), `schema.prototype` (a structure field that
-//     happens to share the name). The lookbehind `(?<![\w.$])` allows
-//     these as member access while still blocking the bareword/keyword
-//     form (e.g. `class { … }`, `prototype = X`). `prototype` blocking
-//     is mostly defence-in-depth here since `constructor` stays blocked
-//     in STRICT; without `.constructor` no Function-escape chain
-//     completes anyway.
-// Reflect/getPrototypeOf/setPrototypeOf/defineProperty/getOwnPropertyDescriptor:
-// stopgap against Object.getPrototypeOf(x).polluted = 1-style pollution.
-const STRICT_BLOCK = /\b(eval|import|constructor|__proto__|Reflect|getPrototypeOf|setPrototypeOf|defineProperty|getOwnPropertyDescriptor)\b/;
-const SOFT_BLOCK = /(?<![\w.$])(class|module|prototype)(?![\w$])/;
+// Plain Map, not an LRU: only author-written b-logic that the compiler cannot
+// represent lands here, which is a small fixed set per application.
+const logicCache = new Map();
 
+const truncate = (raw) =>
+  raw.length > MAX_REPORTED_SOURCE ? `${raw.slice(0, MAX_REPORTED_SOURCE)}...` : raw;
+
+const warnDenied = (expr) => {
+  console.warn(`[Lego] Security Warning: Blocked dangerous expression "${expr}"`);
+};
+
+/**
+ * Evaluate a template expression.
+ *
+ * Expressions are compiled to closures by expression.js: no `new Function`,
+ * no `with`, and no reachable host globals. Identifier lookup order is
+ * helpers, then state, then the named context values (global/self/event/
+ * $event/helpers), then a small allowlist of safe globals. Anything else is
+ * a ReferenceError.
+ *
+ * @param {string} expr - Expression source
+ * @param {object} context - { state, global, self, event }
+ * @param {boolean} [throwError=true] - Re-throw evaluation errors
+ */
 export const safeEval = (expr, context, throwError = true) => {
-  // 1. Security: Block dangerous patterns
-  if (STRICT_BLOCK.test(expr) ||
-      SOFT_BLOCK.test(expr) ||
-      /\[\s*['"`].*\+|\+.*['"`]\s*\]/.test(expr)) {
-    console.warn(`[Lego] Security Warning: Blocked dangerous expression "${expr}"`);
-    return undefined;
-  }
-
+  const scope = context.state || {};
   try {
-    const scope = context.state || {};
-
-    // 2. Performance: Check cache
-    let func = expressionCache.get(expr);
-    if (!func) {
-      // Scope order: helpers first (for $route, $go, etc.), then state
-      func = new Function('global', 'self', 'event', 'helpers', `
-          with(this) {
-            with(helpers) { 
-              return ${expr}
-            }
-          }
-        `);
-      expressionCache.set(expr, func);
-    }
+    const fn = compile(expr);
 
     const helpers = {
       $ancestors: (tag) => findAncestor(context.self, tag),
@@ -77,20 +55,31 @@ export const safeEval = (expr, context, throwError = true) => {
       }
     };
 
-    const result = func.call(scope, context.global, context.self, context.event, helpers);
+    const result = fn(scope, {
+      helpers,
+      global: context.global,
+      self: context.self,
+      event: context.event
+    });
+
     // Audit fix #32: only auto-invoke a function-typed result when we're
     // evaluating in event-handler context (renderer.js bind() is the only
     // call site that passes `event`). Previously a state field that
     // happened to be a function was silently called by every text/attr
-    // interpolation that read it — surprise side effects + a `.toString()`-
-    // shaped output was never observable. Bare-name patterns like
-    // `b-init="setup"` (relying on auto-call) now need explicit parens:
-    // `b-init="setup()"`. Tests cover the new gate.
+    // interpolation that read it. Bare-name patterns like `b-init="setup"`
+    // (relying on auto-call) need explicit parens: `b-init="setup()"`.
     if (typeof result === 'function' && context.event !== undefined) {
       return result.call(scope, context.event);
     }
     return result;
   } catch (e) {
+    // A denied property (__proto__ / constructor / prototype / the reflection
+    // helpers) is never fatal: warn and render nothing, as the old blocklist
+    // did.
+    if (e && e.denied) {
+      warnDenied(expr);
+      return undefined;
+    }
     if (throwError) throw e;
     // Audit fix #26: by default we swallow ReferenceErrors so a single
     // template typo or a transiently-undefined state key doesn't take
@@ -102,48 +91,91 @@ export const safeEval = (expr, context, throwError = true) => {
   }
 };
 
+let _legacyLogicWarned = false;
+
+/**
+ * Escape hatch for b-logic bodies the expression parser cannot represent,
+ * i.e. method shorthand with statement bodies: `{ count: 0, inc() { ... } }`.
+ * Those need a real function body, which a template-expression grammar does
+ * not have. Only reached after the compiler reports a SyntaxError.
+ *
+ * This is the one remaining `new Function` in the runtime. Move methods into
+ * the block's script section to drop the CSP `unsafe-eval` requirement.
+ */
+const evalLogicWithFunctionFallback = (str, scope) => {
+  if (!_legacyLogicWarned) {
+    _legacyLogicWarned = true;
+    console.warn('[Lego] b-logic method bodies compile through Function(), which ' +
+      'needs CSP unsafe-eval. Move methods into the block script.');
+  }
+  let fn = logicCache.get(str);
+  if (!fn) {
+    fn = new Function('scope', 'global', `with(global) { with(scope) { return (${str}); } }`);
+    logicCache.set(str, fn);
+  }
+  return fn(scope, globals);
+};
+
+/**
+ * Fallback ladder for a b-logic body the compiler rejected: retry it wrapped
+ * in braces, then (only for a syntax error) hand it to the Function()
+ * escape hatch. The error reported is the original one unless the fallback
+ * itself failed.
+ */
+const recoverLogic = (raw, scope, ctx, original) => {
+  let error = original;
+  // A bare property list (`name: 'x', count: 0`) is retried wrapped in braces.
+  const trimmed = raw.trim();
+  const braced = (!trimmed.startsWith('{') && trimmed.includes(':')) ? `{${raw}}` : null;
+  if (braced) {
+    try {
+      return compile(braced)(scope, ctx);
+    } catch (ignored) { /* keep the original error */ }
+  }
+  if (error instanceof SyntaxError) {
+    try {
+      return evalLogicWithFunctionFallback(braced || raw, scope);
+    } catch (fallbackError) { error = fallbackError; }
+  }
+  if (error && error.denied) {
+    warnDenied(truncate(raw));
+    return {};
+  }
+  console.error(`[Lego] Error parsing b-logic: "${truncate(raw)}"`, error);
+  return {};
+};
+
+/**
+ * Parse a `b-logic` / `b-data` attribute into a plain object.
+ *
+ * Identifier lookup order here is scope (the parent block's state) first,
+ * then globals, then the safe-global allowlist.
+ *
+ * @param {string} raw - Attribute source
+ * @param {object} [scope={}] - Parent scope for scoped props
+ */
 export const parseJSObject = (raw, scope = {}) => {
   if (!raw || raw.trim() === '{}') return {};
 
   // Guardrail: refuse to evaluate b-logic that contains template delimiters.
   // The body is run as JavaScript, so an interpolated `[[user.bio]]` reaching
-  // this path is RCE. Templating into b-logic is never the right pattern —
+  // this path is RCE. Templating into b-logic is never the right pattern:
   // use script logic and pass values through state instead.
   const [start, end] = getDelimiters();
   if (raw.includes(start) && raw.includes(end)) {
     console.error(
-      `[Lego] Refusing to parse b-logic containing template delimiters ("${start}...${end}"). ` +
-      `b-logic is evaluated as JavaScript; templating user data into it is unsafe. ` +
-      `Pass values through state instead. Got: "${raw.length > 80 ? raw.slice(0, 80) + '...' : raw}"`
+      `[Lego] Refusing to parse b-logic containing template delimiters ` +
+      `("${start}...${end}"): it is evaluated as JavaScript, so templating user ` +
+      `data into it is unsafe. Pass values through state instead. ` +
+      `Got: "${truncate(raw)}"`
     );
     return {};
   }
 
-  const compile = (str) => {
-    let fn = logicCache.get(str);
-    if (!fn) {
-      fn = new Function('scope', 'global', `with(global) { with(scope) { return (${str}); } }`);
-      logicCache.set(str, fn);
-    }
-    return fn;
-  };
-
-  const attemptParse = (str) => compile(str)(scope, globals);
-
+  const ctx = { extra: globals, global: globals };
   try {
-    return attemptParse(raw);
+    return compile(raw)(scope, ctx);
   } catch (e) {
-    // Retry with braces if it looks like a property list (and didn't start with brace)
-    const trimmed = raw.trim();
-    if (!trimmed.startsWith('{') && trimmed.includes(':')) {
-      try {
-        return attemptParse(`{${raw}}`);
-      } catch (e2) {
-        // Fall through to original error handling
-      }
-    }
-
-    console.error(`[Lego] Error parsing b-logic: "${raw.length > 80 ? raw.slice(0, 80) + '...' : raw}"`, e);
-    return {};
+    return recoverLogic(raw, scope, ctx, e);
   }
 };

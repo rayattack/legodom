@@ -55,7 +55,8 @@ Each directive exports an object with `name`, `scan()`, `execute()`, and `destro
 
 ### Utilities (`src/utils/`)
 
-- **`safe-eval.js`** — Sandboxed expression evaluation via `Function` constructor with `with()` scope. LRU cache (1000 entries). Blocks dangerous patterns (`eval`, `import`, `Function`, etc.).
+- **`expression.js`** — Tokenizer, precedence-climbing parser and AST-to-closure compiler for template expressions. Pure (no DOM/core imports). LRU cache (1000 entries) of compiled closures. Identifier lookup is helpers -> scope -> caller extras -> named context (`global`/`self`/`event`/`$event`/`helpers`) -> a fixed allowlist of safe globals -> ReferenceError. Denies `__proto__` and the `Object` reflection helpers by name; denies `constructor`/`prototype` by value (only when the read would yield a function, so data fields with those names still work). Writes to all three are always denied.
+- **`safe-eval.js`** — Thin wrapper over `expression.js`: builds the `$`-helpers, applies auto-invoke and `throwError`/`config.strict` semantics, and parses `b-logic` (`parseJSObject`). Keeps one `new Function` fallback, used only for `b-logic` method shorthand with statement bodies.
 - **`parser-utils.js`** — Parses `.lego` SFC format (`<template>`, `<script>`, `<style>` sections) into `Lego.block()` calls.
 - **`dom.js`** — `escapeHTML()`, `findAncestor()` (traverses shadow DOM boundaries), `resolveTargets()`, `syncModelValue()`.
 - **`helpers.js`** — Config, `mergeDescriptors()` (preserves getters/setters), delimiter handling (`[[]]` or `{{}}`).

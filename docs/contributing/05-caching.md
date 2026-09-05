@@ -64,108 +64,45 @@ This is a critical "expert-level" choice.
 
 ## 2. Expression Caching (LRU Cache)
 
-Located in `src/utils/safe-eval.js`, the expression cache prevents recompiling the same template expressions repeatedly.
+Every `[[ user.first + ' ' + user.last ]]`, every `b-if`, every `@click` body is
+an expression that has to be turned into something runnable. `src/utils/expression.js`
+does that once per distinct source string and caches the result in an
+`LRUCache(1000)` from `src/utils/lru-cache.js`.
 
-### The Problem: Repeated Compilation
+### What gets cached
 
-Every time you render `[[ user.name + ' ' + user.lastName ]]`, LegoDOM needs to evaluate that JavaScript expression. Without caching, it would parse and compile it fresh every single render, wasting CPU cycles.
-
-### The Solution: LRU Cache
+Not a string, and not a `Function`. The compiler tokenizes the source, parses it
+into an AST with a precedence-climbing parser, and walks that AST once to build a
+tree of small closures. The cache holds the root closure:
 
 ```js
-// src/utils/safe-eval.js
-import { LRUCache } from './lru-cache.js';
+// src/utils/expression.js
+const cache = new LRUCache(1000);
 
-const exprCache = new LRUCache(500);
-
-export const safeEval = (expr, scope = {}, allowSideEffects = false) => {
-  if (typeof expr !== 'string') return expr;
-  
-  const cacheKey = expr.trim();
-  
-  // Check cache
-  let fn = exprCache.get(cacheKey);
-  
-  if (!fn) {
-    // Compile expression
-    const keys = Object.keys(scope);
-    const values = keys.map(k => scope[k]);
-    
-    try {
-      if (allowSideEffects) {
-        fn = new Function(...keys, expr);
-      } else {
-        fn = new Function(...keys, `return (${expr})`);
-      }
-      
-      // Store in cache
-      exprCache.set(cacheKey, fn);
-    } catch (e) {
-      console.error(`[Lego] Expression error: ${expr}`, e);
-      return '';
-    }
-  }
-  
-  // Execute with current scope values
-  const keys = Object.keys(scope);
-  const values = keys.map(k => scope[k]);
-  
-  try {
-    return fn(...values);
-  } catch (e) {
-    console.error(`[Lego] Eval error: ${expr}`, e);
-    return '';
-  }
+export const compile = (src) => {
+  let fn = cache.get(src);
+  if (fn) return fn;
+  fn = gen(parse(src));      // tokenize -> parse -> closures
+  cache.set(src, fn);
+  return fn;
 };
 ```
 
-### LRU (Least Recently Used) Eviction
+Every later render of the same expression is a `Map` lookup plus a call to
+`fn(scope, ctx)`. Nothing is re-tokenized, re-parsed, or re-compiled.
 
-The cache is implemented in `src/utils/lru-cache.js`:
+### Why an LRU and not a plain Map
 
-```js
-export class LRUCache {
-  constructor(maxSize = 500) {
-    this.maxSize = maxSize;
-    this.cache = new Map();
-  }
+A template can generate unbounded distinct expressions (an attribute built from
+data, a thousand list rows with a thousand different `b-data` bodies). A plain
+`Map` would grow forever. The LRU keeps the thousand most recently used and
+evicts the rest; an evicted expression simply pays the parse cost again the next
+time it appears.
 
-  get(key) {
-    if (!this.cache.has(key)) return undefined;
-    
-    // Move to end (most recently used)
-    const value = this.cache.get(key);
-    this.cache.delete(key);
-    this.cache.set(key, value);
-    return value;
-  }
-
-  set(key, value) {
-    // Remove if exists (to update order)
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    }
-    
-    // Add to end
-    this.cache.set(key, value);
-    
-    // Evict oldest if over capacity
-    if (this.cache.size > this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
-    }
-  }
-}
-```
-
-When the cache reaches 500 entries, it evicts the **least recently used** expression to make room for new ones. This prevents unbounded memory growth while keeping "hot" expressions readily available.
-
-### Why 500?
-
-Through testing, 500 compiled expressions provide a good balance:
-- Large enough for complex apps with many unique expressions
-- Small enough to avoid memory issues
-- LRU ensures frequently-used expressions stay cached
+`src/utils/safe-eval.js` keeps one more, much smaller cache: a plain `Map` for
+the `b-logic` bodies the expression grammar cannot represent (methods with
+statement bodies), which fall back to `Function()`. That set is fixed per
+application, so it needs no eviction policy.
 
 ## Summary of Caching Logic
 
@@ -178,10 +115,11 @@ Through testing, 500 compiled expressions provide a good balance:
 
 **Expression Cache**:
 -   **Step 1:** Expression needs evaluation (e.g., `[[ count * 2 ]]`).
--   **Step 2:** Check `exprCache` with expression as key.
--   **Step 3:** Found it? Use cached function.
--   **Step 4:** Not found? Compile with `new Function()` and cache it.
--   **Step 5:** Execute function with current scope values.
+-   **Step 2:** Check the compile cache with the source string as key.
+-   **Step 3:** Found it? Call the cached closure with `(scope, ctx)`.
+-   **Step 4:** Not found? Tokenize, parse to an AST, compile to closures, cache.
+-   **Step 5:** Call the closure. Identifier reads go through the state proxy,
+    so the renderer's dependency tracking still sees every read.
 -   **Step 6:** If cache is full, evict least recently used entry.
 
 Both caches are essential for LegoDOM's performance, preventing repeated work while managing memory efficiently.
