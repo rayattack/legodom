@@ -92,7 +92,49 @@ export const renderErrorBlock = (errorTag, crashedEl, err) => {
 const _errorDepth = new WeakMap();
 const MAX_ERROR_DEPTH = 3;
 
+/**
+ * Call one block's errorCaptured hook.
+ *
+ * A hook that throws is reported through config.onError and nothing else: it
+ * must not re-enter handleError, or a broken handler would recurse through
+ * the very machinery it broke.
+ *
+ * @returns {boolean} true when the hook claimed the error
+ */
+const callCaptured = (hook, state, err, type, source, el) => {
+  try {
+    return hook.call(state, err, { type, source }) === false;
+  } catch (inner) {
+    config.onError(inner, 'errorCaptured', el);
+    return false;
+  }
+};
+
+/**
+ * Offer an error to every block on the way out of the tree before the
+ * boundary machinery sees it. Returning `false` from `errorCaptured` claims
+ * the error: no boundary is rendered and `config.onError` is not called.
+ * Returning anything else (including nothing) lets it keep travelling, so a
+ * hook can log or report without changing what happens next.
+ *
+ * The walk starts at the erroring element itself, so a block can also handle
+ * failures raised by its own render or hooks.
+ */
+const runErrorCaptured = (err, contextEl, contextType) => {
+  let current = contextEl;
+  while (current) {
+    const state = current._studs;
+    const hook = state && state.errorCaptured;
+    if (typeof hook === 'function' && callCaptured(hook, state, err, contextType, contextEl, current)) {
+      return true;
+    }
+    current = current.parentElement || (current.getRootNode && current.getRootNode().host);
+  }
+  return false;
+};
+
 export const handleError = (err, contextEl, contextType) => {
+  if (runErrorCaptured(err, contextEl, contextType)) return;
   const boundary = findErrorBoundary(contextEl);
   if (!boundary) {
     config.onError(err, contextType, contextEl);

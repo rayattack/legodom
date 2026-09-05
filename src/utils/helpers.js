@@ -90,6 +90,23 @@ export const deriveBlockName = (filename) => {
 };
 
 /**
+ * `user-name` -> `userName`. Attribute names are case insensitive in HTML, so
+ * a prop written `:user-name` on a tag has to be translated before it can be
+ * matched against the camelCase key the block declared.
+ * @param {string} name
+ * @returns {string}
+ */
+export const camelCase = (name) => name.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+
+/**
+ * `userName` -> `user-name`, the inverse used to derive the attribute name a
+ * declared prop answers to.
+ * @param {string} name
+ * @returns {string}
+ */
+export const kebabCase = (name) => name.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`);
+
+/**
  * Resolve a path in an object
  * @param {string} path - The path to resolve
  * @param {object} obj - The object to resolve the path in

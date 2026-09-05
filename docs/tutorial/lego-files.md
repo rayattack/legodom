@@ -265,6 +265,21 @@ Contains your block's HTML markup with Lego directives:
 </template>
 ```
 
+The `<template>` tag itself carries the block's definition-level settings:
+
+| Attribute | Effect |
+|---|---|
+| `b-props` | The [prop contract](/tutorial/props). |
+| `b-stylesheets` | Space-separated stylesheet keys. |
+| `b-cascade` | Stylesheet keys to pass down to descendants. |
+| `b-error` | Tag of an [error block](/tutorial/error-handling) for this block. |
+| `b-shadow="false"` | Render into the light DOM instead of a shadow root. |
+| `b-form` | Make the block [form associated](/api/block#form-true). |
+
+```html
+<template b-props="label: String, value: Number = 0" b-shadow="false" b-form>
+```
+
 ### Script Section
 
 Exports the block's reactive state and methods:
@@ -366,17 +381,21 @@ Adding or deleting a `.lego` file invalidates the virtual module so newly create
 
 ## Passing Props
 
-Pass data to blocks via the `b-logic` attribute:
+Declare the block's props on its `<template>`, then bind them from the parent with a colon. The binding is live.
 
 ```html
-<user-card b-logic="{ 
-  name: 'Jane Smith', 
-  bio: 'Designer', 
-  followers: 5678 
-}"></user-card>
+<!-- user-card.lego -->
+<template b-props="name: String, bio: String = '', followers: Number = 0">
+  <h3>[[ name ]]</h3>
+</template>
 ```
 
-Or define defaults in the script section and override as needed.
+```html
+<user-card :name="user.name" :bio="user.bio" :followers="user.followers"></user-card>
+<user-card name="Jane Smith" followers="5678"></user-card>
+```
+
+`b-logic` still works for a one-time object of values at mount, and defaults can still come from the script section. See [Props](/tutorial/props).
 
 ## Best Practices
 

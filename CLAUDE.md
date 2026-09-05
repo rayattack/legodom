@@ -20,19 +20,19 @@ Entry point is `src/index.js` which wires up dependency injection between module
 
 **Initialization flow**: `Lego.init(root)` → register batcher with renderer → create reactive global state → auto-discover inline `<template b-id="...">` tags → setup routing (popstate/click handlers) → setup MutationObserver for auto-mounting components.
 
-**Render cycle**: State mutation (via Proxy) → `trigger()` wakes the effects that read the key → each effect's scheduler marks its binding dirty on the host block and queues the element → `requestAnimationFrame` deduplicates and calls `render()` → only the dirty bindings re-run (each re-collecting its deps) → `updated()` lifecycle hook fires (debounced 50ms).
+**Render cycle**: State mutation (via Proxy) → `trigger()` wakes the effects that read the key → each effect's scheduler marks its binding dirty on the host block and queues the element → `requestAnimationFrame` deduplicates and calls `render()` → `beforeUpdate()` fires, only the dirty bindings re-run (each re-collecting its deps), and the flush keeps draining until nothing new is queued (so a parent writing a child's prop settles in the same frame) → `updated()` fires synchronously, once per element per flush.
 
 ### Module Map
 
 - **`src/core/effect.js`** — The dependency graph. `createEffect`/`track`/`trigger`, plus `computed` and `watch`. Pure: no DOM, no framework imports. Deps belong to the effect that read them and are re-collected on every run.
 - **`src/core/reactive.js`** — Deep proxy wrapper. `get`/`has`/`ownKeys` track, `set`/`deleteProperty` trigger. Knows nothing about elements or the batcher. Detects `$db` descriptors for persistence integration.
 - **`src/core/renderer.js`** — `render()`, `bind()`, `scanForBindings()`, `runBindings()`. Handles text/attribute interpolation (`[[expr]]` or `{{expr}}`), event listeners (`@click`, `@keydown.enter.prevent`), and directive execution.
-- **`src/core/lifecycle.js`** — `snap()` (mount: clone template, attach shadow DOM, merge logic tiers, call `mounted()`) and `unsnap()` (unmount: call `unmounted()`, cleanup).
+- **`src/core/lifecycle.js`** — `snap()` (mount: clone template, attach shadow DOM *or* render into the light DOM and emulate slots when the block declares `b-shadow="false"`, merge logic tiers, apply props, call `mounted()`) and `unsnap()` (unmount: call `unmounted()`, cleanup).
 - **`src/core/batcher.js`** — RAF-based update queue with deduplication. Handles pending updates added during batch processing. Exposes `nextTick()`.
-- **`src/core/element.js`** — `createBlockElementClass()`, the single custom element class behind every block. Teardown on disconnect is deferred by a microtask so DOM moves do not destroy block state.
+- **`src/core/element.js`** — `createBlockElementClass()`, the single custom element class behind every block. Teardown on disconnect is deferred by a microtask so DOM moves do not destroy block state. Also carries `static formAssociated` / `observedAttributes`, which the platform reads once at define time, so both describe what the registry knew then.
 - **`src/core/registry.js`** — Global stores: `registry` (template defs), `proxyCache`/`privateData`/`forPools` (WeakMaps), `activeBlocks`, `legoFileLogic`.
 - **`src/core/globals.js`** — Shared reactive global state (`Lego.globals`). An ordinary `reactive()` object: bindings that read `global.x` subscribe by reading it.
-- **`src/core/stylesheets.js`** — Constructable stylesheets and cascade mode handling.
+- **`src/core/stylesheets.js`** — Constructable stylesheets and cascade mode handling. Also `adoptLightStyle()`, which scopes a light-DOM block's `<style>` by rewriting every selector through the CSSOM (`self` becomes the tag name) and injects it into `<head>` once per tag.
 
 ### Directives (`src/directives/`)
 
@@ -49,11 +49,14 @@ Each directive exports an object with `name`, `scan()`, `execute()`, and `destro
 | `b-init` | Run expression once on mount |
 | `b-enter`/`b-leave` | Viewport enter/exit hooks via IntersectionObserver |
 
+`b-props` (`src/directives/b-props.js`) is not a directive in that sense: it owns the per-tag prop contract. It parses `name`, `name: Type`, `name = default` and `name: Type = default`, compiles defaults through `expression.js` (evaluated per instance), coerces plain attributes through the declared type, and still warns about undeclared `b-logic` keys and missing props. A parent writes a declared prop with `:prop-name="expr"`, which the renderer scans into a `prop` binding owned by the parent's effect.
+
 ### Features (`src/features/`)
 
 - **`persistence.js`** — `$db('key')` API backed by **localStorage only** (no IndexedDB), with cross-tab sync via the `storage` event, per-key debounce, and quota reporting: a `QuotaExceededError` is surfaced through `config.onError(err, 'quota', key)` and the write is abandoned. Lego never evicts keys.
 - **`router.js`** — Regex path matching with params, middleware, `$go()` navigation.
-- **`error.js`** — Hierarchical error boundaries with fallback UI rendering.
+- **`error.js`** — Hierarchical error boundaries with fallback UI rendering, plus the `errorCaptured` walk that runs first: every block from the erroring element outwards gets a look, and returning `false` claims the error (no boundary, no `config.onError`).
+- **`form.js`** — Form-associated blocks (`b-form`). `attachFormInternals()` returns real `ElementInternals` where the platform has it and a shim otherwise (JSDOM); `createFormApi()` is the `$form` object on state.
 
 ### Utilities (`src/utils/`)
 
@@ -61,7 +64,7 @@ Each directive exports an object with `name`, `scan()`, `execute()`, and `destro
 - **`safe-eval.js`** — Thin wrapper over `expression.js`: builds the `$`-helpers, applies auto-invoke and `throwError`/`config.strict` semantics, and parses `b-logic` (`parseJSObject`). Keeps one `new Function` fallback, used only for `b-logic` method shorthand with statement bodies.
 - **`parser-utils.js`** — Parses `.lego` SFC format (`<template>`, `<script>`, `<style>` sections) into `Lego.block()` calls.
 - **`dom.js`** — `escapeHTML()`, `findAncestor()` (traverses shadow DOM boundaries), `resolveTargets()`, `syncModelValue()`.
-- **`helpers.js`** — Config, `mergeDescriptors()` (preserves getters/setters), delimiter handling (`[[]]` or `{{}}`).
+- **`helpers.js`** — Config, `mergeDescriptors()` (preserves getters/setters), delimiter handling (`[[]]` or `{{}}`), `camelCase`/`kebabCase` for prop-to-attribute naming.
 - **`glob.js`** — Minimal glob-to-RegExp matcher used by the Vite plugin for `.lego` discovery, so the package has no runtime dependencies.
 
 ### Vite Plugin (`vite-plugin.js`)
@@ -74,6 +77,8 @@ Components resolve logic in priority order:
 1. **Tier 1**: Script logic from `.lego` file (`legoFileLogic`)
 2. **Tier 2**: Template-level `b-logic` attribute
 3. **Tier 3**: Instance-level `b-logic` attribute (supports scoped props via `Object.create`)
+
+Props are applied on top of the merged tiers, in `applyProps()`: declared defaults fill only what is still `undefined`, then `el._pendingProps` (what a parent's `:prop` binding stashed while the child was unsnapped), then plain attributes coerced through the declared type.
 
 ## Testing
 

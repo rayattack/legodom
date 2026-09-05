@@ -142,7 +142,9 @@ Three patterns, in order of how often you'll need them.
 }
 ```
 
-`updated()` runs once per render cycle, on a ~50 ms trailing debounce. A burst of mutations from animations, websockets, or rapid input fires the hook once, not once per write. Use it for side effects that should follow the DOM, like animating a scroll position into place after the list grows.
+`updated()` runs synchronously once per render flush. A burst of mutations from animations, websockets, or rapid input lands in one flush and fires the hook once, not once per write. The DOM is fully committed by then, so this is where side effects that need to measure it belong, like animating a scroll position into place after the list grows.
+
+Its counterpart `beforeUpdate()` runs immediately before the same render, while the old DOM is still in place, which is where you take the measurement you want to restore.
 
 ### `$watch` for "react when *this* changes"
 
@@ -262,7 +264,8 @@ You can build a serious app without reading the rest of this page again. When so
 |---|---|
 | Update local state | `this.x = v` (anywhere inside the block) |
 | Compute a derived value | `get name() { return ... }` then `[[ name ]]` |
-| React after each render | `updated() { ... }` (debounced ~50 ms) |
+| React after each render | `updated() { ... }` (once per flush, DOM committed) |
+| Measure the DOM a render is about to replace | `beforeUpdate() { ... }` |
 | React only when one property changes | `this.$watch('key', cb)`, or an accessor pair |
 | Talk to a parent block | `this.$emit('event', detail)` |
 | Share state across blocks | `Lego.globals.x = v`; read as `[[ global.x ]]` |

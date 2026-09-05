@@ -119,20 +119,20 @@ describe('b-props: declarative prop contract', () => {
     expect(msgs.some(m => m.includes('b-logic key "name"'))).toBe(false);
   });
 
-  it('rejects non-identifier b-props syntax with a clear error and no crash', async () => {
+  it('rejects an unparseable b-props declaration with a clear error and no crash', async () => {
     Lego.block(
       'props-bad-syntax',
       '<span>[[ name ]]</span>',
       { name: 'fallback' },
       '', '', '',
-      `{ name: 'Alice' }`         // not a bare identifier list
+      `{ name: 'Alice' }`         // 'Alice' is not a declared type
     );
     win.document.body.innerHTML = `<props-bad-syntax></props-bad-syntax>`;
     await flush(20);
 
     const errs = errorSpy.mock.calls.map(c => c[0]);
     expect(errs.some(m =>
-      typeof m === 'string' && m.includes('Invalid b-props') && m.includes('not a bare identifier')
+      typeof m === 'string' && m.includes('Invalid b-props') && m.includes('not a valid prop declaration')
     )).toBe(true);
 
     // No crash + no propWarnings (parse failed → no contract registered → silent)

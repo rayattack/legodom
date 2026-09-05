@@ -1,6 +1,6 @@
-import { registry, forPools, itemIdMap, getPrivateData } from './registry.js';
+import { registry, forPools, itemIdMap, getPrivateData, privateData } from './registry.js';
 import { globals } from './globals.js';
-import { config, resolve, createRegex, getDelimiters } from '../utils/helpers.js';
+import { config, resolve, createRegex, getDelimiters, camelCase } from '../utils/helpers.js';
 import { safeEval } from '../utils/safe-eval.js';
 import { findErrorBoundary, renderErrorBlock, handleError, guardResult } from '../features/error.js';
 import { directives } from '../directives/index.js';
@@ -160,7 +160,7 @@ export const bind = (container, blockRoot, loopCtx = null) => {
   while (child = walker.nextNode()) bindNode(child);
 };
 
-export const scanForBindings = (container) => {
+export const scanForBindings = (container, skipRootAttrs = false) => {
   // Audit fix #14: recursive walk that skips terminal-directive subtrees
   // (notably b-for) outright, instead of TreeWalker-descending then
   // climbing parents per node to detect the boundary. Eliminates the
@@ -177,36 +177,57 @@ export const scanForBindings = (container) => {
   const directiveEntries = Object.entries(directives);
 
   const visit = (node) => {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      let isTerminal = false;
-      for (const [, implementation] of directiveEntries) {
-        if (!implementation.scan) continue;
-        const result = implementation.scan(node, {
-          getPrivateData,
-          pendingOperations,
-          current: node
-        });
-        if (result) {
-          bindings.push(result);
-          if (result.terminal) isTerminal = true;
-        }
-      }
+    // Nodes a light-DOM block moved into one of its slots were written,
+    // scanned and are owned by the block whose template they came from.
+    // Whoever is scanning now is not that block.
+    const nodeData = privateData.get(node);
+    if (nodeData && nodeData.slotted) return;
 
-      if (isTerminal) return;
-
-      for (const attr of node.attributes) {
-        if (attr.value.includes(delimStart)) {
-          bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
-        }
-      }
-
-      for (let child = node.firstChild; child; child = child.nextSibling) {
-        visit(child);
-      }
-    } else if (node.nodeType === Node.TEXT_NODE) {
+    if (node.nodeType === Node.TEXT_NODE) {
       if (node.textContent.includes(delimStart)) {
         bindings.push({ type: 'text', node, template: node.textContent });
       }
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+    let isTerminal = false;
+    for (const [, implementation] of directiveEntries) {
+      if (!implementation.scan) continue;
+      const result = implementation.scan(node, {
+        getPrivateData,
+        pendingOperations,
+        current: node
+      });
+      if (result) {
+        bindings.push(result);
+        if (result.terminal) isTerminal = true;
+      }
+    }
+
+    if (isTerminal) return;
+
+    for (const attr of node.attributes) {
+      // `:prop="expr"` is the parent-to-child data channel, never an
+      // interpolated attribute, whatever its value happens to contain.
+      const isProp = attr.name[0] === ':';
+      if (isProp && registry[node.tagName.toLowerCase()]) {
+        bindings.push({ type: 'prop', node, prop: camelCase(attr.name.slice(1)), expr: attr.value });
+        continue;
+      }
+      if (isProp) continue;
+      if (attr.value.includes(delimStart)) {
+        bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
+      }
+    }
+
+    // A light-DOM block that has already snapped rendered its own template
+    // into itself. Those nodes are its bindings, so descent stops here; its
+    // attributes above (props, events, interpolations) still belong to us.
+    if (nodeData && nodeData.lightDom) return;
+
+    for (let child = node.firstChild; child; child = child.nextSibling) {
+      visit(child);
     }
   };
 
@@ -217,7 +238,11 @@ export const scanForBindings = (container) => {
   // scanning on the root — directives there are a separate concern (and
   // for the main render path the container is a ShadowRoot with no attrs,
   // so this is a no-op).
-  if (container.nodeType === Node.ELEMENT_NODE) {
+  //
+  // `skipRootAttrs` is how a light-DOM block declines its own host
+  // attributes: it renders into itself, so the container is the element, and
+  // anything written on that tag was written by the parent block.
+  if (container.nodeType === Node.ELEMENT_NODE && !skipRootAttrs) {
     for (const attr of container.attributes) {
       if (attr.value.includes(delimStart)) {
         bindings.push({ type: 'attr', node: container, attrName: attr.name, template: attr.value });
@@ -259,6 +284,21 @@ const executeBinding = (b, state, contextEl) => {
         contextEl
       }
     });
+    return;
+  }
+  // A prop binding is the parent's effect: the expression is evaluated
+  // against the parent's scope, so the parent re-runs it when its own state
+  // changes, and the child sees an ordinary state write. A child that has not
+  // snapped yet has nowhere to receive the value, so it is stashed and snap()
+  // merges it in.
+  if (b.type === 'prop') {
+    const value = safeEval(b.expr, { state, global: globals, self: b.node }, false);
+    if (b.node._studs) {
+      b.node._studs[b.prop] = value;
+      return;
+    }
+    const pending = b.node._pendingProps || (b.node._pendingProps = {});
+    pending[b.prop] = value;
     return;
   }
   if (b.type === 'text') {
@@ -379,7 +419,7 @@ export const render = (el) => {
   try {
     // Use shadowRoot if it's a block, otherwise render the element itself (light DOM)
     const target = el.shadowRoot || el;
-    if (!data.bindings) data.bindings = scanForBindings(target);
+    if (!data.bindings) data.bindings = scanForBindings(target, target === el);
 
     // Fine-grained re-render: a binding whose dependency changed put itself
     // in the dirty set, so run only those and let each effect re-collect its

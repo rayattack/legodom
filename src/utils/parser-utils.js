@@ -10,7 +10,7 @@ export { deriveBlockName };
  * Parse a .lego file content into structured sections
  * @param {string} content - Raw .lego file content
  * @param {string} filename - Filename for error reporting
- * @returns {{template: string, script: string, style: string, stylesAttr: string, cascadeAttr: string, errorAttr: string, blockName: string}}
+ * @returns {{template: string, script: string, style: string, stylesAttr: string, cascadeAttr: string, errorAttr: string, propsAttr: string, shadowAttr: string, formAttr: boolean, blockName: string}}
  */
 export function parseLego(content, filename = 'block.lego') {
   const result = {
@@ -21,6 +21,8 @@ export function parseLego(content, filename = 'block.lego') {
     cascadeAttr: '',
     errorAttr: '',
     propsAttr: '',
+    shadowAttr: '',
+    formAttr: false,
     blockName: deriveBlockName(filename),
     hasTemplate: false,
     hasScript: false,
@@ -86,6 +88,17 @@ export function parseLego(content, filename = 'block.lego') {
       if (bPropsMatch) {
         result.propsAttr = bPropsMatch[1];
       }
+      // b-shadow="false" opts the block out of Shadow DOM
+      const bShadowMatch = attrs.match(/b-shadow=["']([^"']*)["']/);
+      if (bShadowMatch) {
+        result.shadowAttr = bShadowMatch[1];
+      }
+      // b-form is a boolean attribute: present means form associated, unless
+      // it was spelled out as "false".
+      const bFormMatch = attrs.match(/(?:^|\s)b-form(?:=["']([^"']*)["'])?(?=\s|$)/);
+      if (bFormMatch) {
+        result.formAttr = bFormMatch[1] !== 'false';
+      }
     } else if (tagName === 'script') {
       result.hasScript = true;
       result.script = innerContent.trim();
@@ -113,7 +126,7 @@ export function parseLego(content, filename = 'block.lego') {
  * @returns {string} - JavaScript code string
  */
 export function generateBlockCall(parsed) {
-  const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr, propsAttr } = parsed;
+  const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr, propsAttr, shadowAttr, formAttr } = parsed;
 
   // Build template HTML
   let templateHTML = '';
@@ -138,8 +151,21 @@ export function generateBlockCall(parsed) {
     }
   }
 
-  // Generate the Lego.block call
-  return `Lego.block('${blockName}', \`${escapeTemplate(templateHTML)}\`, ${logicCode}, ${JSON.stringify(stylesAttr)}, ${JSON.stringify(cascadeAttr)}, ${JSON.stringify(errorAttr)}, ${JSON.stringify(propsAttr || '')});`;
+  // Generate the Lego.block call. The options form is used because the block
+  // contract now has more knobs than a positional list can carry readably,
+  // and because a build artefact should name what it is passing.
+  return [
+    `Lego.block('${blockName}', {`,
+    `  template: \`${escapeTemplate(templateHTML)}\`,`,
+    `  logic: ${logicCode},`,
+    `  styles: ${JSON.stringify(stylesAttr || '')},`,
+    `  cascade: ${JSON.stringify(cascadeAttr || '')},`,
+    `  error: ${JSON.stringify(errorAttr || '')},`,
+    `  props: ${JSON.stringify(propsAttr || '')},`,
+    `  shadow: ${shadowAttr !== 'false'},`,
+    `  form: ${formAttr === true}`,
+    `});`
+  ].join('\n');
 }
 
 /**

@@ -1,13 +1,15 @@
 # Lifecycle Hooks
 
-Three hooks. They live on the block's logic object alongside state and methods.
+Five hooks. They live on the block's logic object alongside state and methods.
 
 ```js
 {
   count: 0,
-  mounted()   { /* attach */ },
-  updated()   { /* react to DOM change */ },
-  unmounted() { /* detach */ }
+  mounted()      { /* attach */ },
+  beforeUpdate() { /* read the DOM this render will replace */ },
+  updated()      { /* react to DOM change */ },
+  unmounted()    { /* detach */ },
+  errorCaptured(err, info) { /* intercept a descendant's error */ }
 }
 ```
 
@@ -30,11 +32,25 @@ The hook fires **before** child blocks inside this block snap, so any state you 
 }
 ```
 
+If `mounted()` returns a promise, `$loading` is set on state while it is pending and cleared when it settles. Blocks with a synchronous `mounted()` never gain the key.
+
 If `mounted()` throws, the error is caught and routed to the nearest [error boundary](/api/directives#b-error), your block doesn't have to crash the page.
+
+## beforeUpdate()
+
+Runs immediately before a batched re-render, while the DOM still shows what the last render produced. Use it to capture a measurement the incoming render is about to invalidate, and restore it in `updated()`. It does not fire for the initial render.
+
+```js
+{
+  beforeUpdate() {
+    this.wasAtBottom = this.$vars.scroller.scrollTop === 0;
+  }
+}
+```
 
 ## updated()
 
-Runs ~50 ms after a render cycle completes (a trailing-only debounce). The debounce is intentional: it absorbs bursts of mutations from animations, websockets, or rapid user input so the hook fires once per logical "tick" instead of once per RAF.
+Runs synchronously once each render flush commits, however many mutations went into that flush. The DOM is fully settled by the time it runs, including any child blocks the same flush re-rendered, so measuring here is safe. `await Lego.nextTick()` resolves after these hooks have run.
 
 ```js
 {
@@ -46,6 +62,23 @@ Runs ~50 ms after a render cycle completes (a trailing-only debounce). The debou
 ```
 
 `updated()` does **not** fire on initial mount, only on subsequent renders.
+
+## errorCaptured()
+
+Runs when this block or any descendant raises an error, innermost block first, before the [error boundary](/tutorial/error-handling) machinery. Receives the error and `{ type, source }`: the context label (`'render'`, `'mounted'`, `'event-handler'`, and so on) and the element it came from.
+
+Return `false` to claim the error, which suppresses both the boundary and `Lego.config.onError`. Return anything else and it carries on to the next ancestor.
+
+```js
+{
+  errorCaptured(err, info) {
+    reportToSentry(err, { context: info.type });
+    // no return: the boundary still gets its turn
+  }
+}
+```
+
+An error thrown inside `errorCaptured` is reported through `Lego.config.onError` and does not recurse.
 
 ## unmounted()
 

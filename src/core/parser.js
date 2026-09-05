@@ -13,7 +13,7 @@ import { definitionCascades } from './stylesheets.js';
  */
 export const defineLegoFile = (Lego, content, filename = 'block.lego') => {
   const parsed = parseLego(content, filename);
-  const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr, propsAttr } = parsed;
+  const { blockName, template, script, style, stylesAttr, cascadeAttr, errorAttr, propsAttr, shadowAttr, formAttr } = parsed;
 
   let logicObj = {};
   if (script) {
@@ -44,6 +44,11 @@ export const defineLegoFile = (Lego, content, filename = 'block.lego') => {
   }
   if (errorAttr) registry[blockName].setAttribute('b-error', errorAttr);
   if (propsAttr) registry[blockName].setAttribute('b-props', propsAttr);
+  // Same two knobs Lego.block takes as `shadow` and `form`. defineLegoFile
+  // stamps them on the template directly because it does not define the
+  // custom element: a lazily loaded block's class already exists by now.
+  if (shadowAttr === 'false') registry[blockName].setAttribute('b-shadow', 'false');
+  if (formAttr) registry[blockName].setAttribute('b-form', '');
   bProps.register(blockName, propsAttr);
 
   legoFileLogic.set(blockName, logicObj);

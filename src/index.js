@@ -89,13 +89,41 @@ const Lego = {
   unsnap,
   mount,
   defineLegoFile: (content, filename) => defineLegoFile(Lego, content, filename),
+  /**
+   * Define a block.
+   *
+   * Two call shapes. The original positional one is unchanged:
+   *   Lego.block(tag, templateHTML, logic, styles, cascade, error, props)
+   * and an options object, which is the one to reach for once a block needs
+   * anything past `props`:
+   *   Lego.block(tag, { template, logic, styles, cascade, error, props,
+   *                     shadow, form })
+   * `shadow: false` renders the block into the light DOM; `form: true` makes
+   * it form associated.
+   */
   block: (tagName, templateHTML, logic = {}, styles = "", cascade = "", error = "", props = "") => {
+    let shadow = true;
+    let form = false;
+    if (templateHTML && typeof templateHTML === 'object') {
+      const opts = templateHTML;
+      templateHTML = opts.template || '';
+      logic = opts.logic || {};
+      styles = opts.styles || '';
+      cascade = opts.cascade || '';
+      error = opts.error || '';
+      props = opts.props || '';
+      shadow = opts.shadow !== false;
+      form = opts.form === true;
+    }
+
     const t = document.createElement('template');
     t.setAttribute('b-id', tagName);
     t.setAttribute('b-stylesheets', styles);
     if (cascade) t.setAttribute('b-cascade', cascade);
     if (error) t.setAttribute('b-error', error);
     if (props) t.setAttribute('b-props', props);
+    if (!shadow) t.setAttribute('b-shadow', 'false');
+    if (form) t.setAttribute('b-form', '');
     t.innerHTML = templateHTML;
 
     // HMR Optimization: REMOVED (Basic re-registration only)
@@ -148,8 +176,8 @@ const Lego = {
   },
   /**
    * Await the next render flush. Resolves once the batcher has committed
-   * the DOM for the pending batch (or, if nothing is pending, after the
-   * next animation frame). Does not wait for the debounced updated() hook.
+   * the DOM for the pending batch and run its `updated()` hooks (or, if
+   * nothing is pending, after the next animation frame).
    * @returns {Promise<void>}
    */
   nextTick: () => globalBatcher.nextTick(),

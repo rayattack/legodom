@@ -32,13 +32,30 @@ export default { mounted() { console.log('hi') } }
     expect(parsed.style).toContain('color: red');
   });
 
-  it('should generate Lego.block call with cascade and error arguments', () => {
+  it('should generate an options-object Lego.block call carrying every attribute', () => {
     const sfcContent = `<template b-stylesheets="tailwind">Hi</template>`;
     const parsed = parseLego(sfcContent, 'test-block.lego');
     const blockCall = generateBlockCall(parsed);
 
-    expect(blockCall).toContain("Lego.block('test-block'");
-    expect(blockCall).toContain(', "tailwind", "", "", "");');
+    expect(blockCall).toContain("Lego.block('test-block', {");
+    expect(blockCall).toContain('styles: "tailwind"');
+    expect(blockCall).toContain('cascade: ""');
+    expect(blockCall).toContain('error: ""');
+    expect(blockCall).toContain('props: ""');
+    expect(blockCall).toContain('shadow: true');
+    expect(blockCall).toContain('form: false');
+  });
+
+  it('should carry b-shadow and b-form through to the generated call', () => {
+    const sfcContent = `<template b-shadow="false" b-form>Hi</template>`;
+    const parsed = parseLego(sfcContent, 'light-form.lego');
+
+    expect(parsed.shadowAttr).toBe('false');
+    expect(parsed.formAttr).toBe(true);
+
+    const blockCall = generateBlockCall(parsed);
+    expect(blockCall).toContain('shadow: false');
+    expect(blockCall).toContain('form: true');
   });
 
   it('audit fix #52: interpolated attrs are JSON-encoded, not manually quoted (build-time injection)', () => {
@@ -65,8 +82,8 @@ export default { mounted() { console.log('hi') } }
     let capturedArgs;
     const Lego = { block: (...args) => { capturedArgs = args; } };
     new Function('Lego', blockCall)(Lego);
-    expect(capturedArgs[3]).toBe(malicious.stylesAttr);
-    expect(capturedArgs[4]).toBe(malicious.cascadeAttr);
+    expect(capturedArgs[1].styles).toBe(malicious.stylesAttr);
+    expect(capturedArgs[1].cascade).toBe(malicious.cascadeAttr);
   });
 
   it('should escape correctly in template', () => {

@@ -4,11 +4,13 @@ Learn about block lifecycle hooks in Lego.
 
 ## Overview
 
-Lego blocks have three lifecycle hooks:
+Lego blocks have five lifecycle hooks:
 
 - `mounted()` - Called after block is added to DOM
-- `updated()` - Called after state changes and re-render
+- `beforeUpdate()` - Called just before a re-render, with the old DOM intact
+- `updated()` - Called right after a re-render commits
 - `unmounted()` - Called when block is removed from DOM
+- `errorCaptured(err, info)` - Called for an error raised by this block or any descendant
 
 ## mounted()
 
@@ -76,9 +78,59 @@ Called once when the block is first attached to the DOM.
 }
 ```
 
+### Async mounted() and `$loading`
+
+If `mounted()` returns a promise, the runtime sets `$loading` on state for as long as it is pending, and clears it when the promise settles either way. Blocks with a synchronous `mounted()` never get the key at all, so a template can test for it directly.
+
+```js
+Lego.block('user-panel', {
+  template: `
+    <p b-if="$loading">Loading…</p>
+    <p b-if="!$loading">[[ user.name ]]</p>
+  `,
+  logic: {
+    user: {},
+    async mounted() {
+      this.user = await fetch('/api/me').then(r => r.json());
+    }
+  }
+});
+```
+
+## beforeUpdate()
+
+Called immediately before a batched re-render, on the block about to render. The DOM is still the one the last render produced, which is the point: it is the only place you can read a measurement that the incoming render is about to invalidate.
+
+```js
+{
+  items: [],
+  scrollFromBottom: 0,
+
+  beforeUpdate() {
+    // The list has not grown yet.
+    const list = this.$element.shadowRoot.querySelector('.list');
+    this.scrollFromBottom = list.scrollHeight - list.scrollTop;
+  },
+
+  updated() {
+    // Now it has. Keep the viewport where the user left it.
+    const list = this.$element.shadowRoot.querySelector('.list');
+    list.scrollTop = list.scrollHeight - this.scrollFromBottom;
+  }
+}
+```
+
+It does **not** fire for the initial render, which is not an update.
+
 ## updated()
 
-Called after a render cycle settles, on a ~50 ms trailing debounce, so a burst of mutations from animations, websockets, or rapid input collapses into **one** hook call. It does **not** fire on initial mount, only on subsequent renders.
+Called synchronously after each render flush commits, once per flush however many mutations went into it. The DOM is fully settled by then, including any child blocks the flush re-rendered, so this is the place to measure. It does **not** fire on initial mount, only on subsequent renders.
+
+```js
+list.state.items.push('new');
+await Lego.nextTick();
+// updated() has already run, and it saw the new row
+```
 
 ### Usage
 
@@ -137,8 +189,8 @@ Called after a render cycle settles, on a ~50 ms trailing debounce, so a burst o
 }
 ```
 
-::: tip Already debounced
-The 50 ms trailing debounce means `updated()` won't run faster than ~20 Hz no matter how much state you mutate, but it still runs in the main thread, so don't put heavy work here. Move expensive work to a method called explicitly when something genuinely changes.
+::: tip Once per flush, not once per write
+Mutating ten keys in a row still produces one `updated()` call, because they all land in the same render flush. But it runs on the main thread, inside the frame, so don't put heavy work here. Move expensive work to a method called explicitly when something genuinely changes.
 :::
 
 ## unmounted()
@@ -235,6 +287,39 @@ Called when the block is removed from the DOM.
 }
 ```
 
+## errorCaptured()
+
+Called when this block, or anything below it, raises an error: a render, a lifecycle hook, an event handler, a directive expression. The hook runs on the way out of the tree, innermost block first.
+
+```js
+{
+  errorCaptured(err, info) {
+    console.warn(`[${info.type}] in <${info.source.tagName.toLowerCase()}>`, err);
+    // no return value: the error keeps travelling
+  }
+}
+```
+
+- `err` is the error.
+- `info.type` is the context label: `'render'`, `'mounted'`, `'event-handler'`, and so on.
+- `info.source` is the element the error came from.
+
+**Return `false` to claim it.** No [error boundary](/tutorial/error-handling) renders and `Lego.config.onError` is not called. Return anything else, including nothing, and the error carries on to the next ancestor and then to the usual boundary handling. That makes `errorCaptured` useful two ways: as a reporting hook that watches without interfering, and as a surgical handler that swallows one kind of failure without replacing a whole subtree with a fallback block.
+
+```js
+{
+  failed: false,
+
+  errorCaptured(err, info) {
+    if (info.type !== 'render') return;   // let anything else through
+    this.failed = true;
+    return false;                          // handled: no boundary, no onError
+  }
+}
+```
+
+An error thrown inside `errorCaptured` itself is reported through `Lego.config.onError` and goes no further, so a broken handler cannot recurse through the machinery it broke.
+
 ## Performance Hooks (Metrics)
 
 For advanced monitoring, LegoDOM provides global hooks in `Lego.config.metrics`. These run for **every** block.
@@ -258,15 +343,21 @@ Lego.config.metrics = {
 
 ```
 1. Block created (HTML element instantiated)
-2. Shadow DOM attached
-3. Template rendered
-4. mounted() hook called → Block is interactive
-5. User interaction / state change
-6. Block re-rendered
-7. updated() hook called
-8. (repeat steps 5-7 as needed)
-9. Block removed from DOM
-10. unmounted() hook called → Cleanup
+2. Shadow DOM attached (or, with shadow: false, the template renders in place)
+3. Props applied: defaults, then :prop bindings, then plain attributes
+4. Template rendered
+5. mounted() hook called → Block is interactive ($loading set if it is async)
+6. User interaction / state change
+7. beforeUpdate() hook called → old DOM still in place
+8. Block re-rendered
+9. updated() hook called → DOM committed
+10. (repeat steps 6-9 as needed)
+11. Block removed from DOM
+12. unmounted() hook called → Cleanup
+
+errorCaptured() runs off to the side: any error raised anywhere in this flow,
+in this block or below it, walks up through every errorCaptured on the way to
+the error boundary.
 ```
 
 ## Complete Example
@@ -377,7 +468,7 @@ If you start something in `mounted()`, stop it in `unmounted()`:
 
 ### 3. Keep updated() Light
 
-`updated()` is debounced (~50 ms) but still runs on the main thread. Don't lock it up:
+`updated()` runs once per flush, not once per write, but it runs on the main thread inside the frame. Don't lock it up:
 
 ```js
 // ❌ Bad

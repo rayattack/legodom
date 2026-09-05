@@ -166,25 +166,29 @@ In the example above, the final state for the block will be:
 </template>
 ```
 
-`b-props` is **pure metadata**, it does not introduce a new data channel. Parents still pass values via `b-logic` exactly as before:
+A declared prop is the block's data channel from outside. A parent binds it with a colon, and the binding stays live: change the expression's value and the child re-renders.
 
 ```html
-<user-card b-logic="{ user: currentUser, onSelect: pick }"></user-card>
+<user-card :user="currentUser" :title="heading"></user-card>
 ```
 
-What it gets you:
+A declaration can also carry a type and a per-instance default:
 
+```html
+<template b-id="user-card" b-props="title: String = 'User', tags: Array = []">
+```
+
+What the contract gets you:
+
+- **A live binding**: `:title="heading"` re-evaluates whenever `heading` changes, unlike `b-logic`, which is read once at mount.
+- **Attribute coercion**: `<user-card count="3">` becomes the number `3` when `count: Number` is declared.
 - **Typo guard**: passing `b-logic="{ usre: ... }"` warns that `usre` is not declared.
-- **Missing-prop warning**: declaring `{ user }` and not providing it (and no script default) warns at mount.
+- **Missing-prop warning**: declaring `{ user }` and not providing it (and no default) warns at mount.
 - **Tooling boundary**: editor extensions and devtools can read `b-props` to know which keys are external-by-contract.
 
-Defaults still come from the script tier, if `title: 'User'` is in the script, `title` is satisfied even when the parent omits it.
+Omitting `b-props` keeps existing behavior: any `b-logic` key merges in, no warnings.
 
-**Syntax rules**
-
-- Identifiers only: `b-props="{ age, name, dateOfBirth }"`. Whitespace is tolerant; outer braces are optional.
-- No values, defaults, or renames. `b-props="{ name: 'Alice' }"` is a parse error, use `b-logic` for values.
-- Omitting `b-props` keeps existing behavior: any `b-logic` key merges in, no warnings.
+See [Props](/tutorial/props) for the full syntax, the resolution order, and how one-way flow works.
 
 ## Block Communication
 

@@ -82,6 +82,29 @@ export type LegoWatchSource<T = any> = string | ((scope: T) => any);
 
 export type LegoWatchCallback = (value: any, oldValue: any) => void;
 
+/** Where an error was raised, handed to `errorCaptured`. */
+export interface LegoErrorInfo {
+  /** The context label: 'render', 'mounted', 'event-handler', and so on. */
+  type: string;
+  /** The element the error came from. */
+  source: HTMLElement;
+}
+
+/**
+ * The form half of `ElementInternals`, exposed as `$form` on a block declared
+ * with `b-form` / `form: true`. Every member delegates to the element's
+ * internals.
+ */
+export interface LegoFormApi {
+  setValue(value: any, state?: any): void;
+  setValidity(flags?: ValidityStateFlags, message?: string, anchor?: HTMLElement): void;
+  reportValidity(): boolean;
+  checkValidity(): boolean;
+  readonly form: HTMLFormElement | null;
+  readonly name: string | null;
+  readonly validity: ValidityState;
+}
+
 /**
  * Helpers the runtime puts on every block's state, alongside the author's own
  * keys. Reachable as `this.$watch(...)` inside block logic and as
@@ -94,7 +117,85 @@ export interface LegoBlockState {
    * function stops it sooner.
    */
   $watch(source: LegoWatchSource, cb: LegoWatchCallback, options?: LegoWatchOptions): () => void;
+
+  /** Present only on a form-associated block (`b-form` / `form: true`). */
+  $form?: LegoFormApi;
+
+  /**
+   * True while an `async mounted()` is still running. The key exists only on
+   * blocks whose `mounted()` returned a promise.
+   */
+  $loading?: boolean;
+
+  /** Set by `formDisabledCallback` on a form-associated block. */
+  $disabled?: boolean;
+
+  /** Called after the block mounts. Returning a promise sets `$loading`. */
+  mounted?(): void | Promise<void>;
+
+  /** Called immediately before a batched re-render, with the old DOM intact. */
+  beforeUpdate?(): void | Promise<void>;
+
+  /**
+   * Called synchronously after each render flush commits, once per flush.
+   * The DOM is settled, so it is safe to measure here.
+   */
+  updated?(): void | Promise<void>;
+
+  /** Called when the block leaves the DOM. */
+  unmounted?(): void | Promise<void>;
+
+  /**
+   * Called for an error raised by this block or any descendant, innermost
+   * first. Return `false` to claim the error: no error boundary is rendered
+   * and `config.onError` is not called. Return anything else to let it pass.
+   */
+  errorCaptured?(err: Error, info: LegoErrorInfo): boolean | void;
+
   [key: string]: any;
+}
+
+/**
+ * The options-object form of `Lego.block()`.
+ *
+ * `props` is a comma-separated declaration list, braces optional. An entry is
+ * `name`, `name: Type`, `name = default`, or `name: Type = default`, where
+ * Type is one of String, Number, Boolean, Array, Object, Function and the
+ * default is a template expression evaluated once per instance:
+ *
+ *   'title: String = "Untitled", count: Number = 0, items: Array = []'
+ *
+ * A parent writes a declared prop with `:prop-name="expr"` on the child tag
+ * (kebab-case maps to camelCase), which stays live: the child sees every
+ * later change. A plain `prop-name="text"` attribute is coerced through the
+ * declared type instead. Data flows one way; a child may write its own props,
+ * and the parent's next change overwrites what it wrote.
+ */
+export interface LegoBlockOptions {
+  /** Template body, as it would appear inside `<template b-id="…">`. */
+  template?: string;
+  /** Initial state, methods, getters and lifecycle hooks. */
+  logic?: object;
+  /** Space-separated stylesheet keys. Maps to `b-stylesheets`. */
+  styles?: string;
+  /** Space-separated keys cascaded to descendants. Maps to `b-cascade`. */
+  cascade?: string;
+  /** Tag of an error block to render when this one crashes. Maps to `b-error`. */
+  error?: string;
+  /** Prop contract. Maps to `b-props`. */
+  props?: string;
+  /**
+   * `false` renders the block into the light DOM instead of a shadow root,
+   * so page-level CSS, ARIA id references and native form submission reach
+   * inside it. Slots are emulated. Maps to `b-shadow="false"`.
+   */
+  shadow?: boolean;
+  /**
+   * `true` makes the block form associated: it gains `$form` and its `value`
+   * key, if it has one, is submitted with the surrounding form. Maps to
+   * `b-form`.
+   */
+  form?: boolean;
 }
 
 export interface LegoInitOptions {
@@ -116,7 +217,13 @@ export interface Lego {
   init(root?: HTMLElement, options?: LegoInitOptions): Promise<void>;
 
   /**
-   * Define a block
+   * Define a block from an options object. Preferred once a block needs
+   * anything past `props`, since `shadow` and `form` have no positional slot.
+   */
+  block(tagName: string, options: LegoBlockOptions): void;
+
+  /**
+   * Define a block, positional form. Unchanged and still supported.
    */
   block(
     tagName: string,
@@ -159,9 +266,9 @@ export interface Lego {
   getActiveBlocksCount(): number;
 
   /**
-   * Await the next render flush. Resolves once the batcher has committed
-   * the DOM for the pending batch, or after the next animation frame when
-   * nothing is queued. Does not wait for the debounced `updated()` hook.
+   * Await the next render flush. Resolves once the batcher has committed the
+   * DOM for the pending batch and run its `updated()` hooks, or after the
+   * next animation frame when nothing is queued.
    */
   nextTick(): Promise<void>;
 

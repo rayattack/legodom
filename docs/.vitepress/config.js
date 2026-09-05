@@ -83,6 +83,7 @@ export default defineConfig({
             { text: 'The Lego Object', link: '/tutorial/the-lego-object' },
             { text: 'Blocks', link: '/tutorial/blocks' },
             { text: 'Templating', link: '/tutorial/templating' },
+            { text: 'Props', link: '/tutorial/props' },
             { text: 'Slots & Content Projection', link: '/tutorial/slots' },
             { text: 'Layouts & Composition', link: '/tutorial/layouts' },
             { text: 'Reactivity', link: '/tutorial/reactivity' },

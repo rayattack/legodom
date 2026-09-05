@@ -12,7 +12,7 @@ Slots let you pass content into a block from the outside, just like React's `chi
 
 ## How Slots Work
 
-Every LegoDOM block uses Shadow DOM. When you place child elements inside a block tag, they live in the **Light DOM**. The browser automatically projects them into matching `<slot>` elements inside the block's Shadow DOM template.
+A LegoDOM block uses Shadow DOM unless it opts out. When you place child elements inside a block tag, they live in the **Light DOM**. The browser automatically projects them into matching `<slot>` elements inside the block's Shadow DOM template. A block that opted out of Shadow DOM writes the same `<slot>` markup and gets [emulated projection](#light-dom-slots) instead.
 
 ```
 Light DOM (what you write)          Shadow DOM (block template)
@@ -230,6 +230,47 @@ Slotted content lives in the **Light DOM**, not inside the block's Shadow DOM. T
 
 ::: warning ::slotted() Limitations
 The `::slotted()` selector can only target **direct children** of the host element. It cannot target nested elements. For example, `::slotted(p)` works but `::slotted(p span)` does not. This is a browser limitation, not a LegoDOM limitation.
+:::
+
+## Light DOM Slots
+
+A block defined with `shadow: false` (or `b-shadow="false"` on its template) has no shadow root, so the browser has nothing to project into. LegoDOM emulates the projection instead, at mount:
+
+1. The element's existing children are set aside. That is the slot content.
+2. The template is rendered into the element.
+3. Each `<slot>` is replaced by the nodes assigned to it, or by its own children when nothing was assigned. The `<slot>` element itself disappears.
+
+Everything you have read above still describes what you write:
+
+```js
+Lego.block('light-card', {
+  template: `
+    <header><slot name="head">Untitled</slot></header>
+    <div class="body"><slot></slot></div>
+  `,
+  shadow: false
+});
+```
+
+```html
+<light-card>
+  <h1 slot="head">Report</h1>
+  <p>Body text.</p>
+</light-card>
+```
+
+The `<h1>` ends up inside `<header>`, the `<p>` inside `<div class="body">`, and there is no `<slot>` left in the DOM.
+
+Bindings survive the move. A `[[ … ]]` you wrote in slot content still belongs to the block whose template it came from, and keeps updating after the nodes are relocated. LegoDOM marks the moved nodes so the receiving block does not bind them a second time.
+
+::: warning What emulated slots do not do
+This is a one-time move at mount, not the live projection the platform gives you.
+
+- **Slot content is moved, not projected.** It really lives inside the block now, so the block's own scoped styles apply to it. That is usually what people want in the light DOM, but it is not what Shadow DOM does.
+- **`::slotted()` does not apply.** Style the content directly instead; it is ordinary page DOM.
+- **`<slot>` events and `assignedNodes()` are gone** along with the `<slot>` element.
+- **Changing the children afterwards does nothing.** Append a node to a light-DOM block after mount and it lands at the end of the rendered template, not in a slot. Drive that content from state instead, with `b-for` or `b-if`.
+- **Nothing assigned to a name with no matching slot is dropped**, exactly as the platform does.
 :::
 
 ## Slots with Blocks (Not Just HTML)
