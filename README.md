@@ -37,6 +37,10 @@ Lego includes a **Vite plugin** for developers who prefer **Single File Componen
 - 🧩 **Native Web Components** – Real Custom Elements, real Shadow DOM.
 - 🌐 **Built-in Routing** – Lego Router included for client-side routing.
 - 📝 **Familiar Mentals** – Plain JavaScript objects for state, plain HTML for templates.
+- 🔒 **CSP Friendly** – Template expressions are compiled, not evaluated. No `unsafe-eval`.
+- 🔗 **Reactive Props** – `b-props="count: Number = 0"` on the block, `:count="n"` on the parent.
+- 🖥️ **Server Rendering** – `lego-dom/server` renders blocks to HTML that the client hydrates in place.
+- 🧱 **Light DOM When You Want It** – `shadow: false` per block for global CSS, ARIA and forms.
 
 ---
 

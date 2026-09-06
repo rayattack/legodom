@@ -2,6 +2,10 @@
 
 Welcome to the internal documentation of LegoDOM.
 
+::: warning Code excerpts predate the September 2026 rewrite
+The chapters below quote source as it stood before the reactivity, expression compiler, component contract, app instance and server rendering work landed. The concepts still hold; the exact code does not. For the current layout read `CLAUDE.md` in the repository root, then these files in order: `src/core/effect.js` (dependency tracking), `src/core/reactive.js` (the proxy), `src/utils/expression.js` (template expression compiler), `src/core/app.js` (`createApp`, block registration, init), `src/core/element.js` (the custom element class), `src/core/lifecycle.js` (snap and unsnap), `src/core/renderer.js` (binding scan and render), and `src/server/` (server rendering). Where a chapter and the code disagree, the code is right.
+:::
+
 This isn't a "how to use" guide. This is a **"how it works"** guide. Understanding the soul of LegoDOM will make you a better contributor.
 
 ## The Philosophy
