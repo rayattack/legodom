@@ -9,6 +9,12 @@
 - Form participation: `form: true` (or `<template b-form>`) makes the element form-associated and exposes `$form` with `setValue`, `setValidity`, `reportValidity`, `checkValidity`. A `value` state key is kept in sync with the form value.
 - Lifecycle: `updated()` now runs synchronously after each flush, once per block per flush; the 50ms debounce is gone. New `beforeUpdate()`, `errorCaptured(err, info)` (return `false` to stop the error before any boundary), and `$loading` while an async `mounted()` is pending. A flush drains work scheduled during the flush, so a parent writing a child's prop reaches the DOM in the same frame.
 
+**Application instances**
+- `Lego.createApp({ config, globals })` returns an app with its own `block`, `route`, `init`, `globals`, `config`, `use`, `nextTick`, `effect`, `watch`, `defineLegoFile`, `mount` and `db`. The default `Lego` export is itself an app built on the module-level config, so existing code is unchanged.
+- Two apps on one page can use different delimiter syntaxes, independent globals, independent routes with `init(root, { routerTarget })`, and per-app `strict`, `onError`, `sanitize` and `loader` settings.
+- `app.use(plugin, options)` installs a plugin once per app; the existing Monitoring plugin works through it.
+- Custom element names are document-global, so a second app defining an already defined tag warns and keeps the first.
+
 **Server rendering**
 - New entry `lego-dom/server`: `createRenderer()` with `define`, `defineLegoFile`, and `renderToString(tag, { props, globals, route, slots, attrs })`. Pure Node, no DOM, zero dependencies, hand-written HTML parser for the template subset. Lifecycle hooks are not run on the server.
 - Output carries the hydration contract: `b-hydrate` on block hosts, `<template shadowrootmode="open">` for shadow blocks, `<!--b-if: expr-->` for false branches, `<!--b-for: item in list-->` plus `data-b-key` on rows, and all `b-*`, `@*` and `:*` attributes preserved as authored.
