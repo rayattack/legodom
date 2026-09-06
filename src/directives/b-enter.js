@@ -9,7 +9,7 @@ export const bEnter = {
     return { modifiers }
   }),
 
-  execute: ({ binding, state, global, helpers }) => {
+  execute: ({ binding, state, global, app, helpers }) => {
     if (binding.observer || binding.done) return;
     // Captured now: the observer callback fires long after execute returns.
     const owner = (helpers && helpers.contextEl) || binding.node;
@@ -20,7 +20,7 @@ export const bEnter = {
       try {
         // guardResult covers `b-enter="loadMore()"` returning a promise.
         guardResult(
-          safeEval(binding.expr, { state, global, self: binding.node }),
+          safeEval(binding.expr, { state, global, self: binding.node, app }),
           owner,
           'b-enter'
         );

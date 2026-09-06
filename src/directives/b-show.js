@@ -9,7 +9,7 @@ export const bShow = {
     }
   },
 
-  execute({ binding, state, global }) {
+  execute({ binding, state, global, app }) {
     const { node, expr } = binding;
     // Audit fix #33: cache the author's inline `display` (e.g. "flex",
     // "grid") on first toggle, so flipping false→true restores it instead
@@ -19,7 +19,7 @@ export const bShow = {
     if (node._bShowOriginal === undefined) {
       node._bShowOriginal = node.style.display;
     }
-    const visible = !!safeEval(expr, { state, global, self: node });
+    const visible = !!safeEval(expr, { state, global, self: node, app });
     node.style.display = visible ? node._bShowOriginal : 'none';
   }
 };

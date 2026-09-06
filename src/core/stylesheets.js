@@ -1,11 +1,7 @@
 import { config } from '../utils/helpers.js';
-import { registry, activeBlocks } from './registry.js';
+import { activeBlocks, getDefinition } from './registry.js';
 
 export const styleRegistry = new Map();
-// Audit fix #17: definition cascades resolved once at registration
-// (block() / defineLegoFile()), so per-snap ancestor walks become
-// O(1) Map lookups instead of getAttribute + split per ancestor.
-export const definitionCascades = new Map(); // tagName -> string[]
 export let styleConfig = {};
 
 export const setStyleConfig = (cfg) => { styleConfig = cfg; };
@@ -41,8 +37,8 @@ export const loadStylesheets = async () => {
 
 /** A block opts out of Shadow DOM with `b-shadow="false"` on its template. */
 export const isLightBlock = (tagName) => {
-  const templateNode = registry[tagName];
-  return !!templateNode && templateNode.getAttribute('b-shadow') === 'false';
+  const definition = getDefinition(tagName);
+  return !!definition && definition.shadow === false;
 };
 
 // One <style> per light-DOM block, however many instances the page mounts.
@@ -124,7 +120,7 @@ export const adoptLightStyle = (tagName, styleEl) => {
 
 export const applyStyles = (el) => {
   const name = el.tagName.toLowerCase();
-  const templateNode = registry[name];
+  const definition = getDefinition(name);
   // A light-DOM block has no private root, so its stylesheets are adopted by
   // the document. They are deduplicated on the way in, so two instances of
   // the same block adopt one copy.
@@ -132,8 +128,9 @@ export const applyStyles = (el) => {
   if (!shadow) return;
 
   // Stylesheet Application: Definition + Instance + Inheritance (Cascade)
-  // Note: If templateNode is missing, we might be in trouble, but let's assume it exists or fallback
-  const defStyles = (templateNode && templateNode.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
+  // An element with no definition (a bare host being styled early) simply
+  // contributes no definition-level sheets.
+  const defStyles = ((definition && definition.styles) || "").split(/\s+/).filter(Boolean);
   const instStyles = (el.getAttribute('b-stylesheets') || "").split(/\s+/).filter(Boolean);
 
   // Calculate inherited styles from ancestors with b-cascade
@@ -144,10 +141,12 @@ export const applyStyles = (el) => {
     const instCascade = (parent.getAttribute('b-cascade') || "").split(/\s+/).filter(Boolean);
     if (instCascade.length) inheritedStyles.push(...instCascade);
 
-    // Check definition cascade (if parent is a Lego block) — read from
-    // the precomputed map, not from the template attribute.
+    // Check definition cascade (if parent is a Lego block). Audit fix #17:
+    // the cascade is split once at registration and kept on the definition
+    // entry, so this walk stays O(1) per ancestor.
     const pName = parent.tagName ? parent.tagName.toLowerCase() : '';
-    const defCascade = definitionCascades.get(pName);
+    const parentDefinition = getDefinition(pName);
+    const defCascade = parentDefinition && parentDefinition.cascadeList;
     if (defCascade && defCascade.length) inheritedStyles.push(...defCascade);
     parent = parent.parentElement || (parent.getRootNode && parent.getRootNode().host);
   }

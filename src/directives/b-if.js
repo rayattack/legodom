@@ -10,9 +10,9 @@ export const bIf = {
     return { anchor };
   }),
 
-  execute({ binding, state, global }) {
+  execute({ binding, state, global, app }) {
     const { node, anchor, expr } = binding;
-    const condition = !!safeEval(expr, { state, global, self: node });
+    const condition = !!safeEval(expr, { state, global, self: node, app });
     const isAttached = !!node.parentNode;
     if (condition && !isAttached) {
       if (anchor.parentNode) anchor.parentNode.replaceChild(node, anchor);

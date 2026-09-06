@@ -1,4 +1,4 @@
-import { registry, snapState, getPrivateData } from './registry.js';
+import { registry, snapState, getPrivateData, getDefinition } from './registry.js';
 import { snap, unsnap } from './lifecycle.js';
 import { bProps } from '../directives/b-props.js';
 import { attachFormInternals } from '../features/form.js';
@@ -33,8 +33,8 @@ import { attachFormInternals } from '../features/form.js';
  */
 export const createBlockElementClass = (tagName, options = {}) => {
   const { lazyLoader = null } = options;
-  const definition = registry[tagName];
-  const isFormBlock = !!definition && definition.hasAttribute('b-form');
+  const definition = getDefinition(tagName);
+  const isFormBlock = !!definition && definition.form;
   const propAttrs = bProps.attrs(tagName);
 
   return class extends HTMLElement {

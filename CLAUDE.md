@@ -20,6 +20,8 @@ Entry point is `src/index.js` which wires up dependency injection between module
 
 **Initialization flow**: `Lego.init(root)` → register batcher with renderer → create reactive global state → auto-discover inline `<template b-id="...">` tags → setup routing (popstate/click handlers) → setup MutationObserver for auto-mounting components.
 
+**App model**: `Lego` is an *app*, created by `createApp()` in `src/core/app.js` around the module level config in `helpers.js`. `Lego.createApp(options)` makes more of them, each with its own `config`, `globals`, `routes`, `sharedStates` (`$registry`) and plugin set. See "App resolution" below.
+
 **Render cycle**: State mutation (via Proxy) → `trigger()` wakes the effects that read the key → each effect's scheduler marks its binding dirty on the host block and queues the element → `requestAnimationFrame` deduplicates and calls `render()` → `beforeUpdate()` fires, only the dirty bindings re-run (each re-collecting its deps), and the flush keeps draining until nothing new is queued (so a parent writing a child's prop settles in the same frame) → `updated()` fires synchronously, once per element per flush.
 
 ### Module Map
@@ -30,8 +32,9 @@ Entry point is `src/index.js` which wires up dependency injection between module
 - **`src/core/lifecycle.js`** — `snap()` (mount: clone template, attach shadow DOM *or* render into the light DOM and emulate slots when the block declares `b-shadow="false"`, merge logic tiers, apply props, call `mounted()`) and `unsnap()` (unmount: call `unmounted()`, cleanup).
 - **`src/core/batcher.js`** — RAF-based update queue with deduplication. Handles pending updates added during batch processing. Exposes `nextTick()`.
 - **`src/core/element.js`** — `createBlockElementClass()`, the single custom element class behind every block. Teardown on disconnect is deferred by a microtask so DOM moves do not destroy block state. Also carries `static formAssociated` / `observedAttributes`, which the platform reads once at define time, so both describe what the registry knew then.
-- **`src/core/registry.js`** — Global stores: `registry` (template defs), `proxyCache`/`privateData`/`forPools` (WeakMaps), `activeBlocks`, `legoFileLogic`.
-- **`src/core/globals.js`** — Shared reactive global state (`Lego.globals`). An ordinary `reactive()` object: bindings that read `global.x` subscribe by reading it.
+- **`src/core/app.js`** — `createApp()`: the app factory. Owns `block()`, `route()`, `init()`, `use()`, the manifest / lazy-loader machinery and the introspection helpers. `src/index.js` is now only dependency injection plus the default app.
+- **`src/core/registry.js`** — Global stores: `registry` (definition entries, see below), `proxyCache`/`privateData`/`forPools`/`itemIdMap` (WeakMaps), `activeBlocks`, `legoFileLogic`, `snapState`. Also `getDefinition(tag)`, `definitionFrom(template, app)` and `canDefine(tag, app)`.
+- **`src/core/globals.js`** — App resolution (`defaultApp`, `setDefaultApp`, `appOf(el)`) and `createGlobals(app, seed)`, which builds an app's reactive globals. Globals are an ordinary `reactive()` object: bindings that read `global.x` subscribe by reading it.
 - **`src/core/stylesheets.js`** — Constructable stylesheets and cascade mode handling. Also `adoptLightStyle()`, which scopes a light-DOM block's `<style>` by rewriting every selector through the CSSOM (`self` becomes the tag name) and injects it into `<head>` once per tag.
 
 ### Directives (`src/directives/`)
@@ -54,7 +57,7 @@ Each directive exports an object with `name`, `scan()`, `execute()`, and `destro
 ### Features (`src/features/`)
 
 - **`persistence.js`** — `$db('key')` API backed by **localStorage only** (no IndexedDB), with cross-tab sync via the `storage` event, per-key debounce, and quota reporting: a `QuotaExceededError` is surfaced through `config.onError(err, 'quota', key)` and the write is abandoned. Lego never evicts keys.
-- **`router.js`** — Regex path matching with params, middleware, `$go()` navigation.
+- **`router.js`** — `createRouter(app)`: per app routes, regex path matching with params, middleware, `$go()` navigation, and the app's default `routerTarget` (`<lego-router>` unless `init()` overrides it). The document level `popstate` / `click` / `submit` listeners are installed once (`ensureRouterListeners`) and fan out to every initialized app (`registerRoutedApp`), so one click pushes history once and each app matches its own routes.
 - **`error.js`** — Hierarchical error boundaries with fallback UI rendering, plus the `errorCaptured` walk that runs first: every block from the erroring element outwards gets a look, and returning `false` claims the error (no boundary, no `config.onError`).
 - **`form.js`** — Form-associated blocks (`b-form`). `attachFormInternals()` returns real `ElementInternals` where the platform has it and a shim otherwise (JSDOM); `createFormApi()` is the `$form` object on state.
 
@@ -64,7 +67,7 @@ Each directive exports an object with `name`, `scan()`, `execute()`, and `destro
 - **`safe-eval.js`** — Thin wrapper over `expression.js`: builds the `$`-helpers, applies auto-invoke and `throwError`/`config.strict` semantics, and parses `b-logic` (`parseJSObject`). Keeps one `new Function` fallback, used only for `b-logic` method shorthand with statement bodies.
 - **`parser-utils.js`** — Parses `.lego` SFC format (`<template>`, `<script>`, `<style>` sections) into `Lego.block()` calls.
 - **`dom.js`** — `escapeHTML()`, `findAncestor()` (traverses shadow DOM boundaries), `resolveTargets()`, `syncModelValue()`.
-- **`helpers.js`** — Config, `mergeDescriptors()` (preserves getters/setters), delimiter handling (`[[]]` or `{{}}`), `camelCase`/`kebabCase` for prop-to-attribute naming.
+- **`helpers.js`** — `createConfig()` (a fresh config per app) and `config` (the default app's), `mergeDescriptors()` (preserves getters/setters), delimiter handling (`getDelimiters(cfg)` / `createRegex(cfg)`, `[[]]` or `{{}}`), `camelCase`/`kebabCase` for prop-to-attribute naming.
 - **`glob.js`** — Minimal glob-to-RegExp matcher used by the Vite plugin for `.lego` discovery, so the package has no runtime dependencies.
 
 ### Server Renderer (`src/server/`)
@@ -91,6 +94,34 @@ Components resolve logic in priority order:
 3. **Tier 3**: Instance-level `b-logic` attribute (supports scoped props via `Object.create`)
 
 Props are applied on top of the merged tiers, in `applyProps()`: declared defaults fill only what is still `undefined`, then `el._pendingProps` (what a parent's `:prop` binding stashed while the child was unsnapped), then plain attributes coerced through the declared type.
+
+## App Resolution
+
+`registry[tag]` holds a **definition entry**, not a bare `<template>`:
+
+```js
+{ template, app, logic, props, styles, cascade, cascadeList, error, shadow, form }
+```
+
+`logic`/`props`/`styles`/`cascade`/`error` are the template-level attribute sources; `shadow` is false for a `b-shadow="false"` block; `form` is true for a `b-form` one. Read it with `getDefinition(tag)` and build it with `definitionFrom(template, app)`. Truthiness of `registry[tag]` still means "registered".
+
+The resolution path from an element to its app:
+
+```
+element -> privateData.get(el).app        (appOf(el), set by snap())
+snap()  -> getDefinition(tag).app         (where that value came from)
+```
+
+`snap()` records the app before the first `applyStyles` / `bind` / `render` touches the element. From there:
+
+- `render()` and `bind()` call `appOf(el)`; `scanForBindings(container, skipRootAttrs, app)` takes it as a parameter (b-for passes it for row scans).
+- Directives receive `app` alongside `global` in their execute arguments, and pass it into `safeEval`.
+- `safeEval(expr, { …, app })` reads `config.strict`, `app.globals` (`$route`, `$db`), `app.sharedStates` (`$registry`) and `app.router.go` (`$go`) from it; with no `app` it falls back to the default app.
+- `handleError()` reports through the failing element's app's `onError`.
+
+Custom element names are global to the document, so a tag belongs to the first app that defines it; `canDefine()` warns and refuses a second claim.
+
+Global by design (keyed by object identity, or process-wide caches): `customElements`, `proxyCache`, `privateData`, `forPools`, `itemIdMap`, `activeBlocks`, `snapState`, `legoFileLogic`, the expression compile cache, the effect dep map, the batcher, and the stylesheet registry.
 
 ## Testing
 

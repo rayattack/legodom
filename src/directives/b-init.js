@@ -13,14 +13,14 @@ export const bInit = {
     }
   },
 
-  execute: ({ binding, state, global, helpers }) => {
+  execute: ({ binding, state, global, app, helpers }) => {
     if (binding.initialized) return;
     binding.initialized = true;
     // A synchronous throw propagates to render()'s handler; an async
     // rejection would otherwise escape entirely, so route it explicitly.
     const owner = (helpers && helpers.contextEl) || binding.node;
     guardResult(
-      safeEval(binding.expr, { state, global, self: binding.node }),
+      safeEval(binding.expr, { state, global, self: binding.node, app }),
       owner,
       'b-init'
     );

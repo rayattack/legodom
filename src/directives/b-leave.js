@@ -7,7 +7,7 @@ export const bLeave = {
   name: 'b-leave',
   scan: node => scanForAttribute('b-leave', node),
 
-  execute: ({ binding, state, global, helpers }) => {
+  execute: ({ binding, state, global, app, helpers }) => {
     if (binding.observer || binding.done) return;
     // Captured now: the observer callback fires long after execute returns.
     const owner = (helpers && helpers.contextEl) || binding.node;
@@ -22,7 +22,7 @@ export const bLeave = {
       try {
         // guardResult covers `b-leave="save()"` returning a promise.
         guardResult(
-          safeEval(binding.expr, { state, global, self: binding.node }),
+          safeEval(binding.expr, { state, global, self: binding.node, app }),
           owner,
           'b-leave'
         );

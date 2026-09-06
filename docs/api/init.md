@@ -24,6 +24,7 @@ interface InitOptions {
   manifest?: ManifestGroup | ManifestGroup[] | string | { url: string; headers?: Headers; credentials?: RequestCredentials };
   studio?: boolean;
   debug?: boolean;
+  routerTarget?: string;
 }
 ```
 
@@ -109,6 +110,22 @@ When `true`, side-loads `@legodom/studio` from the unpkg CDN and registers `/_/s
 
 Enables verbose `[Lego Trace]` logging. Equivalent to `Lego.config.debug = true`.
 
+#### `options.routerTarget`
+
+- **Type**: `string`
+- **Default**: `'lego-router'`
+
+The selector a matched route renders into when the navigation names no `b-target`. Accepts `#id` or any CSS selector.
+
+This exists so two [apps](/api/create-app) on one page can answer the same URL in different regions:
+
+```js
+await sales.init(document.body, { routerTarget: '#main' });
+await ops.init(document.body, { routerTarget: '#sidebar' });
+```
+
+A link's `b-target` still wins over it, and `$go(path, ...targets)` with explicit targets still wins over both.
+
 ## What `init()` actually does
 
 In order:
@@ -119,8 +136,9 @@ In order:
 4. Registers every `<template b-id>` under `root` as a custom element.
 5. Resolves and registers the manifest, if any.
 6. If a `loader` is provided, walks `root` for unknown hyphenated tags and starts a `MutationObserver` to catch later insertions.
-7. Wires up `popstate`, `<a b-link|b-target>` click delegation, and `<form b-action>` submit prevention.
-8. Calls `initCrossTabSync()` to bind a single `storage` listener for `$db` cross-tab updates.
+7. Wires up `popstate`, `<a b-link|b-target>` click delegation, and `<form b-action>` submit prevention. These listeners are installed once per document and then notify every initialized app.
+8. Registers the app as a navigation listener, so from here on it matches every URL change.
+9. Calls `initCrossTabSync()` to bind a single `storage` listener for `$db` cross-tab updates.
 
 Step 4 means inline templates are upgraded **after** routes are matched, useful when you want a route to render before declarations are scanned.
 

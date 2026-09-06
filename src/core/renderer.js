@@ -1,6 +1,6 @@
 import { registry, forPools, itemIdMap, getPrivateData, privateData } from './registry.js';
-import { globals } from './globals.js';
-import { config, resolve, createRegex, getDelimiters, camelCase } from '../utils/helpers.js';
+import { appOf, defaultApp } from './globals.js';
+import { resolve, createRegex, getDelimiters, camelCase } from '../utils/helpers.js';
 import { safeEval } from '../utils/safe-eval.js';
 import { findErrorBoundary, renderErrorBlock, handleError, guardResult } from '../features/error.js';
 import { directives } from '../directives/index.js';
@@ -10,6 +10,10 @@ import { globalBatcher } from './batcher.js';
 
 export const bind = (container, blockRoot, loopCtx = null) => {
   const state = blockRoot._studs;
+  // Handlers outlive this call, so the app is resolved once here rather than
+  // per event: the block's app cannot change while the block is mounted.
+  const app = appOf(blockRoot);
+  const globals = app.globals;
 
   const bindNode = (child) => {
     const childData = getPrivateData(child);
@@ -71,14 +75,14 @@ export const bind = (container, blockRoot, loopCtx = null) => {
             try {
               let evalScope = state;
               if (loopCtx) {
-                const list = safeEval(loopCtx.listName, { state, global: globals, self: blockRoot });
+                const list = safeEval(loopCtx.listName, { state, global: globals, self: blockRoot, app });
                 const item = list[loopCtx.index];
                 evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
               }
               // guardResult: an `async` handler returns a rejected promise
               // rather than throwing, so the catch below never sees it.
               guardResult(
-                safeEval(attr.value, { state: evalScope, global: globals, self: child, event, $event: event }, true),
+                safeEval(attr.value, { state: evalScope, global: globals, self: child, event, $event: event, app }, true),
                 blockRoot,
                 'event-handler'
               );
@@ -110,7 +114,7 @@ export const bind = (container, blockRoot, loopCtx = null) => {
               last = keys.pop();
               target = keys.reduce((o, k) => o[k], globals);
             } else if (loopCtx && prop.startsWith(`${loopCtx.name}.`)) {
-              const list = safeEval(loopCtx.listName, { state, global: globals, self: blockRoot });
+              const list = safeEval(loopCtx.listName, { state, global: globals, self: blockRoot, app });
               const item = list[loopCtx.index];
               if (!item) return;
               const subPath = prop.split('.').slice(1);
@@ -129,7 +133,7 @@ export const bind = (container, blockRoot, loopCtx = null) => {
             }
             if (target && target[last] !== newVal) target[last] = newVal;
           } catch (err) {
-            config.onError(err, 'sync-update', child);
+            app.config.onError(err, 'sync-update', child);
           }
         };
         child._bSyncHandler = updateState;
@@ -160,7 +164,7 @@ export const bind = (container, blockRoot, loopCtx = null) => {
   while (child = walker.nextNode()) bindNode(child);
 };
 
-export const scanForBindings = (container, skipRootAttrs = false) => {
+export const scanForBindings = (container, skipRootAttrs = false, app = defaultApp) => {
   // Audit fix #14: recursive walk that skips terminal-directive subtrees
   // (notably b-for) outright, instead of TreeWalker-descending then
   // climbing parents per node to detect the boundary. Eliminates the
@@ -173,7 +177,7 @@ export const scanForBindings = (container, skipRootAttrs = false) => {
   // effect that runs it.
   const bindings = [];
   const pendingOperations = [];
-  const [delimStart] = getDelimiters();
+  const [delimStart] = getDelimiters(app.config);
   const directiveEntries = Object.entries(directives);
 
   const visit = (node) => {
@@ -235,7 +239,7 @@ export const scanForBindings = (container, skipRootAttrs = false) => {
   // cloned child `<li b-for="x in items" class="row [[x.active]]">`). The
   // prior `updateNodeBindings` call processed the root separately; folding
   // it into scanForBindings keeps a single unified pass. Skip directive
-  // scanning on the root — directives there are a separate concern (and
+  // scanning on the root: directives there are a separate concern (and
   // for the main render path the container is a ShadowRoot with no attrs,
   // so this is a no-op).
   //
@@ -269,13 +273,15 @@ export const scanForBindings = (container, skipRootAttrs = false) => {
  * state, global or `$registry` read it performs becomes a dependency of that
  * one binding.
  */
-const executeBinding = (b, state, contextEl) => {
+const executeBinding = (b, state, contextEl, app) => {
+  const globals = app.globals;
   const directive = directives[b.type];
   if (directive) {
     directive.execute({
       binding: b,
       state,
       global: globals,
+      app,
       helpers: {
         bind,
         scanForBindings,
@@ -292,7 +298,7 @@ const executeBinding = (b, state, contextEl) => {
   // snapped yet has nowhere to receive the value, so it is stashed and snap()
   // merges it in.
   if (b.type === 'prop') {
-    const value = safeEval(b.expr, { state, global: globals, self: b.node }, false);
+    const value = safeEval(b.expr, { state, global: globals, self: b.node, app }, false);
     if (b.node._studs) {
       b.node._studs[b.prop] = value;
       return;
@@ -302,13 +308,13 @@ const executeBinding = (b, state, contextEl) => {
     return;
   }
   if (b.type === 'text') {
-    const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
+    const out = b.template.replace(createRegex(app.config), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node, app }, false) ?? '');
     if (b.node.textContent !== out) b.node.textContent = out;
     return;
   }
   if (b.type === 'attr') {
-    const out = b.template.replace(createRegex(), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node }, false) ?? '');
-    if (config.strict && URL_ATTRS.has(b.attrName.toLowerCase()) && isDangerousUrl(out)) {
+    const out = b.template.replace(createRegex(app.config), (_, k) => safeEval(k.trim(), { state, global: globals, self: b.node, app }, false) ?? '');
+    if (app.config.strict && URL_ATTRS.has(b.attrName.toLowerCase()) && isDangerousUrl(out)) {
       if (b.node.hasAttribute(b.attrName)) b.node.removeAttribute(b.attrName);
       return;
     }
@@ -342,7 +348,7 @@ const scheduleBinding = (b, contextEl) => {
  * row's persistent `_loopScope`, which is why a row can be re-run on its own
  * without having lost which item it was showing.
  */
-const runBinding = (b, state, contextEl) => {
+const runBinding = (b, state, contextEl, app) => {
   // Audit fix #9: bindings whose nodes are gone are tagged dead by whoever
   // removed them, either b-html replacing the surrounding subtree or b-for
   // evicting a row from its pool. Skip them: they may still be sitting in
@@ -352,7 +358,7 @@ const runBinding = (b, state, contextEl) => {
   if (b.dead) return;
   if (!b.effect) {
     b.effect = createEffect(
-      () => executeBinding(b, state, contextEl),
+      () => executeBinding(b, state, contextEl, app),
       () => scheduleBinding(b, contextEl)
     );
   }
@@ -383,15 +389,15 @@ const isPostBinding = (b) => {
  * the remaining bindings still run. Without it a throw propagates to the
  * caller (render() turns it into a boundary/onError report for the block).
  */
-export const runBindings = (bindings, state, contextEl, onError = null) => {
+export const runBindings = (bindings, state, contextEl, app, onError = null) => {
   let post = null;
   const run = (b) => {
     if (!onError) {
-      runBinding(b, state, contextEl);
+      runBinding(b, state, contextEl, app);
       return;
     }
     try {
-      runBinding(b, state, contextEl);
+      runBinding(b, state, contextEl, app);
     } catch (err) {
       onError(err, b);
     }
@@ -408,6 +414,8 @@ export const runBindings = (bindings, state, contextEl, onError = null) => {
 };
 
 export const render = (el) => {
+  const app = appOf(el);
+  const config = app.config;
   if (config.debug) console.log('[Lego Trace] render() called for:', el.tagName);
   const state = el._studs;
   if (!state) return;
@@ -419,7 +427,7 @@ export const render = (el) => {
   try {
     // Use shadowRoot if it's a block, otherwise render the element itself (light DOM)
     const target = el.shadowRoot || el;
-    if (!data.bindings) data.bindings = scanForBindings(target, target === el);
+    if (!data.bindings) data.bindings = scanForBindings(target, target === el, app);
 
     // Fine-grained re-render: a binding whose dependency changed put itself
     // in the dirty set, so run only those and let each effect re-collect its
@@ -428,9 +436,9 @@ export const render = (el) => {
     if (data.dirtyBindings && data.dirtyBindings.size > 0) {
       const dirty = data.dirtyBindings;
       data.dirtyBindings = null;
-      runBindings(dirty, state, el);
+      runBindings(dirty, state, el, app);
     } else {
-      runBindings(data.bindings, state, el);
+      runBindings(data.bindings, state, el, app);
     }
   } catch (err) {
     handleError(err, el, 'render');

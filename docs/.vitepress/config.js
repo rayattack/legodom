@@ -116,6 +116,7 @@ export default defineConfig({
           text: 'API Reference',
           items: [
             { text: 'Overview', link: '/api/' },
+            { text: 'Lego.createApp()', link: '/api/create-app' },
             { text: 'Lego.init()', link: '/api/init' },
             { text: 'Lego.block()', link: '/api/block' },
             { text: 'Lego.route()', link: '/api/route' },

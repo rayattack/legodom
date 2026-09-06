@@ -1,8 +1,8 @@
-import { registry, legoFileLogic, sharedStates, activeBlocks, getPrivateData, privateData, snapState } from './registry.js';
+import { registry, legoFileLogic, activeBlocks, getPrivateData, privateData, snapState, getDefinition } from './registry.js';
 import { bProps } from '../directives/b-props.js';
-import { globals } from './globals.js';
+import { appOf } from './globals.js';
 import { directives } from '../directives/index.js';
-import { config, mergeDescriptors, resolve, isNode } from '../utils/helpers.js';
+import { mergeDescriptors, resolve, isNode } from '../utils/helpers.js';
 import { findAncestor } from '../utils/dom.js';
 import { cleanupDbBindings } from '../features/persistence.js';
 import { parseJSObject } from '../utils/safe-eval.js';
@@ -12,7 +12,6 @@ import { bind, render } from './renderer.js';
 import { applyStyles, adoptLightStyle } from './stylesheets.js';
 import { findErrorBoundary, renderErrorBlock, handleError, guardResult } from '../features/error.js';
 import { createFormApi, syncFormValue } from '../features/form.js';
-import { _go } from '../features/router.js';
 
 // Audit fix #24: `el.state = X` performs a shallow merge (Object.assign),
 // not a replacement. Warn once per session so authors who expect
@@ -182,20 +181,26 @@ const markLoading = (el, result) => {
 };
 
 export const snap = (el) => {
-  if (config.debug) console.log('[Lego Trace] snap() called for:', el.tagName);
   if (!el || el.nodeType !== Node.ELEMENT_NODE) return;
   const data = getPrivateData(el);
   const name = el.tagName.toLowerCase();
-  const templateNode = registry[name];
+  const definition = getDefinition(name);
+  // The element's app, and the moment it is decided. Everything downstream
+  // (delimiters, strict mode, globals, routes, onError) reads it back off the
+  // private data through appOf(), so it has to be recorded before the first
+  // applyStyles / bind / render touches this element.
+  const app = definition ? definition.app : appOf(el);
+  if (app.config.debug) console.log('[Lego Trace] snap() called for:', el.tagName);
 
-  if (templateNode && !data.snapped) {
+  if (definition && !data.snapped) {
     data.snapped = true;
-    const tpl = templateNode.content.cloneNode(true);
+    data.app = app;
+    const tpl = definition.template.content.cloneNode(true);
 
     // `b-shadow="false"` renders into the element itself. Global stylesheets,
     // ARIA id references and native form submission all reach into a light
     // DOM block; nothing reaches into a shadow one.
-    const useShadow = templateNode.getAttribute('b-shadow') !== 'false';
+    const useShadow = definition.shadow;
     let shadow = el;
     let slotContent = null;
     if (useShadow) {
@@ -220,11 +225,12 @@ export const snap = (el) => {
     const parentScope = parentBlock && parentBlock.state ? parentBlock.state : {};
 
     const scriptLogic = legoFileLogic.get(name) || {};
-    const templateLogic = parseJSObject(templateNode.getAttribute('b-logic') || templateNode.getAttribute('b-data') || '{}');
-    const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}', parentScope);
+    const templateLogic = parseJSObject(definition.logic || '{}', {}, app);
+    const instanceLogic = parseJSObject(el.getAttribute('b-logic') || el.getAttribute('b-data') || '{}', parentScope, app);
 
-    // Note: We need to access $go and $route. We assume they are attached to globals or we import them.
-    // Since globals is the shared object, we should reference accessors there.
+    // $route / $go / $mount are accessors onto the app's globals, so a block
+    // navigates through the routes of the app that defined it and reads the
+    // $route that app committed.
 
     const baseState = {
       $vars: {},
@@ -244,9 +250,9 @@ export const snap = (el) => {
         data.watchers.push(stop);
         return stop;
       },
-      get $route() { return globals.$route },
-      get $go() { return globals.$go },
-      get $mount() { return globals.$mount }
+      get $route() { return app.globals.$route },
+      get $go() { return app.globals.$go },
+      get $mount() { return app.globals.$mount }
     };
 
     mergeDescriptors(scriptLogic, baseState);
@@ -341,12 +347,12 @@ export const snap = (el) => {
 
     // Deeply initialize all nested components (after mounted)
     const nestedComponents = shadow.querySelectorAll('*');
-    if (config.debug) console.log('[Lego Debug] Nested scan in', el.tagName, '- Found elements:', nestedComponents.length);
+    if (app.config.debug) console.log('[Lego Debug] Nested scan in', el.tagName, '- Found elements:', nestedComponents.length);
     nestedComponents.forEach(child => {
       const childTag = child.tagName.toLowerCase();
       const isRegistered = !!registry[childTag];
       if (isRegistered) {
-        if (config.debug) console.log('[Lego Debug] Checking', childTag, '- Registered:', isRegistered);
+        if (app.config.debug) console.log('[Lego Debug] Checking', childTag, '- Registered:', isRegistered);
       }
       if (isRegistered) snap(child);
     });

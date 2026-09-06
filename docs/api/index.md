@@ -6,6 +6,7 @@ Exhaustive surface area of the `Lego` runtime. Every entry on this page maps dir
 
 | Symbol | Purpose |
 |---|---|
+| [`Lego.createApp(options?)`](/api/create-app) | Create an independent app instance with its own config, globals, routes and plugins. |
 | [`Lego.init(root?, options?)`](/api/init) | Boot the engine. Discover templates, hydrate inline blocks, install router & loader, run startup-time route match. |
 | [`Lego.block(tag, html, logic?, styles?, cascade?, error?, props?)`](/api/block) | Define a block from a string template. |
 | [`Lego.defineLegoFile(content, filename?)`](/api/block#lego-definelegofile) | Define a block from `.lego` SFC content (used by the Vite plugin and runtime loaders). |
@@ -15,6 +16,7 @@ Exhaustive surface area of the `Lego` runtime. Every entry on this page maps dir
 | [`Lego.db(key)`](/api/advanced#lego-db) | Persistence descriptor builder (also exposed as `$db` inside blocks). |
 | [`Lego.getLegos()` / `Lego.getActiveBlocksCount()`](/api/advanced#introspection) | Introspection helpers. |
 | [`Lego.debug.stylesheets(el)`](/api/advanced#debug) | Inspect resolved stylesheets for a block. |
+| [`Lego.use(plugin, options?)`](/api/create-app#plugins) | Install a plugin against this app, once per app. |
 
 ## Reactive globals
 

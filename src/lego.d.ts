@@ -205,9 +205,43 @@ export interface LegoInitOptions {
   studio?: boolean;
   /** Pre-register lazy-loaded blocks from a manifest (URL, inline group(s), or an auth-wrapped URL). */
   manifest?: LegoManifest;
+  /**
+   * Selector a matched route renders into when the navigation names no
+   * `b-target`. Defaults to `lego-router`. Two apps on one page each set
+   * their own, which is how they route side by side.
+   */
+  routerTarget?: string;
 }
 
-export interface Lego {
+/** Options for `Lego.createApp()`. */
+export interface LegoCreateAppOptions {
+  /** Merged over a fresh copy of the default config. */
+  config?: Partial<LegoConfig>;
+  /**
+   * Seeds the app's reactive globals, which always also carry `$route`,
+   * `$go`, `$mount` and `$db`.
+   */
+  globals?: Record<string, any>;
+}
+
+/**
+ * A plugin: an object with an `install` method, or a plain function. Either
+ * receives the app it is being installed on.
+ */
+export type LegoPlugin<O = any> =
+  | { install(app: LegoApp, options?: O): void }
+  | ((app: LegoApp, options?: O) => void);
+
+/**
+ * A LegoDOM application instance: its own config, globals, routes,
+ * `$registry` states and plugins. The default export `Lego` is one of these,
+ * created with the default config.
+ *
+ * Custom element names are global to the document, so a tag belongs to
+ * whichever app defined it first; a second app defining the same tag is
+ * warned and ignored.
+ */
+export interface LegoApp {
   config: LegoConfig;
   globals: LegoGlobals;
 
@@ -281,14 +315,43 @@ export interface Lego {
   effect(fn: () => void): () => void;
 
   /**
-   * Watch a value on `Lego.globals` and call back when it changes. `source`
-   * is a dotted key path, or a function receiving `Lego.globals`.
+   * Watch a value on this app's globals and call back when it changes.
+   * `source` is a dotted key path, or a function receiving the globals.
    * @returns a function that stops the watcher
    */
   watch(source: LegoWatchSource<LegoGlobals>, cb: LegoWatchCallback, options?: LegoWatchOptions): () => void;
 
   db(key: string): any;
+
+  /**
+   * Install a plugin against this app: `plugin.install(app, options)`, or
+   * `plugin(app, options)` for a plain function. Once per app per plugin, so
+   * a repeat call is a no-op and the same plugin on two apps is installed
+   * twice, each time receiving that app.
+   * @returns the app, for chaining
+   */
+  use<O = any>(plugin: LegoPlugin<O>, options?: O): LegoApp;
+
+  /** Create another independent app instance. */
+  createApp(options?: LegoCreateAppOptions): LegoApp;
+
+  /** Manually mount a block, optionally into a target. */
+  mount(tagName: string | null, target?: string | HTMLElement | HTMLElement[], props?: Record<string, any>): any;
 }
+
+/**
+ * The default app. Kept as a distinct name so existing `Lego` typings and
+ * imports are unchanged.
+ */
+export interface Lego extends LegoApp {}
+
+/**
+ * Create an independent LegoDOM application instance.
+ *
+ * @param options.config merged over a fresh copy of the default config
+ * @param options.globals seeds the app's reactive globals
+ */
+export function createApp(options?: LegoCreateAppOptions): LegoApp;
 
 declare const Lego: Lego;
 export { Lego };

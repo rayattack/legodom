@@ -1,5 +1,5 @@
 import { safeEval } from '../utils/safe-eval.js';
-import { scanForAttribute, config } from '../utils/helpers.js';
+import { scanForAttribute } from '../utils/helpers.js';
 import { defaultSanitize } from '../utils/dom.js';
 import { privateData } from '../core/registry.js';
 
@@ -20,11 +20,11 @@ export const bHtml = {
   name: 'b-html',
   scan: node => scanForAttribute('b-html', node),
 
-  execute: ({ binding, state, global, helpers }) => {
+  execute: ({ binding, state, global, app, helpers }) => {
     const { node, expr, modifiers } = binding;
-    let value = safeEval(expr, { state, global, self: node }) ?? '';
+    let value = safeEval(expr, { state, global, self: node, app }) ?? '';
     if (modifiers && modifiers.includes('safe')) {
-      const sanitizer = typeof config.sanitize === 'function' ? config.sanitize : defaultSanitize;
+      const sanitizer = typeof app.config.sanitize === 'function' ? app.config.sanitize : defaultSanitize;
       value = sanitizer(value);
     }
     if (node._bHtmlPrev !== value) {

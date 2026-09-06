@@ -1,7 +1,15 @@
 /**
- * Configuration object. It is used to configure the bheaviour of LegoDOM.
+ * Build a configuration object. Every app owns one: two apps on a page may
+ * disagree about the delimiter syntax, strict mode or the error handler, so
+ * the defaults have to be minted per app rather than shared.
+ *
+ * `metrics` in particular must be a fresh object each time, or a monitoring
+ * plugin installed on one app would report the other app's renders too.
+ *
+ * @param {object} [overrides] - values merged over the defaults
+ * @returns {object} a new config object
  */
-export const config = {
+export const createConfig = (overrides = {}) => Object.assign({
   onError: (err, type, el) => {
     console.error(`[Lego Error] [${type}]`, err, el);
   },
@@ -13,15 +21,27 @@ export const config = {
   // built-in sanitizer (script/iframe/event-handler/javascript: stripping).
   // Set this to DOMPurify.sanitize for production-grade cleaning.
   sanitize: null,
-  // Auto-discovery (config.loader): if set, only tag names matching this
-  // pattern (or any of these patterns when given an array) will be fetched.
-  // Default null = no allowlist; a console warning is emitted on first use.
+  // Auto-discovery: if set, only tag names matching this pattern (or any of
+  // these patterns when given an array) will be fetched. Default null = no
+  // allowlist; a console warning is emitted on first use.
   loaderAllowlist: null,
+  // Fetches the source of an unknown hyphenated tag. Set by init().
+  loader: null,
   // Opt-in stricter runtime safety: re-throws undefined-identifier
   // ReferenceErrors instead of rendering '', and drops dangerous-scheme
   // (javascript:/data:text/html/vbscript:) values on URL-sink attributes.
   strict: false
-};
+}, overrides);
+
+/**
+ * The default app's configuration object.
+ *
+ * It is exported (and re-exported as `Lego.config`) so that `Lego.config.x = y`
+ * keeps working, and so the handful of call sites with no app in hand
+ * (persistence, $mount) have somewhere to read `debug` and `onError` from.
+ * Anything that can reach an app should read `app.config` instead.
+ */
+export const config = createConfig();
 
 /**
  * Merge descriptors from source to target
@@ -37,11 +57,13 @@ export const mergeDescriptors = (source, target) => {
 };
 
 /**
- * Get delimiters based on config
+ * Get delimiters for a config. Defaults to the default app's config so pure
+ * callers and tests keep working unchanged.
+ * @param {object} [cfg] - the config whose `syntax` decides the pair
  * @returns {string[]} - The delimiters
  */
-export const getDelimiters = () => {
-  return config.syntax === 'brackets' ? ['[[', ']]'] : ['{{', '}}'];
+export const getDelimiters = (cfg = config) => {
+  return cfg.syntax === 'brackets' ? ['[[', ']]'] : ['{{', '}}'];
 };
 
 /**
@@ -50,11 +72,14 @@ export const getDelimiters = () => {
 const REGEX_CACHE = new Map();
 
 /**
- * Create a regex for matching delimiters
+ * Create a regex for matching delimiters. The cache is keyed on the delimiter
+ * pair itself, so two apps with different syntaxes each get their own entry
+ * and neither pays for the other.
+ * @param {object} [cfg] - the config whose `syntax` decides the pair
  * @returns {RegExp} - The regex
  */
-export const createRegex = () => {
-  const [start, end] = getDelimiters();
+export const createRegex = (cfg = config) => {
+  const [start, end] = getDelimiters(cfg);
   const key = start + end;
   if (REGEX_CACHE.has(key)) {
     const cached = REGEX_CACHE.get(key);

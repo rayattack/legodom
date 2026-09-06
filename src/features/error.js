@@ -1,5 +1,5 @@
-import { registry } from '../core/registry.js';
-import { config } from '../utils/helpers.js';
+import { getDefinition } from '../core/registry.js';
+import { appOf } from '../core/globals.js';
 
 /**
  * Find the nearest error boundary for a crashed element
@@ -17,14 +17,10 @@ export const findErrorBoundary = (el) => {
 
     // 2. Check template-level attribute (default)
     const tagName = current.tagName ? current.tagName.toLowerCase() : '';
-    const templateNode = registry[tagName];
-    if (templateNode) {
-      const templateError = templateNode.getAttribute('b-error');
-      if (templateError) {
-        if (templateError.toLowerCase() !== el.tagName.toLowerCase()) {
-          return { errorTag: templateError, targetElement: current };
-        }
-      }
+    const definition = getDefinition(tagName);
+    const templateError = definition && definition.error;
+    if (templateError && templateError.toLowerCase() !== el.tagName.toLowerCase()) {
+      return { errorTag: templateError, targetElement: current };
     }
 
     // 3. Bubble up to parent
@@ -105,7 +101,7 @@ const callCaptured = (hook, state, err, type, source, el) => {
   try {
     return hook.call(state, err, { type, source }) === false;
   } catch (inner) {
-    config.onError(inner, 'errorCaptured', el);
+    appOf(el).config.onError(inner, 'errorCaptured', el);
     return false;
   }
 };
@@ -135,6 +131,9 @@ const runErrorCaptured = (err, contextEl, contextType) => {
 
 export const handleError = (err, contextEl, contextType) => {
   if (runErrorCaptured(err, contextEl, contextType)) return;
+  // The failing element's own app hears about it: two apps on a page each
+  // keep their own onError.
+  const config = appOf(contextEl).config;
   const boundary = findErrorBoundary(contextEl);
   if (!boundary) {
     config.onError(err, contextType, contextEl);

@@ -62,7 +62,7 @@ export const bFor = {
     }
   },
 
-  execute({ binding, state, global, helpers }) {
+  execute({ binding, state, global, app, helpers }) {
     const { bind, scanForBindings, runBinding, runBindings } = helpers;
     if (!bind || !runBinding || !runBindings) {
       console.error('[Lego] b-for directive missing required helpers: bind, runBinding, runBindings');
@@ -74,7 +74,7 @@ export const bFor = {
     // We will expect 'contextEl' in the arguments.
     const { contextEl } = helpers;
 
-    const list = safeEval(listName, { state, global, self: contextEl }) || [];
+    const list = safeEval(listName, { state, global, self: contextEl, app }) || [];
     if (!forPools.has(anchor)) forPools.set(anchor, new Map());
     const pool = forPools.get(anchor);
     const currentKeys = new Set();
@@ -120,7 +120,7 @@ export const bFor = {
         // bind. We scan once per row; each binding then owns an effect bound
         // to this row's scope.
         if (scanForBindings) {
-          child._loopBindings = scanForBindings(child);
+          child._loopBindings = scanForBindings(child, false, app);
         }
         child._loopSyncInputs = [child, ...child.querySelectorAll('*')].filter(el => findSyncAttr(el));
       } else {
@@ -168,7 +168,7 @@ export const bFor = {
       // previous per-binding isolation: one bad row binding does not stop
       // the rest of the row.
       if (moved && child._loopBindings) {
-        runBindings(child._loopBindings, localScope, contextEl, reportInnerError);
+        runBindings(child._loopBindings, localScope, contextEl, app, reportInnerError);
       }
 
       // Kept outside the row effects on purpose: these reads would otherwise

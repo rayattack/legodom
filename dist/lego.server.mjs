@@ -1,5 +1,5 @@
 // src/utils/helpers.js
-var config = {
+var createConfig = (overrides = {}) => Object.assign({
   onError: (err, type, el) => {
     console.error(`[Lego Error] [${type}]`, err, el);
   },
@@ -13,15 +13,18 @@ var config = {
   // built-in sanitizer (script/iframe/event-handler/javascript: stripping).
   // Set this to DOMPurify.sanitize for production-grade cleaning.
   sanitize: null,
-  // Auto-discovery (config.loader): if set, only tag names matching this
-  // pattern (or any of these patterns when given an array) will be fetched.
-  // Default null = no allowlist; a console warning is emitted on first use.
+  // Auto-discovery: if set, only tag names matching this pattern (or any of
+  // these patterns when given an array) will be fetched. Default null = no
+  // allowlist; a console warning is emitted on first use.
   loaderAllowlist: null,
+  // Fetches the source of an unknown hyphenated tag. Set by init().
+  loader: null,
   // Opt-in stricter runtime safety: re-throws undefined-identifier
   // ReferenceErrors instead of rendering '', and drops dangerous-scheme
   // (javascript:/data:text/html/vbscript:) values on URL-sink attributes.
   strict: false
-};
+}, overrides);
+var config = createConfig();
 var mergeDescriptors = (source, target) => {
   if (!source || !target) return;
   Object.getOwnPropertyNames(source).forEach((key) => {
