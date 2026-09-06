@@ -78,9 +78,9 @@ await Lego.nextTick();
 expect(el.shadowRoot.querySelector('span').textContent).toBe('5');
 ```
 
-The `updated()` hook is debounced separately (about 50ms after the first
-mutation in a burst), so a test asserting on `updated()` still needs a short
-timer rather than `nextTick()`.
+The `updated()` hook runs synchronously at the end of the same flush, once per
+block, so by the time `await Lego.nextTick()` resolves any `updated()` side
+effects have already happened.
 
 ### Logic Isolation
 

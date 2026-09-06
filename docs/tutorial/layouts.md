@@ -114,7 +114,7 @@ This is a native Web Components feature, not a LegoDOM addition. Slots are part 
 
 ## Sharing styles across layout boundaries
 
-Every block has its own scoped styles via Shadow DOM. Usually that's what you want, but layouts are an exception: design tokens, resets, and utility frameworks should be available in every block they wrap.
+By default every block has its own scoped styles via Shadow DOM (a block can opt out with `shadow: false`). Usually that's what you want, but layouts are an exception: design tokens, resets, and utility frameworks should be available in every block they wrap.
 
 The combination is `b-stylesheets` plus `b-cascade`:
 

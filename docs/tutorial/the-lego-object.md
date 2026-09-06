@@ -135,6 +135,20 @@ This catches errors in:
 - Event handlers (`@click`, etc.)
 - Block definitions
 
+## Timing and Reactivity Helpers
+
+- **`Lego.nextTick()`** resolves after the next render flush has committed its DOM writes. Use it in tests and in code that needs to measure the DOM after a state change.
+- **`Lego.effect(fn)`** runs `fn` now and again whenever any reactive value it read changes. Returns a stop function. Useful against `Lego.globals` outside any block.
+- **`Lego.watch(source, cb, options?)`** calls `cb(newValue, oldValue)` when a global changes. `source` is a dotted path into `Lego.globals` or a function receiving it. Inside a block, use `this.$watch` instead.
+
+## Multiple Apps: `Lego.createApp()`
+
+`Lego` itself is an app. `Lego.createApp({ config, globals })` makes another one with its own config (delimiters, `strict`, `onError`, `sanitize`, `loader`), its own globals, its own routes, and its own plugins via `app.use(plugin)`. Two apps can share a page as long as they define different tag names, because custom element names are global to the document. See [Lego.createApp()](/api/create-app).
+
+## Sharing Definitions with the Server
+
+`Lego.block()` no longer touches the DOM at registration, so a module of block definitions can be imported in Node. `Lego.getDefinitions()` returns them in the shape the server renderer accepts, so one registration serves both `renderToString` on the server and hydration in the browser. See [Server-Side Rendering](/tutorial/ssr).
+
 ## Developer Tools
 
 LegoDOM exposes a few methods useful for debugging or building tools (like the Lego Studio):

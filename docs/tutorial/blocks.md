@@ -194,7 +194,9 @@ See [Props](/tutorial/props) for the full syntax, the resolution order, and how 
 
 ### Parent → Child (Scoped Props)
 
-Pass data via `b-logic` naturally. The evaluation context includes the **parent block's state**, effectively making `b-logic` behave like "scoped props".
+The live way is a prop binding: declare the prop with `b-props` and bind it with a colon, `:user="currentUser"`. The child re-renders whenever the parent expression changes. See [Props](/tutorial/props).
+
+`b-logic` still works as a one-time handoff. Its evaluation context includes the **parent block's state**, so it behaves like "scoped props" read once at mount.
 
 ```html
 <!-- `user` comes from the parent's state! -->
@@ -293,7 +295,7 @@ Standard Web Components slots work:
 
 ## Shadow DOM
 
-All blocks use Shadow DOM for style encapsulation.
+Blocks use Shadow DOM for style encapsulation by default. A block can opt out with `shadow: false` (or `<template b-shadow="false">`) to render into the light DOM, which is what you want for page-level CSS frameworks, ARIA id references across the block boundary, and native form submission. See [Lego.block()](/api/block#shadow) for the trade-offs.
 
 ### Benefits
 

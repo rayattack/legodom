@@ -231,13 +231,13 @@ Merge order (last wins): script logic → template `b-logic` → instance `b-log
 
 ## b-props
 
-Declared prop contract on the outer `<template>`. **Pure metadata**, does not change how data flows.
+Declared prop contract on the outer `<template>`. Declared props are reactive state keys: a parent binds them with `:prop-name="expr"` and the block re-renders when the expression changes; plain attributes on declared props are coerced by type. See [Props](/tutorial/props).
 
 ```html
 <template b-id="user-card" b-props="{ user, title }">…</template>
 ```
 
-Syntax: comma-separated identifiers, brace-optional. Anything else (defaults, renames, values) is rejected at parse time.
+Syntax: comma-separated entries of `name`, `name = default`, `name: Type`, or `name: Type = default`, brace-optional. `Type` is one of `String`, `Number`, `Boolean`, `Array`, `Object`, `Function`. Renames are not supported.
 
 What it gets you:
 
