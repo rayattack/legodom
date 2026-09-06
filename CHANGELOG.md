@@ -43,6 +43,11 @@
 - `$db` never evicts other keys on a storage quota error; it reports through `config.onError(err, 'quota', key)` and abandons the write.
 - `fast-glob` is no longer a runtime dependency.
 
+**Hydration and Node-safe registration**
+- `Lego.block()` and `defineLegoFile()` no longer touch the DOM at registration; the `<template>` is built on first use, so block definitions can be imported in Node and shared with the server renderer through `app.getDefinitions()` and `createRenderer({ definitions })`.
+- A host carrying `b-hydrate` is adopted in place: the existing shadow root (or a `<template shadowrootmode>` child, converted by the runtime on browsers without declarative Shadow DOM) becomes the render root, `b-if` comments and `b-for` rows are paired with the block template by position, and a correctly rendered page produces zero DOM writes on first render. Stale server state is corrected on that render.
+- A structural mismatch between server markup and the template falls back to a normal mount for that block with one warning. Known gaps: keyless object lists and light-DOM blocks with caller slot content take the fallback; `b-html`, `b-text` and `b-mount` rebuild their content once.
+
 **Bundle**: about 18 KB gzipped, up from 14 KB. The expression compiler accounts for nearly all of the increase.
 
 ## [2.1.4] - 2026-01-26
