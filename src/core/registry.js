@@ -5,7 +5,10 @@
  * `<template>`. An entry is:
  *
  *   {
- *     template,    // HTMLTemplateElement holding the block markup
+ *     name,        // the tag name
+ *     template,    // HTMLTemplateElement holding the block markup (lazy)
+ *     source,      // that markup as a string, null for a DOM-built entry
+ *     css,         // the block's own <style> text, '' if none
  *     app,         // the app that defined the block (Lego.createApp())
  *     logic,       // template-level b-logic / b-data source, '' if none
  *     props,       // b-props source, '' if none
@@ -16,6 +19,12 @@
  *     shadow,      // false when the block renders into the light DOM
  *     form         // true when the block is form associated
  *   }
+ *
+ * `template` is a getter. A definition made in JavaScript or parsed from a
+ * `.lego` file keeps its markup as `source` and only builds the element the
+ * first time something asks for it, which is what lets `Lego.block()` and
+ * `Lego.defineLegoFile()` run in a Node process with no `document`. The
+ * element is cached on the entry from then on.
  *
  * The entry is how an element finds its app: `snap()` reads
  * `getDefinition(tag).app` and stores it on the element's private data, and
@@ -46,32 +55,90 @@ export const snapState = { locked: false };
 export const getDefinition = (tagName) => registry[tagName] || null;
 
 /**
+ * Build the `<template>` element an entry describes. Needs a document, which
+ * is why it runs on first use rather than at registration.
+ *
+ * The block's own `<style>` leads the markup, exactly where an author writes
+ * it in a `.lego` file, so `snap()` finds it with a single `querySelector`.
+ *
+ * @param {object} entry - a definition entry carrying `source`
+ * @returns {HTMLTemplateElement}
+ */
+const materialize = (entry) => {
+  const node = document.createElement('template');
+  if (entry.name) node.setAttribute('b-id', entry.name);
+  node.setAttribute('b-stylesheets', entry.styles);
+  if (entry.logic) node.setAttribute('b-logic', entry.logic);
+  if (entry.cascade) node.setAttribute('b-cascade', entry.cascade);
+  if (entry.error) node.setAttribute('b-error', entry.error);
+  if (entry.props) node.setAttribute('b-props', entry.props);
+  if (!entry.shadow) node.setAttribute('b-shadow', 'false');
+  if (entry.form) node.setAttribute('b-form', '');
+  node.innerHTML = (entry.css ? `<style>${entry.css}</style>` : '') + entry.source;
+  return node;
+};
+
+/**
+ * Build a definition entry from plain values.
+ *
+ * Nothing here touches the DOM: `spec.source` is the block's markup as a
+ * string and the `<template>` is built on demand. Pass `spec.node` instead
+ * when the caller already holds the element (an inline `<template b-id>`),
+ * and the entry uses it as it stands.
+ *
+ * @param {object} spec - name, source or node, css and the attribute sources
+ * @param {object} app - the app that owns the definition
+ * @returns {object} the entry, not yet registered
+ */
+export const definitionEntry = (spec, app) => {
+  const cascade = spec.cascade || '';
+  let node = spec.node || null;
+  const entry = {
+    name: spec.name || '',
+    app,
+    source: spec.source === undefined ? null : spec.source,
+    css: spec.css || '',
+    logic: spec.logic || '',
+    props: spec.props || '',
+    styles: spec.styles || '',
+    cascade,
+    cascadeList: cascade.split(/\s+/).filter(Boolean),
+    error: spec.error || '',
+    shadow: spec.shadow !== false,
+    form: !!spec.form
+  };
+  Object.defineProperty(entry, 'template', {
+    get() {
+      if (!node) node = materialize(entry);
+      return node;
+    },
+    enumerable: true,
+    configurable: true
+  });
+  return entry;
+};
+
+/**
  * Build a definition entry from the `<template>` that describes the block.
  *
- * Every definition path (Lego.block, a .lego file, an inline
- * `<template b-id>`) already produces such a template with the block's
- * attributes on it, so reading the entry off the template keeps the three
- * paths from drifting apart.
+ * This is the DOM path: an inline `<template b-id>` the page author wrote,
+ * whose attributes are the entry's attribute sources.
  *
  * @param {HTMLTemplateElement} template
  * @param {object} app - the app that owns the definition
  * @returns {object} the entry, not yet registered
  */
-export const definitionFrom = (template, app) => {
-  const cascade = template.getAttribute('b-cascade') || '';
-  return {
-    template,
-    app,
-    logic: template.getAttribute('b-logic') || template.getAttribute('b-data') || '',
-    props: template.getAttribute('b-props') || '',
-    styles: template.getAttribute('b-stylesheets') || '',
-    cascade,
-    cascadeList: cascade.split(/\s+/).filter(Boolean),
-    error: template.getAttribute('b-error') || '',
-    shadow: template.getAttribute('b-shadow') !== 'false',
-    form: template.hasAttribute('b-form')
-  };
-};
+export const definitionFrom = (template, app) => definitionEntry({
+  name: template.getAttribute('b-id') || '',
+  node: template,
+  logic: template.getAttribute('b-logic') || template.getAttribute('b-data') || '',
+  props: template.getAttribute('b-props') || '',
+  styles: template.getAttribute('b-stylesheets') || '',
+  cascade: template.getAttribute('b-cascade') || '',
+  error: template.getAttribute('b-error') || '',
+  shadow: template.getAttribute('b-shadow') !== 'false',
+  form: template.hasAttribute('b-form')
+}, app);
 
 /**
  * May `app` define `tagName`?

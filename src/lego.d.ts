@@ -246,13 +246,27 @@ export interface LegoApp {
   globals: LegoGlobals;
 
   /**
-   * Initialize the LegoDOM engine
+   * Initialize the LegoDOM engine.
+   *
+   * A host carrying `b-hydrate` was rendered by `lego-dom/server` and is
+   * adopted rather than replaced: its DOM (a declarative
+   * `<template shadowrootmode>` for a shadow block, the host's own children
+   * for a light DOM one) becomes the block's render root, and the bindings
+   * are built against the nodes already on screen. A page the server
+   * rendered correctly therefore costs no DOM writes. Markup that does not
+   * match the block's template warns once and re-renders from the template,
+   * for that block only.
    */
   init(root?: HTMLElement, options?: LegoInitOptions): Promise<void>;
 
   /**
    * Define a block from an options object. Preferred once a block needs
    * anything past `props`, since `shadow` and `form` have no positional slot.
+   *
+   * Registration needs no DOM: the block's `<template>` is built on first
+   * mount and the custom element is only defined where `customElements`
+   * exists, so a module of definitions can be imported by a Node process and
+   * handed to `lego-dom/server` through `getDefinitions()`.
    */
   block(tagName: string, options: LegoBlockOptions): void;
 
@@ -270,7 +284,8 @@ export interface LegoApp {
   ): void;
 
   /**
-   * Define a block from a .lego file content string
+   * Define a block from a .lego file content string. Like `block()`, this
+   * runs without a DOM.
    */
   defineLegoFile(content: string, filename: string): void;
 
@@ -293,6 +308,36 @@ export interface LegoApp {
    * Get list of registered block names
    */
   getLegos(): string[];
+
+  /**
+   * Every block this app defined, keyed by tag name, in the shape
+   * `lego-dom/server`'s `createRenderer().define(tagName, definition)`
+   * accepts. `styles` here is the block's own CSS text, not the
+   * `b-stylesheets` list `block()` takes under the same name.
+   *
+   * This is the server side of the round trip: register the blocks once,
+   * render them on the server, and let the client hydrate what comes back.
+   *
+   *   import Lego from 'lego-dom';
+   *   import { createRenderer } from 'lego-dom/server';
+   *   import './blocks.js';                    // calls Lego.block(...)
+   *
+   *   const renderer = createRenderer({ definitions: Lego.getDefinitions() });
+   *   const html = renderer.renderToString('user-card', { props: { name } });
+   *
+   * The server marks every host it writes with `b-hydrate`. On the client
+   * `Lego.init()` adopts that markup rather than replacing it: the DOM stays
+   * put, the bindings are built against it, and a page the server rendered
+   * correctly costs no DOM writes at all. A block whose markup does not match
+   * its template warns once and re-renders itself from the template.
+   */
+  getDefinitions(): Record<string, {
+    template: string;
+    styles: string;
+    logic: object;
+    shadow: boolean;
+    props: string;
+  }>;
 
   /**
    * Get number of active blocks

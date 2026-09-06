@@ -118,6 +118,32 @@ export const adoptLightStyle = (tagName, styleEl) => {
   }
 };
 
+/**
+ * Adopt the `<style>` a server rendered light DOM block shipped inside its
+ * host.
+ *
+ * Those rules are already scoped: src/server/css.js applies the very same
+ * tag-name prefixes this module does, so re-running the scoping pass over
+ * them would double the prefix. The element is moved into `document.head` as
+ * it stands, or simply dropped when a copy is already there, which is what
+ * every instance after the first one finds.
+ *
+ * @param {string} tagName - the block being styled
+ * @param {HTMLStyleElement} styleEl - the <style> the server emitted
+ */
+export const adoptServerLightStyle = (tagName, styleEl) => {
+  const alreadyInHead = injectedLightStyles.has(tagName)
+    || !!document.head.querySelector(`style[data-lego-style="${tagName}"]`);
+  injectedLightStyles.add(tagName);
+  if (!styleEl) return;
+  if (alreadyInHead) {
+    styleEl.remove();
+    return;
+  }
+  styleEl.setAttribute('data-lego-style', tagName);
+  document.head.appendChild(styleEl);
+};
+
 export const applyStyles = (el) => {
   const name = el.tagName.toLowerCase();
   const definition = getDefinition(name);

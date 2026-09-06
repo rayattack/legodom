@@ -224,6 +224,9 @@ const createHelpers = (route) => ({
  *   defaulting to whatever `Lego.config.syntax` says
  * @param {(html: string, blockName: string) => string} [options.sanitize] -
  *   replacement for the built in `b-html.safe` sanitizer
+ * @param {object} [options.definitions] - blocks to register up front. Takes
+ *   what `Lego.getDefinitions()` returns, an app itself, a Map, or any plain
+ *   `{ tagName: definition }` object.
  */
 export function createRenderer(options = {}) {
   const definitions = new Map();
@@ -257,6 +260,23 @@ export function createRenderer(options = {}) {
       styleAttrs: shadow ? '' : ` ${STYLE_MARKER}="${escapeAttr(tag)}"`
     });
     return tag;
+  };
+
+  /**
+   * Register every block a definitions source names.
+   *
+   * The source is whatever `app.getDefinitions()` returns, or the app itself,
+   * or a Map, or any plain object keyed by tag name. This is how one module
+   * of blocks serves both halves of a server rendered page: register them
+   * once through the client API in a Node process, hand the app here, and
+   * the markup this renderer produces is the markup that client hydrates.
+   */
+  const defineAll = (source) => {
+    if (!source) return renderer;
+    if (typeof source.getDefinitions === 'function') return defineAll(source.getDefinitions());
+    const entries = source instanceof Map ? [...source.entries()] : Object.entries(source);
+    entries.forEach(([tagName, definition]) => renderer.define(tagName, definition));
+    return renderer;
   };
 
   const renderer = {
@@ -297,6 +317,17 @@ export function createRenderer(options = {}) {
         shadow: shadowFromLegoSource(source)
       });
       return renderer;
+    },
+
+    /**
+     * Register every block a definitions source holds. See the `definitions`
+     * option on createRenderer for the shapes accepted.
+     *
+     * @param {object} source - an app, `app.getDefinitions()`, a Map, or a
+     *   plain `{ tagName: definition }` object
+     */
+    defineFrom(source) {
+      return defineAll(source);
     },
 
     /** Whether a block is registered under this name. */
@@ -358,6 +389,8 @@ export function createRenderer(options = {}) {
       );
     }
   };
+
+  defineAll(options.definitions);
 
   return renderer;
 }

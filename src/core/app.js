@@ -1,4 +1,4 @@
-import { registry, activeBlocks, legoFileLogic, getPrivateData, canDefine, definitionFrom } from './registry.js';
+import { registry, activeBlocks, legoFileLogic, getPrivateData, canDefine, definitionFrom, definitionEntry } from './registry.js';
 import { bProps } from '../directives/b-props.js';
 import { snap, unsnap } from './lifecycle.js';
 import { createBlockElementClass } from './element.js';
@@ -307,20 +307,6 @@ const readBlockArgs = (args) => {
   };
 };
 
-/** Build the `<template>` that backs a definition made in JavaScript. */
-const buildTemplate = (tagName, def) => {
-  const t = document.createElement('template');
-  t.setAttribute('b-id', tagName);
-  t.setAttribute('b-stylesheets', def.styles);
-  if (def.cascade) t.setAttribute('b-cascade', def.cascade);
-  if (def.error) t.setAttribute('b-error', def.error);
-  if (def.props) t.setAttribute('b-props', def.props);
-  if (!def.shadow) t.setAttribute('b-shadow', 'false');
-  if (def.form) t.setAttribute('b-form', '');
-  t.innerHTML = def.template;
-  return t;
-};
-
 /**
  * Re-snap live instances after a block is redefined (HMR).
  */
@@ -396,12 +382,27 @@ export const createApp = (options = {}, internals = {}) => {
    * it form associated.
    *
    * A tag another app already defined is left alone: see canDefine().
+   *
+   * Registration needs no DOM. The `<template>` is built the first time a
+   * block mounts, and the custom element is only defined where there is a
+   * `customElements` to define it against, so a module of block definitions
+   * can be imported by a Node process and handed to the server renderer
+   * through `getDefinitions()`. `init()` still requires a document.
    */
   app.block = (tagName, ...args) => {
     if (!canDefine(tagName, app)) return;
     const def = readBlockArgs(args);
 
-    registry[tagName] = definitionFrom(buildTemplate(tagName, def), app);
+    registry[tagName] = definitionEntry({
+      name: tagName,
+      source: def.template,
+      styles: def.styles,
+      cascade: def.cascade,
+      error: def.error,
+      props: def.props,
+      shadow: def.shadow,
+      form: def.form
+    }, app);
     legoFileLogic.set(tagName, def.logic);
     bProps.register(tagName, def.props);
 
@@ -412,6 +413,8 @@ export const createApp = (options = {}, internals = {}) => {
     } catch (e) {
       config.onError(e, 'define', tagName);
     }
+
+    if (typeof customElements === 'undefined') return;
 
     if (customElements.get(tagName)) {
       // HMR or re-definition: manually upgrade existing instances.
@@ -579,6 +582,40 @@ export const createApp = (options = {}, internals = {}) => {
 
   /** The block names this app defined. Other apps' tags are not listed. */
   app.getLegos = () => Object.keys(registry).filter(tag => registry[tag].app === app);
+
+  /**
+   * Every block this app defined, in the shape the server renderer's
+   * `define(tagName, definition)` accepts:
+   *
+   *   { template, logic, styles, shadow, props }
+   *
+   * `styles` is the block's own CSS text, not the `b-stylesheets` list that
+   * `block()` takes under the same name: the server has no stylesheet
+   * registry, only the `<style>` a block ships with.
+   *
+   * The point is one module of definitions serving both sides. Register the
+   * blocks once through this API in a Node process, hand the result to
+   * `createRenderer({ definitions })`, render on the server and let the
+   * client hydrate what comes back.
+   *
+   * @returns {Record<string, object>} keyed by tag name
+   */
+  app.getDefinitions = () => {
+    const out = {};
+    app.getLegos().forEach(tag => {
+      const entry = registry[tag];
+      out[tag] = {
+        // A DOM-built entry (an inline `<template b-id>`) has no source
+        // string, so its markup is read back off the element.
+        template: entry.source === null ? entry.template.innerHTML : entry.source,
+        styles: entry.css,
+        logic: legoFileLogic.get(tag) || {},
+        shadow: entry.shadow,
+        props: entry.props
+      };
+    });
+    return out;
+  };
 
   app.debug = {
     stylesheets: (el) => {

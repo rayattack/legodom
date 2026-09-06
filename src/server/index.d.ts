@@ -18,7 +18,23 @@ export interface LegoServerRendererOptions {
    * `(html) => DOMPurify.sanitize(html)`.
    */
   sanitize?: (html: string, blockName: string) => string;
+  /**
+   * Blocks to register up front. Takes what `Lego.getDefinitions()` returns,
+   * or the app itself, or a Map, or any plain object keyed by tag name, so
+   * one module of definitions can serve both halves of a hydrated page.
+   */
+  definitions?: LegoDefinitionSource;
 }
+
+/**
+ * Anything `defineFrom` and the `definitions` option accept: an app (or
+ * anything else exposing `getDefinitions()`), a plain `{ tagName: definition }`
+ * object, or a Map of the same.
+ */
+export type LegoDefinitionSource =
+  | { getDefinitions(): Record<string, LegoBlockDefinition> }
+  | Record<string, LegoBlockDefinition>
+  | Map<string, LegoBlockDefinition>;
 
 export interface LegoBlockDefinition {
   /** The block's markup, the contents of a `.lego` `<template>` section. */
@@ -67,6 +83,13 @@ export interface LegoServerRenderer {
    * is evaluated, so it must be a self contained object literal.
    */
   defineLegoFile(source: string, filename?: string): LegoServerRenderer;
+  /**
+   * Register every block a definitions source holds. The same thing the
+   * `definitions` option does, for a renderer that already exists.
+   *
+   *   createRenderer().defineFrom(Lego);
+   */
+  defineFrom(source: LegoDefinitionSource): LegoServerRenderer;
   /** Whether a block is registered under this name. */
   has(tagName: string): boolean;
   /** Every registered block name. */

@@ -1568,6 +1568,13 @@ function createRenderer(options = {}) {
     });
     return tag;
   };
+  const defineAll = (source) => {
+    if (!source) return renderer;
+    if (typeof source.getDefinitions === "function") return defineAll(source.getDefinitions());
+    const entries = source instanceof Map ? [...source.entries()] : Object.entries(source);
+    entries.forEach(([tagName, definition]) => renderer.define(tagName, definition));
+    return renderer;
+  };
   const renderer = {
     /**
      * Register a block.
@@ -1603,6 +1610,16 @@ function createRenderer(options = {}) {
         shadow: shadowFromLegoSource(source)
       });
       return renderer;
+    },
+    /**
+     * Register every block a definitions source holds. See the `definitions`
+     * option on createRenderer for the shapes accepted.
+     *
+     * @param {object} source - an app, `app.getDefinitions()`, a Map, or a
+     *   plain `{ tagName: definition }` object
+     */
+    defineFrom(source) {
+      return defineAll(source);
     },
     /** Whether a block is registered under this name. */
     has(tagName) {
@@ -1656,6 +1673,7 @@ function createRenderer(options = {}) {
       );
     }
   };
+  defineAll(options.definitions);
   return renderer;
 }
 var index_default = { createRenderer, MAX_BLOCK_DEPTH };

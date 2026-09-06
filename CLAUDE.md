@@ -20,6 +20,10 @@ Entry point is `src/index.js` which wires up dependency injection between module
 
 **Initialization flow**: `Lego.init(root)` → register batcher with renderer → create reactive global state → auto-discover inline `<template b-id="...">` tags → setup routing (popstate/click handlers) → setup MutationObserver for auto-mounting components.
 
+**Registration is DOM free**: `block()` and `defineLegoFile()` store the block's markup as a string on the definition entry and only build the `<template>` element on first mount (`entry.template` is a lazy getter, see `materialize()` in `registry.js`). `customElements.define` is skipped where there is no `customElements`. So a module of definitions imports into a bare Node process, and `app.getDefinitions()` hands it to `lego-dom/server` as `createRenderer({ definitions })` / `renderer.defineFrom(app)`. `init()` still requires a document.
+
+**Hydration**: a host carrying `b-hydrate` was rendered by `src/server/` and is adopted rather than replaced. `snap()` converts a `<template shadowrootmode>` into a shadow root when the browser has not (`adoptDeclarativeShadow`), keeps the existing DOM as the render root, and hands the bindings scan to `src/core/hydrate.js` instead of `scanForBindings`. Every binding still runs on the first render; the compare-before-write checks mean a correct page costs zero DOM writes. A structural divergence throws `HydrationMismatch`, which warns once and falls back to wipe-and-clone for that block only.
+
 **App model**: `Lego` is an *app*, created by `createApp()` in `src/core/app.js` around the module level config in `helpers.js`. `Lego.createApp(options)` makes more of them, each with its own `config`, `globals`, `routes`, `sharedStates` (`$registry`) and plugin set. See "App resolution" below.
 
 **Render cycle**: State mutation (via Proxy) → `trigger()` wakes the effects that read the key → each effect's scheduler marks its binding dirty on the host block and queues the element → `requestAnimationFrame` deduplicates and calls `render()` → `beforeUpdate()` fires, only the dirty bindings re-run (each re-collecting its deps), and the flush keeps draining until nothing new is queued (so a parent writing a child's prop settles in the same frame) → `updated()` fires synchronously, once per element per flush.
@@ -29,13 +33,14 @@ Entry point is `src/index.js` which wires up dependency injection between module
 - **`src/core/effect.js`** — The dependency graph. `createEffect`/`track`/`trigger`, plus `computed` and `watch`. Pure: no DOM, no framework imports. Deps belong to the effect that read them and are re-collected on every run.
 - **`src/core/reactive.js`** — Deep proxy wrapper. `get`/`has`/`ownKeys` track, `set`/`deleteProperty` trigger. Knows nothing about elements or the batcher. Detects `$db` descriptors for persistence integration.
 - **`src/core/renderer.js`** — `render()`, `bind()`, `scanForBindings()`, `runBindings()`. Handles text/attribute interpolation (`[[expr]]` or `{{expr}}`), event listeners (`@click`, `@keydown.enter.prevent`), and directive execution.
-- **`src/core/lifecycle.js`** — `snap()` (mount: clone template, attach shadow DOM *or* render into the light DOM and emulate slots when the block declares `b-shadow="false"`, merge logic tiers, apply props, call `mounted()`) and `unsnap()` (unmount: call `unmounted()`, cleanup).
+- **`src/core/lifecycle.js`** — `snap()` (mount: clone template, attach shadow DOM *or* render into the light DOM and emulate slots when the block declares `b-shadow="false"`, merge logic tiers, apply props, call `mounted()`) and `unsnap()` (unmount: call `unmounted()`, cleanup). On a `b-hydrate` host it adopts the server's markup instead of cloning: no wipe, no slot emulation, bindings from `hydrate.js`.
+- **`src/core/hydrate.js`** — The hydration walk. `hydrateBindings(liveRoot, tplRoot, options)` pairs the live tree against the definition's template positionally, taking each binding's node from the page and its `[[ ]]` source from the template counterpart. Adopts the server's `<!--b-if: …-->` and `<!--b-for: …-->` comments as directive anchors and its `data-b-key` rows into the b-for pool. Throws `HydrationMismatch` on a structural divergence.
 - **`src/core/batcher.js`** — RAF-based update queue with deduplication. Handles pending updates added during batch processing. Exposes `nextTick()`.
 - **`src/core/element.js`** — `createBlockElementClass()`, the single custom element class behind every block. Teardown on disconnect is deferred by a microtask so DOM moves do not destroy block state. Also carries `static formAssociated` / `observedAttributes`, which the platform reads once at define time, so both describe what the registry knew then.
 - **`src/core/app.js`** — `createApp()`: the app factory. Owns `block()`, `route()`, `init()`, `use()`, the manifest / lazy-loader machinery and the introspection helpers. `src/index.js` is now only dependency injection plus the default app.
-- **`src/core/registry.js`** — Global stores: `registry` (definition entries, see below), `proxyCache`/`privateData`/`forPools`/`itemIdMap` (WeakMaps), `activeBlocks`, `legoFileLogic`, `snapState`. Also `getDefinition(tag)`, `definitionFrom(template, app)` and `canDefine(tag, app)`.
+- **`src/core/registry.js`** — Global stores plus `definitionEntry()`, which builds an entry with a lazy `template` getter: `registry` (definition entries, see below), `proxyCache`/`privateData`/`forPools`/`itemIdMap` (WeakMaps), `activeBlocks`, `legoFileLogic`, `snapState`. Also `getDefinition(tag)`, `definitionFrom(template, app)` and `canDefine(tag, app)`.
 - **`src/core/globals.js`** — App resolution (`defaultApp`, `setDefaultApp`, `appOf(el)`) and `createGlobals(app, seed)`, which builds an app's reactive globals. Globals are an ordinary `reactive()` object: bindings that read `global.x` subscribe by reading it.
-- **`src/core/stylesheets.js`** — Constructable stylesheets and cascade mode handling. Also `adoptLightStyle()`, which scopes a light-DOM block's `<style>` by rewriting every selector through the CSSOM (`self` becomes the tag name) and injects it into `<head>` once per tag.
+- **`src/core/stylesheets.js`** — Constructable stylesheets and cascade mode handling. Also `adoptLightStyle()`, which scopes a light-DOM block's `<style>` by rewriting every selector through the CSSOM (`self` becomes the tag name) and injects it into `<head>` once per tag, and `adoptServerLightStyle()`, its hydration twin: the server already applied the same scoping, so the element is moved into `<head>` as it stands, or dropped when one is already there.
 
 ### Directives (`src/directives/`)
 
@@ -80,7 +85,7 @@ Shipped as a separate package entry, `lego-dom/server`, built to `dist/lego.serv
 - **`css.js`**: Block style scoping. Shadow blocks get the `self` to `:host` rewrite `lifecycle.js` does at mount. Light DOM blocks get every top-level selector prefixed with the tag name (per entry in a selector list; a selector naming `self` becomes the bare tag name instead of doubling), recursing into `@media`/`@supports`/`@container`/`@layer` and leaving `@keyframes`/`@font-face` alone. A rule splitter, not a CSS parser: preludes are rewritten, declaration bodies are copied through.
 - **`sanitize.js`**: Server twin of `defaultSanitize` in `src/utils/dom.js`, applied over the parse tree instead of a live DOM. Keep the two rule sets in step.
 
-Output contract (consumed by the client hydration engine): hosts carry `b-hydrate` and `b-id`; shadow blocks emit `<template shadowrootmode="open">` with the `<style>` first; light DOM blocks emit `<style data-lego-style="tag-name">` for de-duplication; `b-if` false becomes `<!--b-if: EXPR-->`; `b-for` becomes `<!--b-for: item in list-->` plus clones carrying `data-b-key`. Nested block props layer as logic defaults, then `b-logic`, then declared plain attributes, then `:prop`. No `b-`, `@` or `:` attribute is ever stripped. Lifecycle hooks are never called. Documented in `docs/tutorial/ssr.md`.
+Output contract (consumed by `src/core/hydrate.js`): hosts carry `b-hydrate` and `b-id`; shadow blocks emit `<template shadowrootmode="open">` with the `<style>` first; light DOM blocks emit `<style data-lego-style="tag-name">` for de-duplication; `b-if` false becomes `<!--b-if: EXPR-->`; `b-for` becomes `<!--b-for: item in list-->` plus clones carrying `data-b-key`. Nested block props layer as logic defaults, then `b-logic`, then declared plain attributes, then `:prop`. No `b-`, `@` or `:` attribute is ever stripped. Lifecycle hooks are never called. Documented in `docs/tutorial/ssr.md`.
 
 ### Vite Plugin (`vite-plugin.js`)
 
@@ -100,10 +105,10 @@ Props are applied on top of the merged tiers, in `applyProps()`: declared defaul
 `registry[tag]` holds a **definition entry**, not a bare `<template>`:
 
 ```js
-{ template, app, logic, props, styles, cascade, cascadeList, error, shadow, form }
+{ name, template, source, css, app, logic, props, styles, cascade, cascadeList, error, shadow, form }
 ```
 
-`logic`/`props`/`styles`/`cascade`/`error` are the template-level attribute sources; `shadow` is false for a `b-shadow="false"` block; `form` is true for a `b-form` one. Read it with `getDefinition(tag)` and build it with `definitionFrom(template, app)`. Truthiness of `registry[tag]` still means "registered".
+`logic`/`props`/`styles`/`cascade`/`error` are the template-level attribute sources; `shadow` is false for a `b-shadow="false"` block; `form` is true for a `b-form` one. `source` is the block's markup as a string and `css` its own `<style>` text, both kept so registration needs no DOM and so `getDefinitions()` can hand them to the server renderer; `template` is a getter that builds (and caches) the element from them on first use. Read the entry with `getDefinition(tag)`, build it with `definitionEntry(spec, app)` or, from an inline `<template b-id>`, `definitionFrom(template, app)`. Truthiness of `registry[tag]` still means "registered".
 
 The resolution path from an element to its app:
 

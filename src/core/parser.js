@@ -1,4 +1,4 @@
-import { registry, legoFileLogic, getPrivateData, canDefine, definitionFrom } from './registry.js';
+import { registry, legoFileLogic, getPrivateData, canDefine, definitionEntry } from './registry.js';
 import { deriveBlockName } from '../utils/helpers.js';
 import { parseLego } from '../utils/parser-utils.js';
 import { snap } from './lifecycle.js';
@@ -31,29 +31,31 @@ export const defineLegoFile = (app, content, filename = 'block.lego') => {
     }
   }
 
-  let finalTemplate = template;
-  if (style) {
-    finalTemplate = `<style>${style}</style>` + finalTemplate;
-  }
-
-  const node = document.createElement('template');
-  node.innerHTML = finalTemplate;
-
-  if (stylesAttr) node.setAttribute('b-stylesheets', stylesAttr);
-  if (cascadeAttr) node.setAttribute('b-cascade', cascadeAttr);
-  if (errorAttr) node.setAttribute('b-error', errorAttr);
-  if (propsAttr) node.setAttribute('b-props', propsAttr);
-  // Same two knobs Lego.block takes as `shadow` and `form`. defineLegoFile
-  // stamps them on the template directly because it does not define the
-  // custom element: a lazily loaded block's class already exists by now.
-  if (shadowAttr === 'false') node.setAttribute('b-shadow', 'false');
-  if (formAttr) node.setAttribute('b-form', '');
-
-  registry[blockName] = definitionFrom(node, app);
+  // The `<style>` section rides on the entry as `css` rather than being
+  // spliced into the markup here: the entry prepends it when it builds the
+  // element, and `getDefinitions()` can hand the two to the server renderer
+  // separately, which is what lets the server scope the CSS itself.
+  //
+  // `shadow` and `form` are the same two knobs Lego.block takes, kept on the
+  // entry because defineLegoFile does not define the custom element: a
+  // lazily loaded block's class already exists by now.
+  registry[blockName] = definitionEntry({
+    name: blockName,
+    source: template,
+    css: style || '',
+    styles: stylesAttr || '',
+    cascade: cascadeAttr || '',
+    error: errorAttr || '',
+    props: propsAttr || '',
+    shadow: shadowAttr !== 'false',
+    form: !!formAttr
+  }, app);
   bProps.register(blockName, propsAttr);
 
   legoFileLogic.set(blockName, logicObj);
 
-  // Upgrade existing elements
+  // Upgrade existing elements. Defining a block is DOM free, so a Node
+  // process registering blocks for the server renderer stops here.
+  if (typeof document === 'undefined') return;
   document.querySelectorAll(blockName).forEach(el => !getPrivateData(el).snapped && snap(el));
 };

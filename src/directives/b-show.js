@@ -20,6 +20,9 @@ export const bShow = {
       node._bShowOriginal = node.style.display;
     }
     const visible = !!safeEval(expr, { state, global, self: node, app });
-    node.style.display = visible ? node._bShowOriginal : 'none';
+    // Compared before it is written, like the text and attribute bindings, so
+    // a server rendered page that is already correct costs no DOM write.
+    const next = visible ? node._bShowOriginal : 'none';
+    if (node.style.display !== next) node.style.display = next;
   }
 };

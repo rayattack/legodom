@@ -104,6 +104,11 @@ export const bFor = {
         // Primitive values: use index + value
         key = `${i}-${item}`;
       }
+      // Pool lookups are Map identity comparisons and the server writes
+      // data-b-key as text, so both sides settle on the string form. Without
+      // this a numeric `b-key="id"` would never find the row hydration
+      // adopted under "1".
+      key = String(key);
       currentKeys.add(key);
       let child = pool.get(key);
       const isNewRow = !child;

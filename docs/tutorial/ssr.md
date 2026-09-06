@@ -10,15 +10,13 @@ import { createRenderer } from 'lego-dom/server';
 
 The point is a first paint that does not wait for JavaScript. The server
 produces real markup, including a declarative shadow root, and the browser
-paints it immediately. LegoDOM then takes over on the client.
+paints it immediately. LegoDOM then **hydrates** it on the client: it adopts
+the nodes that are already there instead of replacing them, so a page the
+server rendered correctly reaches interactivity without a single DOM write.
 
-::: warning Hydration is the next phase
-Today the client does **not** adopt server rendered markup. When `Lego.init()`
-reaches a block host it clears the shadow root and renders the block from
-scratch, exactly as it would for an empty tag. You get the faster first paint
-and the crawler-visible HTML; you do not yet get a preserved DOM. The output
-contract below is fixed, and the hydration engine that consumes it lands next.
-:::
+See [Hydration](#hydration) for what the client does with this output, and
+[The round trip](#the-round-trip) for registering one set of blocks and using
+it on both sides.
 
 ## Quick start
 
@@ -46,6 +44,17 @@ sanitizer belong to the renderer, so one process can serve several.
 |--------|------|-------------|
 | `syntax` | `'brackets' \| 'mustache'` | Interpolation delimiters. Defaults to `Lego.config.syntax`. |
 | `sanitize` | `(html, blockName) => string` | Replaces the built-in `b-html.safe` sanitizer. Point it at DOMPurify for production. |
+| `definitions` | app \| object \| Map | Blocks to register up front. See [The round trip](#the-round-trip). |
+
+### `renderer.defineFrom(source)`
+
+The `definitions` option, for a renderer that already exists. `source` is a
+LegoDOM app, or what `Lego.getDefinitions()` returns, or a Map, or any plain
+object keyed by tag name.
+
+```js
+createRenderer().defineFrom(Lego);
+```
 
 ### `renderer.define(tagName, definition)`
 
@@ -208,8 +217,10 @@ Each `b-for` clone keeps its `b-for` and `b-key` attributes and gains
 4. otherwise the index
 
 The client's own last resort is object identity through a WeakMap, which no
-server can know. **Lists of keyless objects therefore rehydrate by position.**
-Give such lists a `b-key` if their order can change.
+server can know, so **a list of keyless objects cannot be adopted**: the client
+computes different keys, builds fresh rows and drops the server's. Everything
+still renders correctly, it just costs the DOM work hydration exists to avoid.
+Give any server rendered list a `b-key`.
 
 ### Nested blocks
 
@@ -228,6 +239,165 @@ attributes are still emitted as authored.
 Children written inside a block tag are the caller's slot content. They belong
 to the parent, so they are rendered in the parent's scope before the child
 block sees them, exactly as the browser projects light DOM into a shadow root.
+
+## Hydration
+
+`Lego.init()` treats a host carrying `b-hydrate` as markup to take over rather
+than markup to replace. Nothing is cloned and nothing is wiped:
+
+1. A shadow block's `<template shadowrootmode="open">` becomes its shadow root
+   (see [Older browsers](#older-browsers)); a light DOM block's own children
+   are already its render root.
+2. The block's bindings are built by walking the live tree and the block's
+   `<template>` side by side, pairing nodes by position. Each binding takes its
+   node from the page and its `[[ ]]` source from the template, which is the
+   only place that source still exists.
+3. `b-hydrate` is removed and the block renders. Every binding runs, so every
+   effect is created and the block is fully reactive from the first frame.
+
+### Nothing is written to a correct page
+
+That first render runs every binding, but each one compares before it writes:
+text only when the content differs, an attribute only when the value differs,
+`b-show` only when the visibility differs, a `b-for` row only when it moved.
+A page whose markup already agrees with its state therefore produces **zero DOM
+writes**, and the nodes the server painted are the nodes the user keeps
+interacting with.
+
+State that has moved on since the server rendered is corrected on that same
+first render, so a stale value costs one write and nothing else.
+
+### Markers become anchors
+
+The client creates a comment anchor for `b-if` and `b-for` so it knows where to
+put things back. The server writes those anchors itself, and hydration adopts
+them rather than making new ones:
+
+| Server output | What hydration does |
+|---------------|---------------------|
+| `<!--b-if: EXPR-->` | Clones the element out of the template and makes the comment its anchor, so the first toggle swaps it in exactly where the server left the gap. |
+| the `b-if` element | Scans it in place, as any other element. |
+| `<!--b-for: item in list-->` | Becomes the loop's anchor. |
+| a row carrying `data-b-key` | Adopted into the loop's pool under that key, with its scope, its own bindings and its event listeners. `data-b-key` is removed. |
+
+Because rows are adopted by key, editing one item after hydration updates the
+element the server rendered rather than replacing it, and reordering the list
+moves those same elements.
+
+### Mismatches fall back, one block at a time
+
+If the live tree and the template diverge structurally (a different tag at a
+position, a node the template does not describe, a missing anchor) the block
+logs one warning naming itself and renders from its template as though the
+server had sent nothing:
+
+```
+[Lego] Hydration mismatch in <user-card>: the template has <h2> where the
+server rendered <h3>. Rendering this block from its template instead.
+```
+
+The page is still correct; only the DOM saving is lost, and only for that
+block. Its parents, siblings and children hydrate normally.
+
+The usual cause is the server and the client disagreeing about a definition,
+which is what [The round trip](#the-round-trip) is for.
+
+### Older browsers
+
+Every browser that supports declarative Shadow DOM turns
+`<template shadowrootmode="open">` into a real shadow root while it parses, well
+before any script runs. Where it does not, the runtime does the same conversion
+itself when it reaches the host: it attaches the shadow root, moves the
+template's content in, and removes the template. Both paths land in the same
+place, so no polyfill is needed.
+
+### Registration order
+
+A parent binds `:prop="expr"` on a child tag only if the child block is already
+registered when the parent is scanned, hydrating or not. Register child blocks
+before their parents, or register everything before the markup that uses it
+reaches the page.
+
+### What hydration does not adopt
+
+- **`b-html`, `b-text` and `b-mount`** own their element's content outright.
+  The server wrote the result and the template holds the expression, so there
+  is nothing to pair inside them: the directive rebuilds that subtree on the
+  first render.
+- **Light DOM blocks with slot content.** The server substitutes slots itself,
+  so the caller's nodes end up nested inside the child's rendered template and
+  the two shapes no longer line up. Those blocks report a mismatch and
+  re-render. Shadow blocks (the default) are unaffected: their `<slot>`
+  elements survive into the shadow root on both sides.
+- **Keyless object lists**, as described under [Loop keys](#loop-keys).
+
+## The round trip
+
+`Lego.block()` and `Lego.defineLegoFile()` touch no DOM. The block's
+`<template>` is built the first time a block mounts, and the custom element is
+only defined where `customElements` exists, so a module of block definitions
+imports cleanly into a bare Node process. (`Lego.init()` still needs a
+document; it is the browser half.)
+
+`Lego.getDefinitions()` hands those definitions to the server renderer in the
+shape `define()` wants, so one module is the single source of truth for both
+sides and there is nothing for the two to disagree about.
+
+`blocks.js`, imported by the server and shipped to the browser:
+
+```js
+import Lego from 'lego-dom';
+
+Lego.block('user-card', {
+  template: '<div class="card"><h2 title="[[ name ]]">[[ name ]]</h2><slot></slot></div>',
+  logic: { name: 'anon' },
+  props: '{ name }'
+});
+
+export default Lego;
+```
+
+On the server:
+
+```js
+import Lego from './blocks.js';
+import { createRenderer } from 'lego-dom/server';
+
+const renderer = createRenderer({ definitions: Lego.getDefinitions() });
+// or: createRenderer().defineFrom(Lego);
+
+const body = renderer.renderToString('user-card', { props: { name: 'Ada' } });
+
+res.send(`<!DOCTYPE html>
+<html>
+  <head><title>Ada</title></head>
+  <body>
+    ${body}
+    <script type="module" src="/blocks.js"></script>
+    <script type="module">
+      import Lego from './blocks.js';
+      Lego.init();
+    </script>
+  </body>
+</html>`);
+```
+
+The browser paints `<user-card>` before that module arrives. When it does,
+`init()` finds the `b-hydrate` host, adopts the shadow root the parser built,
+and takes over without touching a node.
+
+A `.lego` file works the same way, on both sides:
+
+```js
+const source = fs.readFileSync('./blocks/user-card.lego', 'utf8');
+Lego.defineLegoFile(source, 'user-card.lego');    // Node or browser
+```
+
+`getDefinitions()` returns the block's `<style>` section as `styles`, so the
+server scopes it exactly as the client would and a light DOM block's
+`<style data-lego-style="…">` is the same CSS either way. On the client, a
+hydrated light DOM block moves that element into `<head>` as it stands rather
+than injecting a second, doubly-prefixed copy.
 
 ## What runs, and what does not
 
@@ -296,15 +466,18 @@ LegoDOM's own parser, with no `new Function` anywhere near them.
 import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
+import Lego from 'lego-dom';
 import { createRenderer } from 'lego-dom/server';
 
-const renderer = createRenderer();
-
-// Register every block once, at boot.
+// Register every block once, at boot. Registering through the client API
+// means the browser bundle can import this very module and hydrate what this
+// renderer produced. See The round trip above.
 for (const file of fs.readdirSync('./blocks')) {
   if (!file.endsWith('.lego')) continue;
-  renderer.defineLegoFile(fs.readFileSync(path.join('./blocks', file), 'utf8'), file);
+  Lego.defineLegoFile(fs.readFileSync(path.join('./blocks', file), 'utf8'), file);
 }
+
+const renderer = createRenderer().defineFrom(Lego);
 
 const app = express();
 
@@ -323,8 +496,10 @@ app.get('/u/:id', (req, res) => {
   <body>
     ${body}
     <script type="module">
-      import Lego from '/lego.mjs';
-      Lego.init(document.body, { loader: (tag) => \`/blocks/\${tag}.lego\` });
+      // The same blocks, registered the same way, so the client hydrates
+      // this markup instead of re-rendering it.
+      import Lego from '/blocks.js';
+      Lego.init();
     </script>
   </body>
 </html>`);
@@ -336,14 +511,13 @@ a single renderer is safe to share across concurrent requests.
 
 ## Known gaps
 
-- **Hydration.** The client re-renders on mount. Next phase.
 - **`<select b-sync>`.** The server does not mark the matching `<option>`
   as selected. On the client `b-sync` runs in a late phase precisely because a
   select's options are often produced by a `b-for` that has to run first. The
-  client sets the selection on mount.
-- **Light DOM blocks.** The shipped browser runtime always attaches a shadow
-  root, so `b-shadow="false"` is server-side only until the client half lands.
-  The style scoping above matches what the client will apply.
+  client sets the selection on mount, so a hydrated select costs one write.
+- **Light DOM blocks with slot content**, and **keyless object lists**, and
+  the three content directives: see
+  [What hydration does not adopt](#what-hydration-does-not-adopt).
 
 ## Next steps
 

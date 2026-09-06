@@ -9,9 +9,10 @@ import { parseJSObject } from '../utils/safe-eval.js';
 import { reactive } from './reactive.js';
 import { computed, watch } from './effect.js';
 import { bind, render } from './renderer.js';
-import { applyStyles, adoptLightStyle } from './stylesheets.js';
+import { applyStyles, adoptLightStyle, adoptServerLightStyle } from './stylesheets.js';
 import { findErrorBoundary, renderErrorBlock, handleError, guardResult } from '../features/error.js';
 import { createFormApi, syncFormValue } from '../features/form.js';
+import { hydrateBindings, HydrationMismatch } from './hydrate.js';
 
 // Audit fix #24: `el.state = X` performs a shallow merge (Object.assign),
 // not a replacement. Warn once per session so authors who expect
@@ -102,6 +103,9 @@ const projectSlots = (el, content) => {
  * rewrite, then restore. Doesn't attempt to distinguish selector context from
  * value context (that would require a real CSS parser) but covers the common
  * foot-guns.
+ *
+ * The result is compared before it is written, so a hydrated block whose
+ * server rendered <style> already says `:host` costs no DOM write.
  */
 const rewriteHostSelectors = (style) => {
   const segments = [];
@@ -115,10 +119,11 @@ const rewriteHostSelectors = (style) => {
     }
   );
   const rewritten = protectedCss.replace(/(?<![-\w])self(?![-\w])/g, ':host');
-  style.textContent = rewritten.replace(
+  const restored = rewritten.replace(
     /__LEGO_SEG_(\d+)__/g,
     (_, idx) => segments[+idx]
   );
+  if (style.textContent !== restored) style.textContent = restored;
 };
 
 /**
@@ -165,6 +170,95 @@ const observeLateProps = (el, tagName, data) => {
 };
 
 /**
+ * Detach a light DOM block's existing children as its slot content.
+ *
+ * @param {HTMLElement} el
+ * @returns {DocumentFragment}
+ */
+const takeSlotContent = (el) => {
+  const content = document.createDocumentFragment();
+  while (el.firstChild) content.appendChild(el.firstChild);
+  return content;
+};
+
+/**
+ * Empty a light DOM host and hand back nothing to project. Used when a
+ * hydration attempt is abandoned: the children are the server's rendered
+ * template, never the caller's content.
+ *
+ * @param {HTMLElement} el
+ * @returns {DocumentFragment} an empty fragment, so slots render fallbacks
+ */
+const discardChildren = (el) => {
+  while (el.firstChild) el.removeChild(el.firstChild);
+  return document.createDocumentFragment();
+};
+
+/**
+ * Turn a `<template shadowrootmode>` the HTML parser left behind into a real
+ * shadow root.
+ *
+ * Browsers that implement declarative Shadow DOM do this while parsing, so
+ * the element already has its shadowRoot and there is nothing here to move.
+ * The ones that do not (and JSDOM) leave the template sitting in the light
+ * DOM, and this is where it becomes the block's render root instead.
+ *
+ * The mode is forced to `open`: the runtime reads `el.shadowRoot` everywhere,
+ * and a closed root would be invisible to it.
+ *
+ * @param {HTMLElement} el
+ * @returns {ShadowRoot|null} the root, or null when there is none to adopt
+ */
+const adoptDeclarativeShadow = (el) => {
+  if (el.shadowRoot) return el.shadowRoot;
+  const tpl = [...el.children].find(child =>
+    child.tagName === 'TEMPLATE' && child.hasAttribute('shadowrootmode'));
+  if (!tpl) return null;
+  const root = el.attachShadow({ mode: 'open' });
+  root.appendChild(tpl.content);
+  tpl.remove();
+  return root;
+};
+
+/**
+ * Can this `b-hydrate` host actually be adopted?
+ *
+ * A light DOM block holds its markup directly, so there is always something
+ * to take over. A shadow block needs a shadow root: one the parser built
+ * from the declarative template, or one this call builds from it. A host
+ * marked for hydration with neither is treated as an ordinary empty tag.
+ */
+const canAdopt = (el, useShadow) => {
+  if (!useShadow) return true;
+  return !!adoptDeclarativeShadow(el);
+};
+
+/**
+ * Build the block's bindings against the markup already in the page.
+ *
+ * @returns {Array|null} the bindings, or null when the two trees diverged and
+ *   the block should render itself from scratch instead
+ */
+const tryHydrate = (el, root, definition, name) => {
+  try {
+    return hydrateBindings(root, definition.template.content, {
+      app: definition.app,
+      blockRoot: el,
+      state: el._studs,
+      light: !definition.shadow,
+      skipRootAttrs: root === el
+    });
+  } catch (err) {
+    if (!(err instanceof HydrationMismatch)) throw err;
+    console.warn(
+      `[Lego] Hydration mismatch in <${name}>: ${err.message}. ` +
+      'Rendering this block from its template instead.'
+    );
+    return null;
+  }
+};
+
+/**
  * Give a block with an async `mounted()` an observable pending flag.
  *
  * `$loading` exists only while the promise is in flight, and only on blocks
@@ -195,24 +289,33 @@ export const snap = (el) => {
   if (definition && !data.snapped) {
     data.snapped = true;
     data.app = app;
-    const tpl = definition.template.content.cloneNode(true);
 
     // `b-shadow="false"` renders into the element itself. Global stylesheets,
     // ARIA id references and native form submission all reach into a light
     // DOM block; nothing reaches into a shadow one.
     const useShadow = definition.shadow;
+
+    // A `b-hydrate` host was rendered by src/server/ and is already correct on
+    // screen. Nothing is cloned and nothing is wiped: the markup becomes the
+    // render root and the bindings are built against it further down, once
+    // the state proxy exists. The attribute is consumed either way, so a
+    // later re-snap starts from a clean slate.
+    let hydrating = el.hasAttribute('b-hydrate') && canAdopt(el, useShadow);
+    el.removeAttribute('b-hydrate');
+
     let shadow = el;
     let slotContent = null;
     if (useShadow) {
       // Support HMR/Re-init: Reuse output if exists
       shadow = el.shadowRoot || el.attachShadow({ mode: 'open' });
-      shadow.innerHTML = '';
+      if (!hydrating) shadow.innerHTML = '';
     } else {
       data.lightDom = true;
       // Whatever the element already contained is its slot content. Detach it
-      // before the template lands so the two never mix.
-      slotContent = document.createDocumentFragment();
-      while (el.firstChild) slotContent.appendChild(el.firstChild);
+      // before the template lands so the two never mix. A hydrated host's
+      // children are the rendered template, not caller content, so they stay
+      // where they are.
+      if (!hydrating) slotContent = takeSlotContent(el);
     }
 
     applyStyles(el);
@@ -311,11 +414,25 @@ export const snap = (el) => {
 
     observeLateProps(el, name, data);
 
+    // The bindings scan needs the state proxy (a b-for row's scope is built
+    // on it), so hydration happens here rather than alongside the root
+    // adoption above. A mismatch drops the block back on the fresh path.
+    let bindings = null;
+    if (hydrating) bindings = tryHydrate(el, shadow, definition, name);
+    if (hydrating && !bindings) {
+      hydrating = false;
+      if (useShadow) shadow.innerHTML = '';
+      // The caller's content is unrecoverable once the server has
+      // substituted it into the slots, so the re-render projects nothing and
+      // every slot falls back to its own children.
+      if (!useShadow) slotContent = discardChildren(el);
+    }
+
     // Suppress child connectedCallbacks during appendChild so children
     // don't snap before this parent's mounted() hook has run.
     snapState.locked = true;
     try {
-      shadow.appendChild(tpl);
+      if (!hydrating) shadow.appendChild(definition.template.content.cloneNode(true));
       if (slotContent) projectSlots(el, slotContent);
     } finally {
       snapState.locked = false;
@@ -323,12 +440,14 @@ export const snap = (el) => {
 
     const style = shadow.querySelector('style');
     if (style && useShadow) rewriteHostSelectors(style);
-    if (style && !useShadow) adoptLightStyle(name, style);
+    if (style && !useShadow && hydrating) adoptServerLightStyle(name, style);
+    if (style && !useShadow && !hydrating) adoptLightStyle(name, style);
 
     bind(shadow, el);
+    if (bindings) data.bindings = bindings;
     activeBlocks.add(el);
     render(el);
-    el.setAttribute('b-id', name);
+    if (el.getAttribute('b-id') !== name) el.setAttribute('b-id', name);
 
     // Track this shadow root for later component registration
     if (useShadow && !el._legoShadow) el._legoShadow = shadow;
