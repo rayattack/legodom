@@ -1,0 +1,74 @@
+<template b-shadow="false">
+  <div class="lg-learn">
+    <header class="lg-learn-head">
+      <div>
+        <p class="lg-kicker">Interactive tutorial</p>
+        <h1>Learn LegoDOM by building</h1>
+        <p class="lg-lede">[[ total ]] short lessons. Each one runs in the page, with an editor on one side and the result on the other.</p>
+        <div class="lg-progress" role="progressbar" aria-valuemin="0" aria-valuemax="[[ total ]]" aria-valuenow="[[ finished ]]" aria-label="[[ finished ]] of [[ total ]] lessons finished">
+          <span style="width: [[ percent ]]%"></span>
+        </div>
+        <p class="lg-progress-label">[[ finished ]] of [[ total ]] finished</p>
+        <a class="lg-btn lg-btn-primary lg-btn-big" href="[[ upNext.href ]]" b-link>
+          [[ finished ? 'Continue' : 'Start' ]]: [[ upNext.title ]] <span aria-hidden="true">→</span>
+        </a>
+      </div>
+      <div b-html="art"></div>
+    </header>
+
+    <ol class="lg-chapters">
+      <li b-for="chapter in chapters" b-key="slug" class="lg-chapter tone-[[ chapter.color ]]">
+        <div class="lg-chapter-head">
+          <span class="lg-chapter-number">[[ $index + 1 ]]</span>
+          <div>
+            <h2>[[ chapter.title ]]</h2>
+            <p>[[ chapter.summary ]]</p>
+          </div>
+        </div>
+        <ol>
+          <li b-for="item in chapter.lessons" b-key="path">
+            <a href="[[ item.href ]]" b-link class="[[ global.done.includes(item.path) ? 'is-done' : '' ]]">
+              <span class="lg-tick" aria-hidden="true"></span>[[ item.title ]]
+            </a>
+          </li>
+        </ol>
+      </li>
+    </ol>
+  </div>
+</template>
+
+<script>
+import { href } from '../nav.js';
+import { course, lessons } from '../lib/files.js';
+import { courseArt } from '../lib/home-content.js';
+
+const all = lessons.map(lesson => ({ path: lesson.path, title: lesson.title, href: href('/' + lesson.path) }));
+
+export default {
+  art: courseArt,
+  total: lessons.length,
+  chapters: course.map(chapter => ({
+    slug: chapter.slug,
+    title: chapter.title,
+    summary: chapter.summary,
+    color: chapter.color,
+    lessons: all.filter(lesson => lesson.path.startsWith(`learn/${chapter.slug}/`))
+  })),
+
+  // Progress lives on Lego.globals, so finishing a lesson anywhere updates
+  // these three without this block doing anything.
+  get finished() {
+    return all.filter(lesson => Lego.globals.done.includes(lesson.path)).length;
+  },
+  get percent() {
+    return Math.round((this.finished / this.total) * 100);
+  },
+  get upNext() {
+    return all.find(lesson => !Lego.globals.done.includes(lesson.path)) || all[0];
+  },
+
+  mounted() {
+    document.title = 'Learn | LegoDOM';
+  }
+}
+</script>

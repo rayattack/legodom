@@ -1,0 +1,110 @@
+<template b-shadow="false">
+  <div b-if="global.site.searchOpen" class="search-veil" @click.self="close()">
+    <div class="search-box" role="dialog" aria-modal="true" aria-label="Search the docs">
+      <div class="search-field">
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13.5 13.5L17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input
+          b-sync="query"
+          b-init="focus(self)"
+          type="search"
+          placeholder="Search the docs"
+          aria-label="Search the docs"
+          autocomplete="off"
+          @keydown.down.prevent="move(1)"
+          @keydown.up.prevent="move(-1)"
+          @keydown.enter.prevent="go()"
+          @keydown.esc="close()">
+        <kbd>esc</kbd>
+      </div>
+      <p b-if="query.trim() && results.length === 0" class="search-empty">[[ index ? 'No page mentions that.' : 'Loading the index…' ]]</p>
+      <p b-if="!query.trim()" class="search-empty">Type to search every page, heading and lesson.</p>
+      <ul class="search-results" b-show="results.length">
+        <li b-for="hit in results" b-key="key">
+          <a href="[[ hit.href ]]" b-link class="[[ $index === cursor ? 'is-on' : '' ]]" @click="close()">
+            <strong>[[ hit.title ]]</strong>
+            <small>[[ hit.context ]]</small>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</template>
+
+<script>
+import { href } from '../nav.js';
+
+let loading = null;
+
+export default {
+  query: '',
+  cursor: 0,
+  index: null,
+
+  mounted() {
+    this.onKey = (event) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName) || event.target.isContentEditable;
+      const shortcut = (event.key === '/' && !typing) || (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey));
+      if (!shortcut) return;
+      event.preventDefault();
+      Lego.globals.site.searchOpen = true;
+    };
+    window.addEventListener('keydown', this.onKey);
+    // The index is a few hundred KB of text, so it is fetched on first open.
+    this.$watch(() => Lego.globals.site.searchOpen, (open) => {
+      if (!open) return;
+      this.query = '';
+      this.cursor = 0;
+      loading = loading || import('virtual:site-search').then(module => module.default);
+      loading.then(entries => { this.index = entries; });
+    });
+  },
+
+  unmounted() {
+    window.removeEventListener('keydown', this.onKey);
+  },
+
+  focus(input) {
+    setTimeout(() => input.focus(), 0);
+  },
+
+  get results() {
+    const terms = this.query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length || !this.index) return [];
+    const hits = [];
+    for (const page of this.index) {
+      const title = page.title.toLowerCase();
+      const text = page.text.toLowerCase();
+      let score = 0;
+      let heading = null;
+      for (const term of terms) {
+        const inHeading = page.headings.find(h => h.text.toLowerCase().includes(term));
+        if (title.includes(term)) score += title.startsWith(term) ? 12 : 8;
+        else if (inHeading) { score += 5; heading = heading || inHeading; }
+        else if (text.includes(term)) score += 1;
+        else { score = 0; break; }
+      }
+      if (!score) continue;
+      const at = text.indexOf(terms[0]);
+      const context = heading ? heading.text : at === -1 ? page.path : '…' + page.text.slice(Math.max(0, at - 30), at + 70) + '…';
+      hits.push({ key: page.path, title: page.title, context, score, href: href(page.path) + (heading ? `#${heading.id}` : '') });
+    }
+    return hits.sort((a, b) => b.score - a.score).slice(0, 12);
+  },
+
+  move(step) {
+    const count = this.results.length;
+    if (count) this.cursor = (this.cursor + step + count) % count;
+  },
+
+  go() {
+    const hit = this.results[this.cursor];
+    if (!hit) return;
+    this.close();
+    this.$go(hit.href).get();
+  },
+
+  close() {
+    Lego.globals.site.searchOpen = false;
+  }
+}
+</script>

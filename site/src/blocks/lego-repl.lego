@@ -1,0 +1,295 @@
+<template b-shadow="false" b-props="files: Object, open: String = '', layout: String = 'stacked', compact: Boolean, manage: Boolean, action: String = ''">
+  <div
+    b-var="root"
+    class="lg-repl is-[[ layout ]] [[ compact ? 'is-compact' : '' ]] [[ dragging ? 'is-dragging' : '' ]]"
+    style="--lg-split: [[ split ]]%"
+    @pointermove="drag(event)"
+    @pointerup="dragging = false"
+    @pointerleave="dragging = false">
+
+    <section class="lg-pane lg-pane-code" aria-label="Code">
+      <div class="lg-bar">
+        <div class="lg-tabs" role="tablist">
+          <button
+            b-for="tab in tabs"
+            b-key="name"
+            type="button"
+            role="tab"
+            class="lg-tab is-[[ tab.kind ]] [[ tab.name === active ? 'is-on' : '' ]]"
+            aria-selected="[[ tab.name === active ]]"
+            @click="show(tab.name)"
+            @dblclick="startNaming(tab.name)">
+            <span class="lg-dot" aria-hidden="true"></span>[[ tab.name ]]
+            <span
+              b-if="manage && tab.removable && tab.name === active"
+              class="lg-tab-x"
+              role="button"
+              tabindex="0"
+              aria-label="Delete [[ tab.name ]]"
+              @click.stop="removeFile(tab.name)"
+              @keydown.enter.stop="removeFile(tab.name)">×</span>
+          </button>
+          <form b-if="naming" class="lg-tab-form" @submit.prevent="commitNaming()">
+            <input
+              b-sync="nameDraft"
+              b-init="focusName(self)"
+              aria-label="File name"
+              aria-invalid="[[ nameProblem ? 'true' : 'false' ]]"
+              @keydown.esc="naming = false">
+          </form>
+          <button b-if="manage && !naming" type="button" class="lg-tab lg-tab-add" aria-label="Add a file" title="Add a file" @click="startNaming('')">+</button>
+        </div>
+        <div class="lg-bar-actions">
+          <button b-if="action" type="button" class="lg-chip-btn [[ action === 'Reset' ? 'is-on' : '' ]]" @click="$emit('action')">[[ action ]]</button>
+        </div>
+      </div>
+      <p b-if="naming && nameProblem" class="lg-name-problem">[[ nameProblem ]]</p>
+      <div class="lg-editor"><div class="lg-editor-mount" b-var="editor"></div></div>
+    </section>
+
+    <div
+      class="lg-divider"
+      role="separator"
+      tabindex="0"
+      aria-label="Resize code and result"
+      @pointerdown.prevent="dragging = true"
+      @keydown.left.up.prevent="nudge(-4)"
+      @keydown.right.down.prevent="nudge(4)"></div>
+
+    <section class="lg-pane lg-pane-result" aria-label="Result">
+      <div class="lg-bar lg-bar-result">
+        <span class="lg-bar-title">
+          <span class="lg-pulse [[ running ? 'is-busy' : '' ]] [[ error ? 'is-bad' : '' ]]" aria-hidden="true"></span>Result
+        </span>
+        <div class="lg-bar-actions">
+          <button type="button" class="lg-icon-btn" title="Run again from scratch" aria-label="Reload the preview" @click="run()">
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9M15.5 3.5v3h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button b-if="!compact" type="button" class="lg-icon-btn" title="Clear saved $db values and run again" aria-label="Clear saved values" @click="resetStorage()">
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4.5 6h11M8 6V4.5h4V6M6 6l.7 9.5h6.6L14 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="lg-stage">
+        <div class="lg-stage-frames" b-var="stage"></div>
+        <div b-if="error" class="lg-error" role="alert">
+          <strong>[[ error.where || 'Error' ]]</strong>
+          <span>[[ error.message ]]</span>
+        </div>
+      </div>
+
+      <div b-if="!compact" class="lg-drawer">
+        <div class="lg-drawer-tabs" role="tablist">
+          <button type="button" role="tab" class="[[ drawer === 'state' ? 'is-on' : '' ]]" aria-selected="[[ drawer === 'state' ]]" @click="drawer = 'state'">
+            State<span class="lg-count">[[ blocks.length ]]</span>
+          </button>
+          <button type="button" role="tab" class="[[ drawer === 'console' ? 'is-on' : '' ]]" aria-selected="[[ drawer === 'console' ]]" @click="drawer = 'console'">
+            Console<span class="lg-count [[ problems ? 'is-bad' : '' ]]">[[ logs.length ]]</span>
+          </button>
+        </div>
+        <div class="lg-drawer-body" b-show="drawer === 'state'">
+          <p b-if="painted.length === 0" class="lg-empty">No blocks are mounted yet.</p>
+          <div b-for="block in painted" b-key="key" class="lg-block">
+            <span class="lg-block-tag">&lt;[[ block.tag ]]&gt;</span>
+            <pre b-html="block.html"></pre>
+          </div>
+        </div>
+        <div class="lg-drawer-body" b-show="drawer === 'console'">
+          <p b-if="logs.length === 0" class="lg-empty">Nothing logged. Try <code>console.log()</code> in a method.</p>
+          <p b-for="entry in logs" b-key="id" class="lg-log is-[[ entry.level ]]">[[ entry.text ]]</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</template>
+
+<script>
+import { createPreview } from '../lib/sandbox.js';
+import { orderFiles } from '../lib/files.js';
+
+// The editor and the preview are plain objects with their own DOM. They are
+// kept beside the block, not in its state: state is reactive, and wrapping a
+// CodeMirror view in a proxy would help nobody.
+const live = new WeakMap();
+
+const VALID_FILE = /^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)+\.lego|[a-z][a-z0-9-]*\.js|index\.html)$/;
+const kind = (name) => (name.endsWith('.lego') ? 'lego' : name.endsWith('.js') ? 'js' : 'html');
+const escapeHTML = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const paintJSON = (value) => escapeHTML(JSON.stringify(value, null, 2) || '{}').replace(
+  /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)/gi,
+  (match, str, colon, word, num) => {
+    if (str) return colon ? `<span class="k">${str.slice(1, -1)}</span>${colon}` : `<span class="s">${str}</span>`;
+    if (word) return `<span class="b">${word}</span>`;
+    return `<span class="n">${num}</span>`;
+  }
+);
+let logId = 0;
+
+export default {
+  project: {},
+  active: '',
+  logs: [],
+  error: null,
+  blocks: [],
+  drawer: 'state',
+  running: false,
+  split: 54,
+  dragging: false,
+  naming: false,
+  nameOriginal: '',
+  nameDraft: '',
+
+  get tabs() {
+    const names = orderFiles(Object.keys(this.project));
+    return names.map(name => ({ name, kind: kind(name), removable: name !== 'index.html' && names.length > 1 }));
+  },
+
+  get painted() {
+    return this.blocks.map((block, i) => ({ key: `${block.tag}-${i}`, tag: block.tag, html: paintJSON(block.state) }));
+  },
+
+  get problems() {
+    return this.logs.filter(entry => entry.level === 'error' || entry.level === 'warn').length;
+  },
+
+  get nameProblem() {
+    const value = this.nameDraft.trim();
+    if (!VALID_FILE.test(value)) return 'Use a name like my-block.lego, app.js or index.html';
+    if (value !== this.nameOriginal && value in this.project) return 'That file already exists';
+    return '';
+  },
+
+  async mounted() {
+    const host = this.$element;
+    if (this.layout === 'split') this.split = 50;
+
+    const entry = { editor: null, timer: null };
+    entry.preview = createPreview(this.$vars.stage, {
+      start: () => { this.logs = []; this.error = null; this.running = true; },
+      ready: () => { this.running = false; },
+      console: (line) => this.log(line.level, line.text),
+      error: (problem) => {
+        this.running = false;
+        this.error = problem;
+        this.log('error', problem.where ? `${problem.message} (${problem.where})` : problem.message);
+      },
+      state: (blocks) => { this.blocks = blocks; }
+    });
+    live.set(host, entry);
+
+    this.load(this.files || {}, this.open);
+    this.$watch('files', (files) => this.load(files || {}, this.open));
+
+    // CodeMirror is the heavy part of the page, so it arrives on its own.
+    const { createEditor } = await import('../lib/editor.js');
+    if (live.get(host) !== entry) return;
+    entry.editor = createEditor(this.$vars.editor, {
+      doc: this.project[this.active] || '',
+      filename: this.active,
+      onChange: (text) => this.edit(text)
+    });
+  },
+
+  unmounted() {
+    const entry = live.get(this.$element);
+    if (!entry) return;
+    clearTimeout(entry.timer);
+    entry.preview.destroy();
+    if (entry.editor) entry.editor.destroy();
+    live.delete(this.$element);
+  },
+
+  /** Replace the whole project: a new lesson, an example, reset, solution. */
+  load(files, open) {
+    this.project = { ...files };
+    const names = orderFiles(Object.keys(files));
+    if (open && open in files) this.active = open;
+    else if (!(this.active in files)) this.active = names[0] || '';
+    const entry = live.get(this.$element);
+    if (entry && entry.editor) entry.editor.open(this.active, this.project[this.active] || '');
+    this.$emit('project', { ...this.project });
+    this.run();
+  },
+
+  show(name) {
+    this.active = name;
+    const entry = live.get(this.$element);
+    if (entry && entry.editor) entry.editor.open(name, this.project[name]);
+  },
+
+  edit(text) {
+    this.project[this.active] = text;
+    this.$emit('project', { ...this.project });
+    const entry = live.get(this.$element);
+    clearTimeout(entry.timer);
+    entry.timer = setTimeout(() => this.run(), 220);
+  },
+
+  run() {
+    const entry = live.get(this.$element);
+    if (!entry) return;
+    clearTimeout(entry.timer);
+    entry.preview.run({ ...this.project });
+  },
+
+  resetStorage() {
+    const entry = live.get(this.$element);
+    if (entry) entry.preview.clearStorage();
+    this.run();
+  },
+
+  log(level, text) {
+    this.logs = [...this.logs.slice(-199), { id: ++logId, level, text }];
+  },
+
+  // ---- files (playground) ----
+
+  startNaming(original) {
+    if (!this.manage || original === 'index.html') return;
+    this.nameOriginal = original;
+    this.nameDraft = original || 'new-block.lego';
+    this.naming = true;
+  },
+
+  focusName(input) {
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+  },
+
+  commitNaming() {
+    if (this.nameProblem) return;
+    const value = this.nameDraft.trim();
+    const next = {};
+    if (this.nameOriginal) {
+      for (const name of Object.keys(this.project)) next[name === this.nameOriginal ? value : name] = this.project[name];
+    } else {
+      Object.assign(next, this.project);
+      next[value] = value.endsWith('.lego')
+        ? '<template>\n  <p>A new block</p>\n</template>\n'
+        : value.endsWith('.js') ? "import { Lego } from 'lego-dom';\n\nLego.init();\n" : '';
+    }
+    this.naming = false;
+    this.load(next, value);
+  },
+
+  removeFile(name) {
+    const next = { ...this.project };
+    delete next[name];
+    this.load(next, '');
+  },
+
+  // ---- the divider ----
+
+  drag(event) {
+    if (!this.dragging) return;
+    const box = this.$vars.root.getBoundingClientRect();
+    const sideways = this.layout === 'split' && box.width > 760;
+    const ratio = sideways ? (event.clientX - box.left) / box.width : (event.clientY - box.top) / box.height;
+    this.split = Math.min(80, Math.max(20, Math.round(ratio * 1000) / 10));
+  },
+
+  nudge(amount) {
+    this.split = Math.min(80, Math.max(20, this.split + amount));
+  }
+}
+</script>

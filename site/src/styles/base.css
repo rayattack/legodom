@@ -1,0 +1,200 @@
+/* Reset, page chrome (header, sidebar, search) and the prose of doc pages. */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light; scroll-padding-top: calc(var(--lg-nav-height) + 16px); -webkit-text-size-adjust: 100%; }
+html.dark { color-scheme: dark; }
+body {
+  margin: 0;
+  background: var(--lg-paper);
+  color: var(--lg-text);
+  font: 16px/1.6 var(--lg-font-body);
+  -webkit-font-smoothing: antialiased;
+}
+button { margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+a { color: inherit; }
+img, svg { max-width: 100%; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Blocks are custom elements, which are inline until told otherwise. */
+site-header, docs-sidebar, lego-router, doc-article, home-page, learn-index, lesson-page, play-page, lego-repl, site-search { display: block; }
+lego-router { min-width: 0; }
+/* The editor fills whatever box its parent gives it. */
+lego-repl { height: 100%; min-height: 0; }
+
+/* ---- header ------------------------------------------------------------------ */
+
+site-header { position: sticky; top: 0; z-index: 50; }
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: var(--lg-nav-height);
+  padding: 0 24px;
+  border-bottom: 2px solid var(--lg-hairline);
+  background: var(--lg-paper);
+}
+.site-logo { display: flex; flex: none; align-items: center; gap: 10px; font: 800 19px/1 var(--lg-font-display); text-decoration: none; }
+.site-logo img { width: 28px; height: 28px; }
+.site-search-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 150px;
+  padding: 8px 10px 8px 12px;
+  border: 2px solid var(--lg-hairline);
+  border-radius: 999px;
+  background: var(--lg-surface);
+  color: var(--lg-text-2);
+  font-size: 14px;
+}
+.site-search-btn:hover { border-color: var(--lg-border); color: var(--lg-text); }
+.site-search-btn kbd { margin-left: auto; padding: 1px 7px; border-radius: 6px; background: var(--lg-tint-ink); font: 600 11.5px/1.5 var(--lg-font-mono); }
+.site-links { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.site-links a { padding: 8px 11px; border-radius: 999px; font-weight: 600; font-size: 14.5px; text-decoration: none; }
+.site-links a:hover { background: var(--lg-tint-ink); }
+.site-links a.is-active { background: var(--lg-yellow); color: #14161f; }
+.site-tools { display: flex; flex: none; align-items: center; gap: 6px; }
+.site-version { padding: 4px 9px; border-radius: 999px; background: var(--lg-tint-ink); font: 600 12px/1.4 var(--lg-font-mono); }
+.site-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; }
+.site-icon:hover { background: var(--lg-tint-ink); }
+.site-menu-btn { display: none; }
+.site-nav :focus-visible, .doc-side :focus-visible, .prose :focus-visible, .doc-pager :focus-visible { outline: 3px solid var(--lg-blue); outline-offset: 2px; }
+
+@media (max-width: 1160px) {
+  .site-menu-btn { display: grid; }
+  .site-search-btn { min-width: 0; margin-left: auto; }
+  .site-search-btn span, .site-search-btn kbd, .site-version { display: none; }
+  .site-links {
+    position: absolute;
+    top: var(--lg-nav-height);
+    right: 0;
+    left: 0;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0;
+    padding: 12px 16px 18px;
+    border-bottom: 2px solid var(--lg-border);
+    background: var(--lg-paper);
+  }
+  .site-links.is-open { display: flex; }
+  .site-links a { padding: 11px 14px; font-size: 16px; }
+}
+
+/* ---- docs layout ----------------------------------------------------------------- */
+
+.site-body { display: flex; align-items: flex-start; }
+.site-body > lego-router { flex: 1; }
+
+/* The sticky element has to be the flex child itself. <docs-sidebar> is only
+   as tall as its content, so a sticky box inside it has nowhere to stick and
+   scrolls away with the page. */
+docs-sidebar { position: sticky; top: var(--lg-nav-height); flex: none; align-self: flex-start; }
+.doc-side {
+  width: var(--lg-side-width);
+  height: calc(100vh - var(--lg-nav-height));
+  padding: 24px 16px 40px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-right: 2px solid var(--lg-hairline);
+  background: var(--lg-paper-2);
+}
+.doc-side h2 { margin: 0 0 6px 10px; font: 750 14px/1.3 var(--lg-font-display); letter-spacing: 0.02em; }
+.doc-side section + section { margin-top: 22px; }
+.doc-side a { display: block; padding: 6px 10px; border-radius: 8px; color: var(--lg-text-2); font-size: 14.5px; line-height: 1.35; text-decoration: none; }
+.doc-side a:hover { background: var(--lg-hairline); color: var(--lg-text); }
+.doc-side a.is-active { background: var(--lg-yellow); color: #14161f; font-weight: 650; }
+.doc-side-toggle { display: none; }
+
+.doc-layout { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 48px; max-width: 1080px; margin: 0 auto; padding: 40px 32px 80px; }
+.doc-main { min-width: 0; }
+.doc-toc { position: sticky; top: calc(var(--lg-nav-height) + 32px); align-self: start; max-height: calc(100vh - var(--lg-nav-height) - 64px); overflow-y: auto; font-size: 13.5px; }
+.doc-toc h2 { margin: 0 0 8px; font: 750 12px/1 var(--lg-font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.doc-toc a { display: block; padding: 4px 0 4px 12px; border-left: 2px solid var(--lg-hairline); color: var(--lg-text-2); line-height: 1.35; text-decoration: none; }
+.doc-toc a.is-sub { padding-left: 24px; }
+.doc-toc a:hover { border-color: var(--lg-border); color: var(--lg-text); }
+.doc-loading { min-height: 60vh; }
+.doc-edit { display: inline-block; margin-top: 40px; color: var(--lg-text-2); font-size: 14px; }
+.doc-pager { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; padding-top: 24px; border-top: 2px solid var(--lg-hairline); }
+.doc-pager a { display: block; padding: 14px 16px; border: 2px solid var(--lg-border); border-radius: var(--lg-radius); background: var(--lg-surface); text-decoration: none; transition: transform 0.12s, box-shadow 0.12s; }
+.doc-pager a:hover { box-shadow: var(--lg-shadow); transform: translate(-2px, -2px); }
+.doc-pager small { display: block; color: var(--lg-text-2); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.doc-pager strong { font: 750 17px/1.3 var(--lg-font-display); }
+.doc-pager .is-next { grid-column: 2; text-align: right; }
+
+@media (max-width: 1100px) {
+  .doc-layout { grid-template-columns: minmax(0, 1fr); }
+  .doc-toc { display: none; }
+}
+@media (max-width: 860px) {
+  .site-body { display: block; }
+  docs-sidebar { position: static; }
+  .doc-side { width: auto; height: auto; padding: 0; border-right: 0; border-bottom: 2px solid var(--lg-hairline); }
+  .doc-side-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 20px; font-weight: 700; font-size: 14.5px; }
+  .doc-side-body { display: none; padding: 4px 12px 18px; }
+  .doc-side.is-open .doc-side-body { display: block; }
+  .doc-layout { padding: 24px 18px 64px; }
+  .site-nav { padding: 0 14px; gap: 10px; }
+}
+
+/* ---- prose -------------------------------------------------------------------------- */
+
+.prose { font-size: 16.5px; line-height: 1.7; overflow-wrap: break-word; }
+.prose h1, .prose h2, .prose h3, .prose h4 { position: relative; font-family: var(--lg-font-display); letter-spacing: -0.015em; line-height: 1.15; }
+.prose h1 { margin: 0 0 20px; font-weight: 800; font-size: clamp(32px, 5vw, 44px); }
+.prose h2 { margin: 52px 0 16px; padding-top: 28px; border-top: 2px solid var(--lg-hairline); font-weight: 750; font-size: 27px; }
+.prose h3 { margin: 34px 0 10px; font-weight: 700; font-size: 21px; }
+.prose h4 { margin: 26px 0 8px; font-size: 17px; }
+.prose p, .prose ul, .prose ol { margin: 16px 0; }
+.prose li + li { margin-top: 6px; }
+.prose a:not(.anchor) { color: var(--lg-link); font-weight: 550; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.prose a:not(.anchor):hover { text-decoration-color: var(--lg-yellow-deep); }
+.prose .anchor { position: absolute; left: -0.9em; width: 0.9em; color: var(--lg-text-2); opacity: 0; text-decoration: none; }
+.prose :is(h2, h3, h4):hover .anchor, .prose .anchor:focus { opacity: 1; }
+.prose hr { margin: 40px 0; border: 0; border-top: 2px solid var(--lg-hairline); }
+.prose blockquote { margin: 20px 0; padding: 2px 18px; border-left: 4px solid var(--lg-yellow-deep); color: var(--lg-text-2); }
+.prose :not(pre) > code { padding: 2px 6px; border-radius: 6px; background: var(--lg-code-bg); color: var(--lg-code-text); font: 0.86em var(--lg-font-mono); }
+.prose a > code { color: inherit; }
+.prose img { border-radius: var(--lg-radius-small); }
+
+.code { position: relative; margin: 20px 0; border: 2px solid var(--lg-border); border-radius: var(--lg-radius); background: #14161f; overflow: hidden; }
+.code pre { margin: 0; padding: 18px 20px; overflow-x: auto; background: transparent !important; font: 13.5px/1.65 var(--lg-font-mono); tab-size: 2; }
+.code code { font: inherit; color: #e6edf3; }
+.code-lang { position: absolute; top: 8px; right: 12px; color: #6f7590; font: 600 11px/1 var(--lg-font-mono); pointer-events: none; }
+.code-copy { position: absolute; top: 6px; right: 8px; padding: 5px 9px; border-radius: 6px; background: #3a3f52; color: #ffffff; font: 700 11px/1 var(--lg-font-body); opacity: 0; }
+.code:hover .code-copy, .code-copy:focus-visible { opacity: 1; }
+.code:hover .code-lang { opacity: 0; }
+.code-copy.is-done { background: var(--lg-green); color: #14161f; }
+.code-title { display: block; padding: 8px 16px; border-bottom: 2px solid #23263a; color: #a8adc2; font: 600 12.5px/1.4 var(--lg-font-mono); }
+.code-group .code + .code { margin-top: -10px; }
+
+.note { margin: 22px 0; padding: 14px 18px; border: 2px solid var(--lg-border); border-radius: var(--lg-radius); background: var(--lg-tint-blue); }
+.note-tip { background: var(--lg-tint-green); }
+.note-warning { background: var(--lg-tint-yellow); }
+.note-danger { background: var(--lg-tint-red); }
+.note > :first-child { margin-top: 0; }
+.note > :last-child { margin-bottom: 0; }
+.note-title, .note summary { margin: 0 0 6px; font-weight: 750; }
+.note .code { margin: 12px 0; }
+
+.table-wrap { margin: 20px 0; overflow-x: auto; border: 2px solid var(--lg-border); border-radius: var(--lg-radius-small); }
+.prose table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.prose th, .prose td { padding: 10px 14px; border-bottom: 1px solid var(--lg-hairline); text-align: left; vertical-align: top; }
+.prose th { background: var(--lg-tint-ink); font-weight: 700; white-space: nowrap; }
+.prose tr:last-child td { border-bottom: 0; }
+
+/* ---- search ----------------------------------------------------------------------------- */
+
+.search-veil { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding: 10vh 16px 16px; background: rgba(13, 15, 21, 0.62); }
+.search-box { display: flex; flex-direction: column; width: min(640px, 100%); max-height: 76vh; border: 2px solid var(--lg-border); border-radius: var(--lg-radius); background: var(--lg-surface); box-shadow: var(--lg-shadow-big); overflow: hidden; }
+.search-field { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 2px solid var(--lg-border); }
+.search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--lg-text); font: 18px var(--lg-font-body); }
+.search-field kbd { padding: 2px 7px; border-radius: 6px; background: var(--lg-tint-ink); font: 600 11.5px/1.5 var(--lg-font-mono); }
+.search-results { margin: 0; padding: 8px; overflow-y: auto; list-style: none; }
+.search-results a { display: block; padding: 10px 12px; border-radius: var(--lg-radius-small); text-decoration: none; }
+.search-results a.is-on { background: var(--lg-yellow); color: #14161f; }
+.search-results strong { display: block; font: 700 15.5px/1.3 var(--lg-font-display); }
+.search-results small { display: block; overflow: hidden; color: inherit; font-size: 13px; opacity: 0.75; text-overflow: ellipsis; white-space: nowrap; }
+.search-empty { margin: 0; padding: 22px 18px; color: var(--lg-text-2); }
+
+.site-foot { padding: 28px 24px 40px; border-top: 2px solid var(--lg-hairline); color: var(--lg-text-2); font-size: 14px; text-align: center; }

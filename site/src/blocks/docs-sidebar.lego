@@ -1,0 +1,45 @@
+<template b-shadow="false">
+  <aside class="doc-side [[ open ? 'is-open' : '' ]]" b-show="groups.length" aria-label="Section pages">
+    <button type="button" class="doc-side-toggle" @click="open = !open" aria-expanded="[[ open ]]">
+      <span>In this section</span><span aria-hidden="true">[[ open ? '−' : '+' ]]</span>
+    </button>
+    <div class="doc-side-body">
+      <section b-for="group in groups" b-key="text">
+        <h2>[[ group.text ]]</h2>
+        <a
+          b-for="item in group.items"
+          b-key="path"
+          href="[[ item.href ]]"
+          b-link
+          class="[[ item.path === current ? 'is-active' : '' ]]"
+          @click="open = false">[[ item.text ]]</a>
+      </section>
+    </div>
+  </aside>
+</template>
+
+<script>
+import { sidebars, sectionOf, sitePath, href } from '../nav.js';
+
+// Built once: the sidebar never changes, only which part of it is showing.
+const prepared = Object.fromEntries(Object.entries(sidebars).map(([section, groups]) => [
+  section,
+  groups.map(group => ({ text: group.text, items: group.items.map(item => ({ ...item, href: href(item.path) })) }))
+]));
+
+// This block sits outside <lego-router>, so navigating between pages never
+// remounts it. It reads $route, and that read is the whole subscription.
+export default {
+  open: false,
+
+  get current() {
+    const path = sitePath(this.$route.url.split('?')[0]);
+    // '/api' and '/api/' are the same page; the sidebar lists the second.
+    return /^\/[^/]+$/.test(path) ? path + '/' : path;
+  },
+
+  get groups() {
+    return prepared[sectionOf(this.current)] || [];
+  }
+}
+</script>

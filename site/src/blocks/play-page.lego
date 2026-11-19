@@ -1,0 +1,105 @@
+<template b-shadow="false">
+  <div class="lg-play">
+    <header class="lg-play-bar">
+      <h1><span class="lg-stud" aria-hidden="true"></span>Playground</h1>
+      <label class="lg-select">
+        <span class="visually-hidden">Load an example</span>
+        <select b-sync="picked" @change="pick()">
+          <option value="">Your project</option>
+          <option b-for="example in examples" b-key="id" value="[[ example.id ]]">[[ example.label ]]</option>
+        </select>
+      </label>
+      <span class="lg-play-notice" role="status">[[ notice ]]</span>
+      <button type="button" class="lg-btn lg-btn-primary lg-btn-small" @click="share()">Share</button>
+    </header>
+    <div class="lg-play-work">
+      <lego-repl :files="files" layout="split" manage @project="remember($event.detail)"></lego-repl>
+    </div>
+  </div>
+</template>
+
+<script>
+import { lessonProject } from '../lib/files.js';
+import { decodeProject, encodeProject } from '../lib/share.js';
+
+const STORE = 'legodom.playground';
+
+// The examples are the solved lesson projects, so they are covered by the
+// same tests as the tutorial and cannot drift from the library.
+const examples = [
+  { id: 'counter', label: 'Counter', path: 'learn/basics/events' },
+  { id: 'cart', label: 'Derived values', path: 'learn/reactivity/getters' },
+  { id: 'list', label: 'Keyed list', path: 'learn/directives/lists' },
+  { id: 'form', label: 'Form binding', path: 'learn/directives/forms' },
+  { id: 'props', label: 'Props', path: 'learn/composition/props' },
+  { id: 'slots', label: 'Slots', path: 'learn/composition/slots' },
+  { id: 'globals', label: 'Shared state', path: 'learn/composition/globals' },
+  { id: 'tabs', label: 'Dynamic tabs', path: 'learn/beyond/dynamic-blocks' },
+  { id: 'tasks', label: 'Task list', path: 'learn/beyond/next-steps' }
+];
+const exampleFiles = (id) => {
+  const example = examples.find(e => e.id === id);
+  return example ? lessonProject(example.path).solved : null;
+};
+
+// What to open, decided before the editor mounts: the last project worked on
+// in this browser, or the counter. A shared link is decoded afterwards,
+// because decompressing it is asynchronous.
+const initial = () => {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(STORE) || 'null');
+    if (saved && typeof saved === 'object' && Object.keys(saved).length) return { files: saved, picked: '' };
+  } catch (e) { /* nothing saved */ }
+  return { files: exampleFiles('counter'), picked: 'counter' };
+};
+let noticeTimer = null;
+
+export default {
+  examples,
+  files: {},
+  picked: '',
+  notice: '',
+  latest: null,
+
+  // Runs before the first render, so the editor mounts with a project.
+  ...initial(),
+
+  async mounted() {
+    document.title = 'Playground | LegoDOM';
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash) return;
+    const shared = await decodeProject(hash);
+    if (shared) { this.files = shared; this.picked = ''; }
+    else this.say('That link could not be read, so here is your last project.');
+  },
+
+  remember(current) {
+    this.latest = current;
+    try { window.localStorage.setItem(STORE, JSON.stringify(current)); } catch (e) { /* private mode */ }
+  },
+
+  pick() {
+    const next = exampleFiles(this.picked);
+    if (!next) return;
+    this.files = next;
+    if (window.location.hash) history.replaceState(history.state, '', window.location.pathname + window.location.search);
+  },
+
+  async share() {
+    const encoded = await encodeProject(this.latest || this.files);
+    history.replaceState(history.state, '', `#${encoded}`);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      this.say('Link copied. Anyone who opens it gets this exact project.');
+    } catch (e) {
+      this.say('The link is in the address bar, ready to copy.');
+    }
+  },
+
+  say(text) {
+    this.notice = text;
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => { this.notice = ''; }, 2600);
+  }
+}
+</script>

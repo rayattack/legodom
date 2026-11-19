@@ -1,0 +1,86 @@
+<template b-shadow="false">
+  <div class="doc-layout">
+    <main class="doc-main">
+      <div b-if="loading" class="doc-loading" aria-busy="true"></div>
+
+      <article b-if="missing" class="prose">
+        <h1>Page not found</h1>
+        <p>There is nothing at <code>[[ path ]]</code>. It may have moved.</p>
+        <p><a href="[[ home ]]" b-link>Back to the start</a></p>
+      </article>
+
+      <article class="prose" b-html="html" @click="onClick(event)"></article>
+
+      <a b-if="editUrl" class="doc-edit" href="[[ editUrl ]]" target="_blank" rel="noreferrer">Edit this page on GitHub</a>
+
+      <nav b-if="previous || next" class="doc-pager" aria-label="More pages">
+        <a b-if="previous" href="[[ previous.href ]]" b-link><small>Previous</small><strong>[[ previous.text ]]</strong></a>
+        <a b-if="next" class="is-next" href="[[ next.href ]]" b-link><small>Next</small><strong>[[ next.text ]]</strong></a>
+      </nav>
+    </main>
+
+    <aside class="doc-toc" b-show="headings.length > 1" aria-label="On this page">
+      <h2>On this page</h2>
+      <a b-for="heading in headings" b-key="id" href="#[[ heading.id ]]" class="[[ heading.level === 3 ? 'is-sub' : '' ]]">[[ heading.text ]]</a>
+    </aside>
+  </div>
+</template>
+
+<script>
+import { BASE, REPO, href, sitePath, neighbours } from '../nav.js';
+import { loadPage } from '../lib/docs.js';
+
+export default {
+  home: BASE + '/',
+  path: '',
+  html: '',
+  headings: [],
+  loading: true,
+  missing: false,
+  previous: null,
+  next: null,
+  editUrl: '',
+
+  async mounted() {
+    const path = sitePath();
+    this.path = path;
+    const page = await loadPage(path);
+    this.loading = false;
+    if (!page) {
+      this.missing = true;
+      document.title = 'Page not found | LegoDOM';
+      return;
+    }
+
+    this.html = page.html;
+    this.headings = page.headings;
+    document.title = `${page.title} | LegoDOM`;
+
+    const around = neighbours(path);
+    this.previous = around.previous && { ...around.previous, href: href(around.previous.path) };
+    this.next = around.next && { ...around.next, href: href(around.next.path) };
+    const file = path.endsWith('/') ? `${path}index.md` : `${path}.md`;
+    this.editUrl = `${REPO}/edit/main/docs${file}`;
+
+    // The content arrived after the navigation, so a #hash is ours to honour.
+    if (window.location.hash) {
+      await Lego.nextTick();
+      const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+      if (target) target.scrollIntoView();
+    }
+  },
+
+  // One listener for every copy button in the page, however many there are.
+  async onClick(event) {
+    const button = event.target.closest('.code-copy');
+    if (!button) return;
+    const code = button.parentElement.querySelector('pre');
+    try {
+      await navigator.clipboard.writeText(code.textContent);
+      button.textContent = 'Copied';
+      button.classList.add('is-done');
+      setTimeout(() => { button.textContent = 'Copy'; button.classList.remove('is-done'); }, 1600);
+    } catch (e) { /* clipboard blocked: the text is still selectable */ }
+  }
+}
+</script>

@@ -1,0 +1,149 @@
+<template b-shadow="false">
+  <div class="lg-home">
+    <section class="lg-hero">
+      <div class="lg-hero-copy">
+        <p class="lg-eyebrow"><span class="lg-stud" aria-hidden="true"></span>Web components that snap together</p>
+        <h1>Build <mark>blocks</mark>.<br>Use them as HTML.</h1>
+        <p class="lg-lede">
+          LegoDOM turns a <code>&lt;template&gt;</code> into a reactive, encapsulated custom element.
+          No imports, no virtual DOM and no build step unless you want one.
+        </p>
+        <div class="lg-hero-actions">
+          <a class="lg-btn lg-btn-primary lg-btn-big" href="[[ links.first ]]" b-link>Start the tutorial <span aria-hidden="true">→</span></a>
+          <a class="lg-btn lg-btn-ghost lg-btn-big" href="[[ links.play ]]" b-link>Open the playground</a>
+        </div>
+        <button type="button" class="lg-command" aria-label="Copy the command [[ command ]]" @click="copy()">
+          <span aria-hidden="true">$</span><code>[[ command ]]</code>
+          <span class="lg-command-copy">[[ copied ? 'Copied' : 'Copy' ]]</span>
+        </button>
+      </div>
+      <div class="lg-hero-art" b-html="heroArt"></div>
+    </section>
+
+    <section class="lg-live" aria-labelledby="lg-live-title">
+      <header class="lg-live-head">
+        <h2 id="lg-live-title">This is running in your browser. Change it.</h2>
+        <p>The whole framework is on this page. Edit the block on the left and the result follows as you type.</p>
+      </header>
+      <div class="lg-live-frame">
+        <lego-repl :files="demo" open="brick-counter.lego" layout="split" compact></lego-repl>
+      </div>
+    </section>
+
+    <section class="lg-facts" aria-label="At a glance">
+      <div b-for="fact in facts" b-key="label" class="lg-fact tone-[[ fact.tone ]]">
+        <strong>[[ fact.value ]]</strong>
+        <span>[[ fact.label ]]</span>
+      </div>
+    </section>
+
+    <section class="lg-section" aria-labelledby="lg-anatomy-title">
+      <header class="lg-section-head">
+        <p class="lg-kicker">One file</p>
+        <h2 id="lg-anatomy-title">A block is three plain sections</h2>
+        <p>If you can read HTML, CSS and a JavaScript object, you can already read a <code>.lego</code> file.</p>
+      </header>
+      <div class="lg-anatomy">
+        <article b-for="part in anatomy" b-key="tag" class="lg-part tone-[[ part.tone ]]">
+          <div class="lg-part-studs" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="lg-part-body">
+            <h3><code>[[ part.tag ]]</code>[[ part.title ]]</h3>
+            <p>[[ part.text ]]</p>
+            <pre><code>[[ part.code ]]</code></pre>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="lg-section" aria-labelledby="lg-features-title">
+      <header class="lg-section-head">
+        <p class="lg-kicker">What you get</p>
+        <h2 id="lg-features-title">Small surface, whole framework</h2>
+      </header>
+      <div class="lg-features">
+        <article b-for="feature in features" b-key="title" class="lg-feature tone-[[ feature.tone ]]">
+          <div class="lg-feature-art" b-html="feature.svg"></div>
+          <h3>[[ feature.title ]]</h3>
+          <p>[[ feature.text ]]</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="lg-section lg-course" aria-labelledby="lg-course-title">
+      <div class="lg-course-copy">
+        <p class="lg-kicker">Learn by doing</p>
+        <h2 id="lg-course-title">[[ lessonCount ]] short lessons, each one in the editor</h2>
+        <p>Every lesson gives you a small broken thing and the one idea that fixes it. Nothing to install, and a solution button when you are stuck.</p>
+        <ol class="lg-course-list">
+          <li b-for="chapter in chapters" b-key="slug" class="tone-[[ chapter.color ]]">
+            <a href="[[ chapter.href ]]" b-link>
+              <span class="lg-stud" aria-hidden="true"></span>
+              <span><strong>[[ chapter.title ]]</strong><small>[[ chapter.summary ]]</small></span>
+              <em>[[ chapter.count ]] lessons</em>
+            </a>
+          </li>
+        </ol>
+        <a class="lg-btn lg-btn-primary" href="[[ links.learn ]]" b-link>See the course map <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="lg-course-art" b-html="stairArt"></div>
+    </section>
+
+    <section class="lg-cta">
+      <h2>Go and build something.</h2>
+      <p>Start in the browser, or scaffold a project with Vite and single-file blocks.</p>
+      <div class="lg-hero-actions">
+        <a class="lg-btn lg-btn-primary lg-btn-big" href="[[ links.first ]]" b-link>Start the tutorial</a>
+        <a class="lg-btn lg-btn-ghost lg-btn-big" href="[[ links.quickstart ]]" b-link>Read the quickstart</a>
+        <a class="lg-btn lg-btn-ghost lg-btn-big" href="[[ links.repo ]]">GitHub</a>
+      </div>
+    </section>
+
+    <footer class="site-foot">Released under the MIT License. Built with LegoDOM [[ version ]].</footer>
+  </div>
+</template>
+
+<script>
+import { href, REPO, VERSION } from '../nav.js';
+import { course, lessons } from '../lib/files.js';
+import { heroArt, stairArt, demo, facts, anatomy, features } from '../lib/home-content.js';
+
+export default {
+  heroArt,
+  stairArt,
+  demo,
+  facts,
+  anatomy,
+  features,
+  version: VERSION,
+  lessonCount: lessons.length,
+  chapters: course.map(chapter => ({
+    slug: chapter.slug,
+    title: chapter.title,
+    summary: chapter.summary,
+    color: chapter.color,
+    count: chapter.lessons.length,
+    href: href(`/learn/${chapter.slug}/${chapter.lessons[0].slug}`)
+  })),
+  links: {
+    first: href(`/${lessons[0].path}`),
+    learn: href('/learn/'),
+    play: href('/play/'),
+    quickstart: href('/quickstart/'),
+    repo: REPO
+  },
+  command: 'npm create legodom@latest my-app',
+  copied: false,
+
+  mounted() {
+    document.title = 'LegoDOM: build blocks, use them as HTML';
+  },
+
+  async copy() {
+    try {
+      await navigator.clipboard.writeText(this.command);
+      this.copied = true;
+      setTimeout(() => { this.copied = false; }, 1800);
+    } catch (e) { /* clipboard blocked: the text is selectable */ }
+  }
+}
+</script>

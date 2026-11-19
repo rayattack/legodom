@@ -1,0 +1,61 @@
+<template b-shadow="false">
+  <header class="site-nav">
+    <a class="site-logo" href="[[ home ]]" b-link>
+      <img src="[[ home ]]logo.svg" alt="" width="28" height="28">LegoDOM
+    </a>
+
+    <button type="button" class="site-search-btn" @click="global.site.searchOpen = true">
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13.5 13.5L17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Search</span><kbd>/</kbd>
+    </button>
+
+    <nav class="site-links [[ menuOpen ? 'is-open' : '' ]]" aria-label="Main">
+      <a
+        b-for="item in links"
+        b-key="path"
+        href="[[ item.href ]]"
+        b-link
+        class="[[ path.indexOf(item.match) === 0 ? 'is-active' : '' ]]"
+        @click="menuOpen = false">[[ item.text ]]</a>
+    </nav>
+
+    <div class="site-tools">
+      <span class="site-version">v[[ version ]]</span>
+      <button type="button" class="site-icon" @click="toggleTheme()" aria-label="Switch between light and dark">
+        <svg b-show="!global.site.dark" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="4" fill="currentColor"/><path d="M10 1.5v2.5M10 16v2.5M1.5 10H4M16 10h2.500M4 4l1.800 1.800M14.200 14.200L16 16M4 16l1.800-1.800M14.200 5.800L16 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg b-show="global.site.dark" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M16.500 12.500A7 7 0 0 1 7.500 3.500a7 7 0 1 0 9 9z" fill="currentColor"/></svg>
+      </button>
+      <a class="site-icon" href="[[ repo ]]" aria-label="LegoDOM on GitHub">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 .5a11.500 11.500 0 0 0-3.640 22.410c.580.110.790-.250.790-.550v-2.140c-3.200.700-3.880-1.360-3.880-1.360-.520-1.330-1.280-1.690-1.280-1.690-1.050-.710.080-.700.080-.700 1.160.080 1.770 1.190 1.770 1.190 1.030 1.760 2.700 1.250 3.360.960.100-.750.400-1.250.730-1.540-2.560-.290-5.240-1.280-5.240-5.690 0-1.260.450-2.280 1.190-3.090-.120-.290-.520-1.460.110-3.050 0 0 .970-.310 3.170 1.180a11 11 0 0 1 5.780 0c2.200-1.490 3.170-1.180 3.170-1.180.630 1.590.230 2.760.110 3.050.740.810 1.190 1.830 1.190 3.090 0 4.420-2.690 5.390-5.250 5.680.410.360.780 1.060.780 2.140v3.170c0 .310.210.670.800.550A11.500 11.500 0 0 0 12 .5z"/></svg>
+      </a>
+      <button type="button" class="site-icon site-menu-btn" @click="menuOpen = !menuOpen" aria-label="Menu">
+        <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 5.500h14M3 10h14M3 14.500h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+</template>
+
+<script>
+import { BASE, REPO, VERSION, topNav, href, sitePath } from '../nav.js';
+
+export default {
+  home: BASE + '/',
+  repo: REPO,
+  version: VERSION,
+  links: topNav.map(item => ({ ...item, href: href(item.path) })),
+  menuOpen: false,
+  // 'auto' follows the system until the reader picks a side.
+  theme: $db('legodom.theme').default('auto'),
+
+  get path() {
+    return sitePath(this.$route.url.split('?')[0]);
+  },
+
+  toggleTheme() {
+    const dark = !Lego.globals.site.dark;
+    this.theme = dark ? 'dark' : 'light';
+    Lego.globals.site.dark = dark;
+    document.documentElement.classList.toggle('dark', dark);
+  }
+}
+</script>

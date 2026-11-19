@@ -1,0 +1,157 @@
+<template b-shadow="false">
+  <div b-if="missing" class="lg-lesson-missing prose">
+    <h1>Lesson not found</h1>
+    <p>This page is not part of the course. <a href="[[ courseHref ]]" b-link>Back to the course map</a>.</p>
+  </div>
+
+  <!-- Always in the page and only hidden when there is no lesson. A block
+       inside a b-if mounts before its parent has bound its props, and the
+       editor needs its files when it mounts. -->
+  <div b-show="!missing" class="lg-lesson tone-[[ lesson.color ]] show-[[ view ]]">
+    <div class="lg-lesson-switch" role="tablist" aria-label="Lesson panes">
+      <button type="button" role="tab" class="[[ view === 'lesson' ? 'is-on' : '' ]]" aria-selected="[[ view === 'lesson' ]]" @click="view = 'lesson'">Lesson</button>
+      <button type="button" role="tab" class="[[ view === 'code' ? 'is-on' : '' ]]" aria-selected="[[ view === 'code' ]]" @click="view = 'code'">Code</button>
+    </div>
+
+    <aside class="lg-lesson-text">
+      <header class="lg-lesson-head">
+        <button type="button" class="lg-lesson-menu-btn" aria-expanded="[[ menuOpen ]]" @click="menuOpen = !menuOpen">
+          <span class="lg-stud" aria-hidden="true"></span>
+          <span class="lg-lesson-crumb">
+            <small>[[ lesson.chapterTitle ]] · [[ position ]]</small>
+            <strong>[[ lesson.title ]]</strong>
+          </span>
+          <span class="lg-caret [[ menuOpen ? 'is-open' : '' ]]" aria-hidden="true">
+            <svg viewBox="0 0 20 20" width="18" height="18"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </button>
+
+        <nav b-if="menuOpen" class="lg-lesson-menu" aria-label="All lessons">
+          <section b-for="chapter in chapters" b-key="slug" class="tone-[[ chapter.color ]]">
+            <h3><span class="lg-stud" aria-hidden="true"></span>[[ chapter.title ]]</h3>
+            <ol>
+              <li b-for="item in chapter.lessons" b-key="path">
+                <a
+                  href="[[ item.href ]]"
+                  b-link
+                  class="[[ item.path === lesson.path ? 'is-current' : '' ]] [[ global.done.includes(item.path) ? 'is-done' : '' ]]">
+                  <span class="lg-tick" aria-hidden="true"></span>[[ item.title ]]
+                </a>
+              </li>
+            </ol>
+          </section>
+        </nav>
+      </header>
+
+      <div class="lg-lesson-scroll">
+        <div class="prose lg-lesson-doc" b-html="html"></div>
+
+        <p b-if="matches && !solved" class="lg-solved" role="status">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Solved. That is exactly it.
+        </p>
+
+        <button type="button" class="lg-btn lg-btn-ghost lg-lesson-tocode" @click="view = 'code'">Open the editor</button>
+      </div>
+
+      <footer class="lg-lesson-foot">
+        <a b-show="previous.href" class="lg-btn lg-btn-ghost" href="[[ previous.href ]]" b-link><span aria-hidden="true">←</span> Back</a>
+        <span b-show="!previous.href"></span>
+        <a class="lg-btn lg-btn-primary" href="[[ next.href ]]" b-link @click="finish()">[[ next.label ]] <span aria-hidden="true">→</span></a>
+      </footer>
+    </aside>
+
+    <div class="lg-lesson-work">
+      <lego-repl
+        :files="files"
+        :open="project.open"
+        :action="action"
+        layout="stacked"
+        @action="toggleSolution()"
+        @project="check($event.detail)"></lego-repl>
+    </div>
+  </div>
+</template>
+
+<script>
+import { href, sitePath } from '../nav.js';
+import { course, lessons, findLesson, lessonProject } from '../lib/files.js';
+import { loadPage } from '../lib/docs.js';
+import { markDone } from '../lib/progress.js';
+
+const chapters = course.map(chapter => ({
+  slug: chapter.slug,
+  title: chapter.title,
+  color: chapter.color,
+  lessons: chapter.lessons.map(item => {
+    const path = `learn/${chapter.slug}/${item.slug}`;
+    return { path, title: item.title, href: href('/' + path) };
+  })
+}));
+const squash = (text) => text.replace(/\s+/g, '');
+
+export default {
+  chapters,
+  courseHref: href('/learn/'),
+  // Placeholders until mounted() fills them in, so the template always has
+  // something to read.
+  lesson: { path: '', title: '', chapterTitle: '', color: 'yellow' },
+  project: { start: {}, solved: {}, open: '', hasSolution: false },
+  missing: false,
+  html: '',
+  position: '',
+  previous: { href: '' },
+  next: { href: '', label: '' },
+  solved: false,
+  matches: false,
+  menuOpen: false,
+  view: 'lesson',
+
+  get files() {
+    return this.solved ? this.project.solved : this.project.start;
+  },
+
+  get action() {
+    if (!this.project.hasSolution) return '';
+    return this.solved ? 'Reset' : 'Show solution';
+  },
+
+  async mounted() {
+    // The router builds a fresh lesson-page for every lesson, so the URL at
+    // mount is this instance's lesson for its whole life.
+    const path = sitePath().replace(/^\//, '').replace(/\/$/, '');
+    const found = findLesson(path);
+    if (!found) { this.missing = true; return; }
+
+    this.project = lessonProject(path);
+    this.position = `${found.index + 1} / ${lessons.length}`;
+    this.previous = { href: found.previous ? href('/' + found.previous.path) : '' };
+    this.next = found.next
+      ? { href: href('/' + found.next.path), label: `Next: ${found.next.title}` }
+      : { href: href('/play/'), label: 'Open the playground' };
+    this.lesson = found.lesson;
+    document.title = `${found.lesson.title} | Learn LegoDOM`;
+
+    const page = await loadPage('/' + path);
+    if (page) this.html = page.html;
+  },
+
+  // The editor reports every change. A project that matches the solution,
+  // ignoring whitespace, counts as solved.
+  check(current) {
+    if (!this.project.hasSolution) return;
+    const target = this.project.solved;
+    this.matches = Object.keys(target).every(name => name in current && squash(current[name]) === squash(target[name]));
+    if (this.matches) markDone(this.lesson.path);
+  },
+
+  toggleSolution() {
+    this.solved = !this.solved;
+    if (this.solved) markDone(this.lesson.path);
+  },
+
+  finish() {
+    markDone(this.lesson.path);
+  }
+}
+</script>
