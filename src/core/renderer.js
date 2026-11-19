@@ -377,8 +377,10 @@ const executeBinding = (b, state, contextEl, app) => {
       return;
     }
     if (b.node.getAttribute(b.attrName) !== out) {
+      // setAttribute is the whole write, `class` included. Assigning
+      // `className` as well threw on SVG elements, where it is a read-only
+      // SVGAnimatedString, and took the rest of the render down with it.
       b.node.setAttribute(b.attrName, out);
-      if (b.attrName === 'class') b.node.className = out;
     }
   }
 };

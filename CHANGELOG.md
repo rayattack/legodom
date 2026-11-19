@@ -7,7 +7,14 @@
 - `npm create legodom` writes `AGENTS.md` and a `CLAUDE.md` that imports it into every new project.
 - `tests/agent-docs.test.js` runs the examples in those files against the bundle, checks the template globals list against the compiler's allowlist, and asserts each documented limitation still holds, so lifting one fails the test until the docs are updated.
 
+**Docs site**
+- The documentation site is now a LegoDOM app (`site/`) instead of VitePress: every page, the search box and the code editor are blocks. It adds an interactive tutorial at `/learn/` (22 lessons with a live editor, preview, state inspector and console) and a playground at `/play/` with shareable links.
+- `tests/learn-lessons.test.js` runs the starting files and the solution of every lesson against the bundle.
+
 **Fixes**
+- `Lego.defineLegoFile()` called directly now registers the custom element. It used to mount only the instances already on the page, so a block nested in another block's template, or one added later by `b-if`, stayed inert.
+- A `class="[[ … ]]"` interpolation on an SVG element no longer throws; the write goes through `setAttribute` alone.
+- `b-link` / `b-target` links leave modified clicks (Cmd, Ctrl, Shift, Alt, middle button) and `target="_blank"` to the browser, so "open in new tab" works.
 - `.lego` scripts are ES modules. The Vite plugin used to keep only the default export's object literal, so `import` lines, top-level constants and helper functions were silently dropped and the code using them failed at runtime. The plugin now emits the whole script and rebinds the default export; `Lego` and `$db` are still in scope unless the script declares them. Paths with no bundler (runtime `loader`/`manifest`/`Lego.defineLegoFile()`, and the server's text `defineLegoFile`) run the script as a function body: top-level helpers work, and an `import` is reported as an error instead of being dropped. Lego Studio bundles scripts that import modules, or are TypeScript, with esbuild, so `lego-studio snap` renders them.
 - `:name="expr"` on a built-in element binds the attribute; it used to be ignored on anything that was not a registered block, which left no declarative way to toggle `disabled`, `hidden`, `checked` or `open`. Boolean attributes are present when truthy and removed when falsy; other attributes are removed for `null`/`undefined` and otherwise hold `String(value)`, so `:aria-expanded="open"` writes `"false"`. `:value`, `:checked` and `:selected` also set the live property. Strict mode's dangerous-URL guard applies. The server renderer writes the same state, so hydration makes no writes.
 - `:name` on a tag with a hyphen that is not registered yet is now kept as a prop and applied when the block mounts, instead of being dropped.

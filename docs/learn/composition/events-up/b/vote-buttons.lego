@@ -1,0 +1,8 @@
+<template>
+  <button @click="$emit('vote', { amount: 1 })">Upvote</button>
+  <button @click="$emit('vote', { amount: -1 })">Downvote</button>
+</template>
+
+<style>
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

@@ -1,0 +1,25 @@
+<template>
+  <p b-if="user">Welcome back, [[ user.name ]]!</p>
+  <p b-if="!user">You are logged out.</p>
+  <button @click="user = user ? null : { name: 'Ada' }">
+    [[ user ? 'Log out' : 'Log in' ]]
+  </button>
+  <button @click="open = !open">[[ open ? 'Hide' : 'Show' ]] details</button>
+
+  <section b-show="open">
+    <p>These are the details.</p>
+    <textarea placeholder="Notes survive hiding"></textarea>
+  </section>
+</template>
+
+<script>
+export default {
+  open: true,
+  user: { name: 'Ada' }
+}
+</script>
+
+<style>
+  section { margin-top: 12px; padding: 12px; border: 2px dashed #14161f; border-radius: 10px; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

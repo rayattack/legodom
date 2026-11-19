@@ -1,0 +1,32 @@
+<template>
+  <label>Name <input placeholder="Your name"></label>
+  <label>Quantity <input type="number" min="1"></label>
+  <label>Colour
+    <select>
+      <option value="red">Red</option>
+      <option value="blue">Blue</option>
+      <option value="yellow">Yellow</option>
+    </select>
+  </label>
+  <label><input type="checkbox"> Gift wrap</label>
+
+  <p class="summary">
+    [[ name || 'Someone' ]] wants [[ quantity * 2 ]] studs of [[ color ]]
+    [[ gift ? 'wrapped as a gift' : '' ]]
+  </p>
+</template>
+
+<script>
+export default {
+  name: "",
+  quantity: 1,
+  color: "red",
+  gift: false
+}
+</script>
+
+<style>
+  label { display: block; margin: 8px 0; }
+  input, select { padding: 6px 8px; border: 2px solid #14161f; border-radius: 8px; }
+  .summary { margin-top: 16px; padding: 12px; background: #ffd43b; border-radius: 10px; color: #14161f; }
+</style>

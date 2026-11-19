@@ -161,6 +161,13 @@ export const ensureRouterListeners = () => {
     const path = e.composedPath();
     const link = path.find(el => el.tagName === 'A' && (el.hasAttribute('b-target') || el.hasAttribute('b-link')));
     if (!link) return;
+    // A modified click, a middle click or a link that asks for another
+    // window is the reader telling the browser where to open it. Leave it to
+    // the browser: taking it over would turn "open in a new tab" into a
+    // navigation of this one.
+    if (e.defaultPrevented || e.button > 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const linkTarget = link.getAttribute('target');
+    if (linkTarget && linkTarget !== '_self') return;
     e.preventDefault();
     const href = link.getAttribute('href');
     const targetAttr = link.getAttribute('b-target');

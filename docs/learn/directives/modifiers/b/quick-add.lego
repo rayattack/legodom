@@ -1,0 +1,32 @@
+<template>
+  <input
+    b-sync="draft"
+    placeholder="Name a brick, press Enter"
+    @keydown.enter="add()"
+    @keydown.esc="draft = ''"
+    @keydown.up.prevent="size++"
+    @keydown.down.prevent="size = Math.max(1, size - 1)">
+  <p class="hint">Size [[ size ]] (arrow keys change it, Esc clears)</p>
+  <ul>
+    <li b-for="item in items">[[ item.text ]], size [[ item.size ]]</li>
+  </ul>
+</template>
+
+<script>
+export default {
+  draft: "",
+  size: 2,
+  items: [],
+
+  add() {
+    if (!this.draft.trim()) return;
+    this.items.push({ id: Date.now(), text: this.draft.trim(), size: this.size });
+    this.draft = "";
+  }
+}
+</script>
+
+<style>
+  input { padding: 8px 10px; border: 2px solid #14161f; border-radius: 8px; width: 220px; }
+  .hint { opacity: 0.7; font-size: 13px; }
+</style>

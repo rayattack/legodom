@@ -3,6 +3,7 @@ import { deriveBlockName } from '../utils/helpers.js';
 import { parseLego, scriptFunctionBody } from '../utils/parser-utils.js';
 import { snap } from './lifecycle.js';
 import { bProps } from '../directives/b-props.js';
+import { createBlockElementClass } from './element.js';
 
 /**
  * Define a Lego block from a .lego file
@@ -55,5 +56,17 @@ export const defineLegoFile = (app, content, filename = 'block.lego') => {
   // Upgrade existing elements. Defining a block is DOM free, so a Node
   // process registering blocks for the server renderer stops here.
   if (typeof document === 'undefined') return;
+
+  // A lazily loaded block already has its class (the loader defined it to
+  // catch the first mount). Called directly, nothing has, and without one only
+  // the elements on the page right now would ever mount: an instance inside
+  // another block's shadow root, or one a b-if adds later, would stay inert.
+  if (typeof customElements !== 'undefined' && !customElements.get(blockName)) {
+    try {
+      customElements.define(blockName, createBlockElementClass(blockName));
+    } catch (e) {
+      console.warn(`[Lego] Failed to register web component ${blockName}:`, e);
+    }
+  }
   document.querySelectorAll(blockName).forEach(el => !getPrivateData(el).snapped && snap(el));
 };

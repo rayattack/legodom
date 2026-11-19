@@ -1,0 +1,36 @@
+<template>
+  <ul>
+    <li>A brick goes here</li>
+  </ul>
+  <button @click="add()">Add brick</button>
+</template>
+
+<script>
+export default {
+  nextId: 4,
+  bricks: [
+    { id: 1, color: "red", studs: 4 },
+    { id: 2, color: "blue", studs: 8 },
+    { id: 3, color: "yellow", studs: 2 }
+  ],
+
+  add() {
+    const colors = ["green", "red", "blue", "yellow"];
+    this.bricks.push({
+      id: this.nextId,
+      color: colors[this.nextId % colors.length],
+      studs: 2 * (1 + this.nextId % 4)
+    });
+    this.nextId++;
+  },
+
+  remove(brick) {
+    this.bricks = this.bricks.filter(b => b.id !== brick.id);
+  }
+}
+</script>
+
+<style>
+  li { margin: 6px 0; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

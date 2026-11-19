@@ -1,0 +1,18 @@
+<template>
+  <p class="count">[[ count ]] / [[ limit ]] bricks</p>
+  <button>+1</button>
+  <button>+5</button>
+  <button>Reset</button>
+</template>
+
+<script>
+export default {
+  count: 0,
+  limit: 20
+}
+</script>
+
+<style>
+  .count { font-size: 28px; font-weight: 800; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

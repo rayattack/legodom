@@ -1,0 +1,19 @@
+<template>
+  <p class="count">[[ count ]]</p>
+  <button @click="count++">Count</button>
+  <button @click="count = 0">Reset</button>
+  <p><input b-sync="note" placeholder="A note to keep"></p>
+</template>
+
+<script>
+export default {
+  count: 0,
+  note: ''
+}
+</script>
+
+<style>
+  .count { font-size: 40px; font-weight: 800; margin: 0 0 8px; }
+  input { padding: 8px 10px; border: 2px solid #14161f; border-radius: 8px; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

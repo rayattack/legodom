@@ -1,0 +1,20 @@
+<template>
+  <button>A block button</button>
+</template>
+
+<style>
+  self {
+    display: inline-block;
+    margin: 8px 0;
+  }
+
+  button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    background: #2f6bff;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+  }
+</style>

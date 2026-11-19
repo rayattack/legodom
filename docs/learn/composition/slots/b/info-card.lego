@@ -1,0 +1,14 @@
+<template>
+  <header>
+    <slot name="title">Untitled</slot>
+  </header>
+  <div class="body">
+    <slot></slot>
+  </div>
+</template>
+
+<style>
+  self { display: block; margin: 12px 0; border: 2px solid #14161f; border-radius: 12px; overflow: hidden; }
+  header { padding: 10px 14px; background: #ffd43b; color: #14161f; font-weight: 700; }
+  .body { padding: 6px 14px; }
+</style>

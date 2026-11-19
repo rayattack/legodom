@@ -1,0 +1,22 @@
+<template>
+  <p class="level">Volume [[ volume ]]</p>
+  <button @click="volume = Math.max(0, volume - 1)">Quieter</button>
+  <button @click="volume = Math.min(10, volume + 1)">Louder</button>
+  <p>Changes: [[ history.length ? history.join(', ') : 'none yet' ]]</p>
+</template>
+
+<script>
+export default {
+  volume: 5,
+  history: [],
+
+  mounted() {
+    // watch volume here
+  }
+}
+</script>
+
+<style>
+  .level { font-size: 24px; font-weight: 800; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

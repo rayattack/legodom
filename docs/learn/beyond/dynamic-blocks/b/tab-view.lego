@@ -1,0 +1,27 @@
+<template>
+  <nav>
+    <button
+      b-for="tab in tabs"
+      class="[[ active === tab.id ? 'on' : '' ]]"
+      @click="active = tab.id">[[ tab.label ]]</button>
+  </nav>
+  <div class="pane" b-mount="active + '-pane'"></div>
+</template>
+
+<script>
+export default {
+  active: "summary",
+  tabs: [
+    { id: "summary", label: "Summary" },
+    { id: "details", label: "Details" },
+    { id: "reviews", label: "Reviews" }
+  ]
+}
+</script>
+
+<style>
+  nav { display: flex; gap: 6px; margin-bottom: 12px; }
+  button { padding: 8px 14px; border: 2px solid #14161f; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+  button.on { background: #ffd43b; color: #14161f; }
+  .pane { padding: 12px; border: 2px dashed #14161f; border-radius: 10px; }
+</style>

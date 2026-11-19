@@ -10,7 +10,7 @@ LegoDOM (npm: `lego-dom`) is a zero-dependency web components framework (~18 KB 
 
 - **Build**: `node build.js` (outputs `dist/lego.min.js` IIFE + `dist/lego.mjs` ESM + `dist/lego.server.mjs` Node ESM + `dist/lego.d.ts` + `dist/lego.server.d.ts`). Use `node build.js --dev` for sourcemaps.
 - **Test**: `npx vitest run` (all tests) or `npx vitest run tests/<name>.test.js` (single test)
-- **Docs dev**: `npx vitepress dev docs`
+- **Docs site**: `npm run docs:dev` (dev server), `npm run docs:build` (static build into `site/dist`), `npm run docs:check` (internal link check). The site is a LegoDOM app in `site/`, not VitePress; see "Docs Site" below.
 
 ## Architecture
 
@@ -127,6 +127,17 @@ snap()  -> getDefinition(tag).app         (where that value came from)
 Custom element names are global to the document, so a tag belongs to the first app that defines it; `canDefine()` warns and refuses a second claim.
 
 Global by design (keyed by object identity, or process-wide caches): `customElements`, `proxyCache`, `privateData`, `forPools`, `itemIdMap`, `activeBlocks`, `snapState`, `legoFileLogic`, the expression compile cache, the effect dep map, the batcher, and the stylesheet registry.
+
+## Docs Site (`site/`)
+
+The documentation site is itself a LegoDOM app, built with Vite and `vite-plugin.js`. It imports `dist/lego.mjs`, so build the library first.
+
+- **`site/src/blocks/*.lego`**: every page and piece of chrome. All are light DOM (`b-shadow="false"`) and styled by the global CSS in `site/src/styles/`. `site-header`, `docs-sidebar` and `site-search` sit in `site/index.html` outside `<lego-router>`, so navigation never remounts them; they follow the URL by reading `$route`.
+- **`site/src/main.js`**: routes. `setup.js` is imported first because registering blocks mounts the ones already in `index.html`, and they read `Lego.globals.site`.
+- **`site/plugins/markdown.js`**: turns each `docs/**/*.md` into a module of finished HTML (markdown-it + shiki) that `doc-article` inserts with `b-html`, and serves `virtual:site-search`.
+- **`site/src/lib/sandbox-runtime.js`**: the script inside the preview iframe of the editor. Plain ES2017, shipped as text. `tests/learn-lessons.test.js` runs every lesson through this same file.
+- **`docs/learn/`**: the interactive tutorial. `course.js` is the table of contents; each lesson is `<chapter>/<lesson>.md` plus a folder with `a/` (starting files) and `b/` (only the files that differ in the solution).
+- **`site/scripts/prerender.js`**: after the Vite build, writes an HTML file per route so deep links work on a static host.
 
 ## Testing
 

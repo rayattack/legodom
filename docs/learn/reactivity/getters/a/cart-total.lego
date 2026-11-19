@@ -1,0 +1,23 @@
+<template>
+  <p>
+    <button @click="quantity = Math.max(1, quantity - 1)">-</button>
+    <strong>[[ quantity ]]</strong>
+    <button @click="quantity++">+</button>
+    bricks at $[[ price ]]
+  </p>
+  <p>Subtotal: $0</p>
+  <p>Shipping: $0</p>
+  <p class="total">Total: $0</p>
+</template>
+
+<script>
+export default {
+  price: 4,
+  quantity: 2
+}
+</script>
+
+<style>
+  .total { font-weight: 800; font-size: 20px; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

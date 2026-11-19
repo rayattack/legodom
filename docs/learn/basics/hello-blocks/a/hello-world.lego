@@ -1,0 +1,12 @@
+<template>
+  <p>Hello from a block!</p>
+</template>
+
+<style>
+  p {
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #ffd43b;
+    font-weight: 600;
+  }
+</style>

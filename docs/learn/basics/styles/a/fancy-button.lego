@@ -1,0 +1,7 @@
+<template>
+  <button>A block button</button>
+</template>
+
+<style>
+  /* Style the button here */
+</style>

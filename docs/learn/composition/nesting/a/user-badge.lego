@@ -1,0 +1,17 @@
+<template>
+  <span class="avatar">🧱</span>
+  <span>Builder, waved at [[ waves ]] times</span>
+  <button @click="waves++">Wave</button>
+</template>
+
+<script>
+export default {
+  waves: 0
+}
+</script>
+
+<style>
+  self { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .avatar { font-size: 24px; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

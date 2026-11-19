@@ -12,3 +12,4 @@ docs/.vitepress/dist/
 
 unpublish.sh
 www/
+site/dist/

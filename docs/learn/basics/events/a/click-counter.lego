@@ -1,0 +1,17 @@
+<template>
+  <p class="count">[[ count ]]</p>
+  <button>+1</button>
+  <button>-1</button>
+  <button>Reset</button>
+</template>
+
+<script>
+export default {
+  count: 0
+}
+</script>
+
+<style>
+  .count { font-size: 48px; font-weight: 800; margin: 0 0 12px; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

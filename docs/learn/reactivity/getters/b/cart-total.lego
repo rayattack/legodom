@@ -1,0 +1,35 @@
+<template>
+  <p>
+    <button @click="quantity = Math.max(1, quantity - 1)">-</button>
+    <strong>[[ quantity ]]</strong>
+    <button @click="quantity++">+</button>
+    bricks at $[[ price ]]
+  </p>
+  <p>Subtotal: $[[ subtotal ]]</p>
+  <p>Shipping: [[ shipping === 0 ? 'Free' : '$' + shipping ]]</p>
+  <p class="total">Total: $[[ total ]]</p>
+</template>
+
+<script>
+export default {
+  price: 4,
+  quantity: 2,
+
+  get subtotal() {
+    return this.price * this.quantity;
+  },
+
+  get shipping() {
+    return this.subtotal >= 20 ? 0 : 4;
+  },
+
+  get total() {
+    return this.subtotal + this.shipping;
+  }
+}
+</script>
+
+<style>
+  .total { font-weight: 800; font-size: 20px; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

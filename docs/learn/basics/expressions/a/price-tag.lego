@@ -1,0 +1,22 @@
+<template>
+  <h3>[[ product ]]</h3>
+  <p>[[ quantity ]] at $[[ price ]] each</p>
+  <p class="total">Total: $0.00</p>
+  <span class="badge">Unknown</span>
+</template>
+
+<script>
+export default {
+  product: 'Yellow brick',
+  price: 2.5,
+  quantity: 4,
+  stock: 12
+}
+</script>
+
+<style>
+  .total { font-weight: 700; }
+  .badge { padding: 4px 10px; border-radius: 999px; background: #e7e5dc; }
+  .badge.in { background: #b8f0d2; }
+  .badge.out { background: #ffc9c0; }
+</style>

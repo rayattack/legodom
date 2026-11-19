@@ -1,0 +1,12 @@
+<template b-props="task: Object">
+  <input type="checkbox" b-sync="task.done">
+  <span class="[[ task.done ? 'done' : '' ]]">[[ task.title ]]</span>
+  <button @click="$emit('remove', { id: task.id })">Remove</button>
+</template>
+
+<style>
+  self { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  span { flex: 1; }
+  .done { text-decoration: line-through; opacity: 0.6; }
+  button { border: none; background: none; color: #e5432d; cursor: pointer; }
+</style>

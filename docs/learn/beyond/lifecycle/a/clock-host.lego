@@ -1,0 +1,14 @@
+<template>
+  <button @click="showing = !showing">[[ showing ? 'Remove' : 'Add' ]] the clock</button>
+  <tick-clock b-if="showing"></tick-clock>
+</template>
+
+<script>
+export default {
+  showing: true
+}
+</script>
+
+<style>
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

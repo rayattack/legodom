@@ -1,0 +1,16 @@
+<template>
+  <button @click="add()">Add a brick</button>
+</template>
+
+<script>
+export default {
+  add() {
+    // increase the shared count
+  }
+}
+</script>
+
+<style>
+  self { display: inline-block; margin-right: 6px; }
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

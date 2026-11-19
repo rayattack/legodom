@@ -1,0 +1,20 @@
+<template>
+  <p>On screen for <strong>[[ seconds ]]</strong> seconds</p>
+</template>
+
+<script>
+export default {
+  seconds: 0,
+  timer: null,
+
+  mounted() {
+    console.log('clock mounted');
+    this.timer = setInterval(() => this.seconds++, 1000);
+  },
+
+  unmounted() {
+    console.log('clock unmounted');
+    clearInterval(this.timer);
+  }
+}
+</script>

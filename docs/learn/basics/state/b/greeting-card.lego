@@ -1,0 +1,11 @@
+<template>
+  <h2>Hello, [[ name ]]!</h2>
+  <p>You have been here [[ visits ]] times.</p>
+</template>
+
+<script>
+export default {
+  name: 'Ada',
+  visits: 3
+}
+</script>

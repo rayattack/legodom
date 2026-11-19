@@ -1,0 +1,45 @@
+<template>
+  <h2>Tasks</h2>
+  <form @submit.prevent="add()">
+    <input b-sync.trim="draft" placeholder="What needs doing?">
+    <button>Add</button>
+  </form>
+  <p b-if="tasks.length === 0">Nothing to do. Enjoy it.</p>
+  <task-row
+    b-for="task in tasks"
+    :task="task"
+    @remove="remove($event.detail.id)"></task-row>
+  <p class="left">[[ remaining ]] left</p>
+</template>
+
+<script>
+export default {
+  draft: '',
+  nextId: 3,
+  tasks: [
+    { id: 1, title: 'Finish the tutorial', done: true },
+    { id: 2, title: 'Build something', done: false }
+  ],
+
+  get remaining() {
+    return this.tasks.filter(task => !task.done).length;
+  },
+
+  add() {
+    if (!this.draft) return;
+    this.tasks.push({ id: this.nextId++, title: this.draft, done: false });
+    this.draft = '';
+  },
+
+  remove(id) {
+    this.tasks = this.tasks.filter(task => task.id !== id);
+  }
+}
+</script>
+
+<style>
+  form { display: flex; gap: 8px; margin-bottom: 12px; }
+  input { flex: 1; padding: 8px 10px; border: 2px solid #14161f; border-radius: 8px; }
+  button { padding: 8px 14px; border: 2px solid #14161f; border-radius: 8px; background: #ffd43b; cursor: pointer; }
+  .left { opacity: 0.7; }
+</style>

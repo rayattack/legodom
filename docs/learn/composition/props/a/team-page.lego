@@ -1,0 +1,25 @@
+<template>
+  <h2>The team</h2>
+  <div b-for="member in team">
+    <user-badge></user-badge>
+  </div>
+  <button @click="promote()">Promote Grace</button>
+</template>
+
+<script>
+export default {
+  team: [
+    { id: 1, name: "Ada", role: "Lead" },
+    { id: 2, name: "Grace", role: "Engineer" },
+    { id: 3, name: "Linus" }
+  ],
+
+  promote() {
+    this.team[1].role = "Principal";
+  }
+}
+</script>
+
+<style>
+  button { padding: 8px 14px; border-radius: 8px; border: 2px solid #14161f; background: #ffd43b; cursor: pointer; }
+</style>

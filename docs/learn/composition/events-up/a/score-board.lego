@@ -1,0 +1,14 @@
+<template>
+  <p class="score">Score: [[ score ]]</p>
+  <vote-buttons></vote-buttons>
+</template>
+
+<script>
+export default {
+  score: 0
+}
+</script>
+
+<style>
+  .score { font-size: 28px; font-weight: 800; }
+</style>

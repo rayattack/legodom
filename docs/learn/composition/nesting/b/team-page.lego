@@ -1,0 +1,6 @@
+<template>
+  <h2>The team</h2>
+  <user-badge></user-badge>
+  <user-badge></user-badge>
+  <user-badge></user-badge>
+</template>
