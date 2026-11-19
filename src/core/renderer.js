@@ -1,12 +1,45 @@
 import { registry, forPools, itemIdMap, getPrivateData, privateData } from './registry.js';
 import { appOf, defaultApp } from './globals.js';
-import { resolve, createRegex, getDelimiters, camelCase } from '../utils/helpers.js';
+import { resolve, createRegex, getDelimiters, camelCase, bindsAsProp, boundAttrText } from '../utils/helpers.js';
 import { safeEval } from '../utils/safe-eval.js';
 import { findErrorBoundary, renderErrorBlock, handleError, guardResult } from '../features/error.js';
 import { directives } from '../directives/index.js';
 import { findSyncAttr, URL_ATTRS, isDangerousUrl } from '../utils/dom.js';
 import { createEffect } from './effect.js';
 import { globalBatcher } from './batcher.js';
+
+/**
+ * The binding a `:name="expr"` attribute becomes. On a block (or a tag that
+ * may become one) it is a prop; on a built-in element it binds the attribute.
+ * Shared with hydrate.js, which scans the same attributes off the template.
+ */
+export const colonBinding = (node, attr) => {
+  const name = attr.name.slice(1);
+  if (registry[node.tagName.toLowerCase()] || bindsAsProp(node.tagName.toLowerCase())) {
+    return { type: 'prop', node, prop: camelCase(name), expr: attr.value };
+  }
+  return { type: 'bind', node, attrName: name, expr: attr.value };
+};
+
+/**
+ * These three follow their attribute only until the user touches the control,
+ * so the live property is written too. Every write compares first, which is
+ * what keeps a hydrated page at zero DOM writes.
+ */
+const LIVE_PROPERTIES = new Set(['value', 'checked', 'selected']);
+
+const writeBoundAttr = (node, name, value, app) => {
+  let text = boundAttrText(name, value);
+  if (text !== null && app.config.strict && URL_ATTRS.has(name) && isDangerousUrl(text)) text = null;
+  if (text === null) {
+    if (node.hasAttribute(name)) node.removeAttribute(name);
+  } else if (node.getAttribute(name) !== text) {
+    node.setAttribute(name, text);
+  }
+  if (!LIVE_PROPERTIES.has(name) || !(name in node)) return;
+  const live = name === 'value' ? (text === null ? '' : text) : text !== null;
+  if (node[name] !== live) node[name] = live;
+};
 
 export const bind = (container, blockRoot, loopCtx = null) => {
   const state = blockRoot._studs;
@@ -29,12 +62,12 @@ export const bind = (container, blockRoot, loopCtx = null) => {
           const modifiers = parts.slice(1);
 
           const handler = (event) => {
-            // Action Modifiers
-            if (modifiers.includes('prevent')) event.preventDefault();
-            if (modifiers.includes('stop')) event.stopPropagation();
             if (modifiers.includes('self') && event.target !== event.currentTarget) return;
 
-            // Keyboard Modifiers
+            // Keyboard Modifiers decide whether this event is ours at all. Only
+            // an event that passes them is acted on, so `.prevent` and `.stop`
+            // never touch the keys the handler ignores: `@keydown.enter.prevent`
+            // must not swallow every ordinary keystroke in the input.
             if (typeof KeyboardEvent !== 'undefined' && event instanceof KeyboardEvent) {
               // System Keys (AND logic)
               if (modifiers.includes('ctrl') && !event.ctrlKey) return;
@@ -72,12 +105,26 @@ export const bind = (container, blockRoot, loopCtx = null) => {
                 if (!isMatch) return;
               }
             }
+
+            // Action Modifiers, applied only to an event the handler fires for
+            if (modifiers.includes('prevent')) event.preventDefault();
+            if (modifiers.includes('stop')) event.stopPropagation();
             try {
+              // A b-for row's handler runs in the row's own scope: the item it
+              // shows and its `$index`, kept current by b-for on every pass,
+              // with the block state behind them. That is the item the user
+              // clicked, even if the list has moved since the last render.
+              // The rebuilt scope is the fallback for a row b-for has not run.
               let evalScope = state;
               if (loopCtx) {
-                const list = safeEval(loopCtx.listName, { state, global: globals, self: blockRoot, app });
-                const item = list[loopCtx.index];
-                evalScope = Object.assign(Object.create(state), { [loopCtx.name]: item });
+                evalScope = container._loopScope;
+                if (!evalScope) {
+                  const list = safeEval(loopCtx.listName, { state, global: globals, self: blockRoot, app });
+                  evalScope = Object.assign(Object.create(state), {
+                    [loopCtx.name]: list[loopCtx.index],
+                    $index: loopCtx.index
+                  });
+                }
               }
               // guardResult: an `async` handler returns a rejected promise
               // rather than throwing, so the catch below never sees it.
@@ -212,14 +259,13 @@ export const scanForBindings = (container, skipRootAttrs = false, app = defaultA
     if (isTerminal) return;
 
     for (const attr of node.attributes) {
-      // `:prop="expr"` is the parent-to-child data channel, never an
-      // interpolated attribute, whatever its value happens to contain.
-      const isProp = attr.name[0] === ':';
-      if (isProp && registry[node.tagName.toLowerCase()]) {
-        bindings.push({ type: 'prop', node, prop: camelCase(attr.name.slice(1)), expr: attr.value });
+      // `:name="expr"` is never an interpolated attribute, whatever its value
+      // contains. On a block it is the parent-to-child prop channel; on a
+      // built-in element it binds the attribute (see bindsAsProp).
+      if (attr.name[0] === ':' && attr.name.length > 1) {
+        bindings.push(colonBinding(node, attr));
         continue;
       }
-      if (isProp) continue;
       if (attr.value.includes(delimStart)) {
         bindings.push({ type: 'attr', node, attrName: attr.name, template: attr.value });
       }
@@ -246,8 +292,15 @@ export const scanForBindings = (container, skipRootAttrs = false, app = defaultA
   // `skipRootAttrs` is how a light-DOM block declines its own host
   // attributes: it renders into itself, so the container is the element, and
   // anything written on that tag was written by the parent block.
+  //
+  // A b-for row is such a container, so `:name` on the looped element itself
+  // (`<user-card b-for="u in users" :user="u">`) is bound here too.
   if (container.nodeType === Node.ELEMENT_NODE && !skipRootAttrs) {
     for (const attr of container.attributes) {
+      if (attr.name[0] === ':' && attr.name.length > 1) {
+        bindings.push(colonBinding(container, attr));
+        continue;
+      }
       if (attr.value.includes(delimStart)) {
         bindings.push({ type: 'attr', node: container, attrName: attr.name, template: attr.value });
       }
@@ -287,6 +340,7 @@ const executeBinding = (b, state, contextEl, app) => {
         scanForBindings,
         runBinding,
         runBindings,
+        reviveBindings,
         contextEl
       }
     });
@@ -305,6 +359,10 @@ const executeBinding = (b, state, contextEl, app) => {
     }
     const pending = b.node._pendingProps || (b.node._pendingProps = {});
     pending[b.prop] = value;
+    return;
+  }
+  if (b.type === 'bind') {
+    writeBoundAttr(b.node, b.attrName, safeEval(b.expr, { state, global: globals, self: b.node, app }, false), app);
     return;
   }
   if (b.type === 'text') {
@@ -389,9 +447,61 @@ const isPostBinding = (b) => {
  * the remaining bindings still run. Without it a throw propagates to the
  * caller (render() turns it into a boundary/onError report for the block).
  */
-export const runBindings = (bindings, state, contextEl, app, onError = null) => {
+/**
+ * Whether a binding still has somewhere to write.
+ *
+ * `b-if` detaches its node rather than removing the bindings inside it, and
+ * only `b-for` is a terminal directive, so the subtree under a false `b-if`
+ * keeps its own bindings and used to evaluate them on every render. That made
+ * the shape every framework teaches, `<div b-if="user">[[ user.name ]]</div>`,
+ * throw while the condition was false. The work was wasted even when it did
+ * not throw.
+ *
+ * A live binding owns at least one connected node: the node itself when the
+ * branch is attached, or its anchor comment when a directive has swapped the
+ * node out. A binding with neither is inside a detached branch, so it is
+ * skipped and re-runs when its branch comes back.
+ *
+ * The `rootLive` guard keeps this from changing anything for a block mounted
+ * on a detached tree, where nothing is connected and every binding must still
+ * run exactly as before.
+ */
+const bindingIsLive = (b) => {
+  if (b.node && b.node.isConnected) return true;
+  return !!(b.anchor && b.anchor.isConnected);
+};
+
+/**
+ * Wake the bindings inside a branch a directive has just re-attached.
+ *
+ * Skipping detached bindings means nothing marked them dirty while they were
+ * away, and their dependencies have not necessarily changed since, so without
+ * this a branch would come back carrying whatever text and attributes it was
+ * cloned with. Marking them dirty here puts them in the next pass of the same
+ * flush, which the batcher keeps draining until nothing new is queued.
+ *
+ * The directive's own binding is excluded: it has just run, and re-running it
+ * would only re-evaluate the same condition.
+ */
+export const reviveBindings = (subtreeRoot, contextEl, skipBinding) => {
+  const data = getPrivateData(contextEl);
+  if (!data.bindings || !subtreeRoot) return;
+  data.bindings.forEach(b => {
+    if (b === skipBinding || b.dead) return;
+    const node = b.node || b.anchor;
+    if (!node) return;
+    if (node === subtreeRoot || subtreeRoot.contains(node)) scheduleBinding(b, contextEl);
+  });
+};
+
+export const runBindings = (bindings, state, contextEl, app, onError = null, guardDetached = false) => {
   let post = null;
+  // Only the block's own pass opts in. b-for binds a pooled row before it is
+  // inserted, so its rows are legitimately detached while their bindings run
+  // and must never be skipped.
+  const rootLive = guardDetached && !!(contextEl && contextEl.isConnected);
   const run = (b) => {
+    if (rootLive && !bindingIsLive(b)) return;
     if (!onError) {
       runBinding(b, state, contextEl, app);
       return;
@@ -436,9 +546,9 @@ export const render = (el) => {
     if (data.dirtyBindings && data.dirtyBindings.size > 0) {
       const dirty = data.dirtyBindings;
       data.dirtyBindings = null;
-      runBindings(dirty, state, el, app);
+      runBindings(dirty, state, el, app, null, true);
     } else {
-      runBindings(data.bindings, state, el, app);
+      runBindings(data.bindings, state, el, app, null, true);
     }
   } catch (err) {
     handleError(err, el, 'render');

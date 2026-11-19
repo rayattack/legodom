@@ -26,11 +26,11 @@
  * it, warns once naming the block, and re-renders that block from its
  * template. One block falling back never disturbs the rest of the page.
  */
-import { registry, getDefinition, getPrivateData, forPools } from './registry.js';
+import { getDefinition, getPrivateData, forPools } from './registry.js';
 import { directives } from '../directives/index.js';
-import { getDelimiters, camelCase } from '../utils/helpers.js';
+import { getDelimiters } from '../utils/helpers.js';
 import { findSyncAttr } from '../utils/dom.js';
-import { bind } from './renderer.js';
+import { bind, colonBinding } from './renderer.js';
 
 /** Comment prefixes the server writes in place of an element. */
 const IF_MARKER = 'b-if: ';
@@ -156,12 +156,10 @@ const scanDirectives = (node, ctx) => {
  */
 const scanAttributes = (liveEl, tplEl, ctx) => {
   for (const attr of tplEl.attributes) {
-    const isProp = attr.name[0] === ':';
-    if (isProp && registry[tplEl.tagName.toLowerCase()]) {
-      ctx.bindings.push({ type: 'prop', node: liveEl, prop: camelCase(attr.name.slice(1)), expr: attr.value });
+    if (attr.name[0] === ':' && attr.name.length > 1) {
+      ctx.bindings.push(colonBinding(liveEl, attr));
       continue;
     }
-    if (isProp) continue;
     if (attr.value.includes(ctx.delimiter)) {
       ctx.bindings.push({ type: 'attr', node: liveEl, attrName: attr.name, template: attr.value });
     }
@@ -170,11 +168,16 @@ const scanAttributes = (liveEl, tplEl, ctx) => {
 
 /**
  * The container's own attributes, matching what `scanForBindings` does for
- * the root it is handed: interpolations only, no directives and no props.
+ * the root it is handed: interpolations and `:name` bindings, no directives.
+ * A b-for row is such a container.
  */
 const scanContainerAttrs = (liveRoot, tplRoot, ctx) => {
   if (!isElement(tplRoot)) return;
   for (const attr of tplRoot.attributes) {
+    if (attr.name[0] === ':' && attr.name.length > 1) {
+      ctx.bindings.push(colonBinding(liveRoot, attr));
+      continue;
+    }
     if (attr.value.includes(ctx.delimiter)) {
       ctx.bindings.push({ type: 'attr', node: liveRoot, attrName: attr.name, template: attr.value });
     }

@@ -1,0 +1,60 @@
+<template b-props="label: String = 'Revenue', value: Number = 0, unit: String = '', delta: Number = 0">
+  <div class="stat">
+    <p class="stat__label">[[label]]</p>
+    <p class="stat__value">[[value]][[unit]]</p>
+    <p class="stat__delta stat__delta--[[direction]]">[[sign]][[delta]]% this week</p>
+  </div>
+</template>
+
+<script>
+  export default {
+    get direction() {
+      return this.delta < 0 ? 'down' : 'up';
+    },
+
+    get sign() {
+      return this.delta < 0 ? '' : '+';
+    }
+  }
+</script>
+
+<style>
+  self {
+    display: block;
+  }
+
+  .stat {
+    padding: 1rem 1.2rem;
+    border-radius: 12px;
+    background: #f7f9fc;
+    color: #2b3245;
+  }
+
+  .stat__label {
+    margin: 0;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7a839b;
+  }
+
+  .stat__value {
+    margin: 0.25rem 0 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat__delta {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+  }
+
+  .stat__delta--up {
+    color: #1c7a4a;
+  }
+
+  .stat__delta--down {
+    color: #b03030;
+  }
+</style>

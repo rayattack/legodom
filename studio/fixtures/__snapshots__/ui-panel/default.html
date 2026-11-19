@@ -1,0 +1,172 @@
+<ui-panel b-hydrate b-id="ui-panel">
+  <template shadowrootmode="open">
+    <style>:host {
+    display: block;
+    max-width: 32rem;
+  }
+
+  .panel__empty {
+    margin: 0;
+    color: #7a839b;
+  }
+
+  .panel__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .panel__row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .panel__what {
+    color: #46506b;
+  }</style>
+    <ui-card :title="heading" b-hydrate b-id="ui-card">
+      <template shadowrootmode="open">
+        <style>:host {
+    display: block;
+  }
+
+  .card {
+    border: 1px solid #e4e8f0;
+    border-radius: 12px;
+    background: #fff;
+    color: #2b3245;
+    overflow: hidden;
+  }
+
+  .card__head {
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid #eef1f6;
+  }
+
+  .card__title {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .card__body {
+    padding: 1.1rem;
+    line-height: 1.55;
+  }
+
+  .card__foot {
+    padding: 0.75rem 1.1rem;
+    border-top: 1px solid #eef1f6;
+    background: #fbfcfe;
+  }</style>
+        <article class="card">
+          <header class="card__head">
+            <slot name="header">
+              <h3 class="card__title">Team activity</h3>
+            </slot>
+          </header>
+          <div class="card__body">
+            <slot></slot>
+          </div>
+          <footer class="card__foot">
+            <slot name="footer"></slot>
+          </footer>
+        </article>
+      </template>
+      <ui-badge slot="header" tone="brand" :count="entries.length" b-hydrate b-id="ui-badge">
+        <style data-lego-style="ui-badge">ui-badge {
+    display: inline-block;
+  }
+
+  ui-badge .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  ui-badge .badge--neutral {
+    background: #eef1f6;
+    color: #46506b;
+  }
+
+  ui-badge .badge--brand {
+    background: #e5edff;
+    color: #2f6df6;
+  }
+
+  ui-badge .badge--warn {
+    background: #fdf0d5;
+    color: #8a5a00;
+  }
+
+  ui-badge .badge__count {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+  }</style>
+        <span class="badge badge--brand">
+          Team activity
+          <!--b-if: count > 0-->
+        </span>
+      </ui-badge>
+      <p b-if="entries.length === 0" class="panel__empty">Nothing has happened yet.</p>
+      <!--b-if: entries.length > 0-->
+      <ui-button slot="footer" label="Refresh" variant="ghost" b-hydrate b-id="ui-button">
+        <template shadowrootmode="open">
+          <style>:host {
+    display: inline-block;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.1rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .button--primary {
+    background: #2f6df6;
+    color: #fff;
+  }
+
+  .button--ghost {
+    background: transparent;
+    border-color: #cfd6e4;
+    color: inherit;
+  }
+
+  .button--danger {
+    background: #d7373f;
+    color: #fff;
+  }
+
+  .button__spinner {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+  }</style>
+          <button class="button button--ghost" @click="press()">
+            <!--b-if: busy-->
+            <span class="button__label">Refresh</span>
+            <slot></slot>
+          </button>
+        </template>
+      </ui-button>
+    </ui-card>
+  </template>
+</ui-panel>

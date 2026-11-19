@@ -29,8 +29,6 @@ import { mount } from '../features/mount.js';
 // loader will fetch source for it.
 const VALID_TAG = /^[a-z][a-z0-9]*(-[a-z0-9]+)+$/;
 
-const STUDIO_URL = 'https://unpkg.com/@legodom/studio@0.0.2/dist/lego-studio.js';
-
 /**
  * Audit fix #36: shared allowlist gate. Lazy-loaded blocks (whether
  * discovered via config.loader or pre-registered from a manifest) all run as
@@ -490,17 +488,6 @@ export const createApp = (options = {}, internals = {}) => {
     });
   };
 
-  const loadStudio = () => {
-    if (!registry['lego-studio']) {
-      const script = document.createElement('script');
-      script.src = STUDIO_URL;
-      script.onerror = () => console.warn('[Lego] Failed to load Studio from CDN');
-      document.head.appendChild(script);
-    }
-    app.route('/_/studio', 'lego-studio');
-    app.route('/_/studio/:block', 'lego-studio');
-  };
-
   /**
    * Initialize the app.
    *
@@ -525,7 +512,6 @@ export const createApp = (options = {}, internals = {}) => {
 
     if (options.manifest) await loadManifest(app, options.manifest);
     if (config.loader) setupDiscovery(app, root);
-    if (options.studio) loadStudio();
 
     ensureRouterListeners();
     registerRoutedApp(app);

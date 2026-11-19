@@ -1,0 +1,609 @@
+# LegoDOM: complete reference for language models
+
+> LegoDOM (npm `lego-dom`) is a zero-dependency, ~18 KB gzipped framework that
+> turns HTML templates into reactive custom elements called blocks. State is a
+> plain object behind an ES Proxy, updates are direct DOM writes with no
+> virtual DOM, blocks render into Shadow DOM by default, and template
+> expressions are compiled rather than evaluated, so pages run under a CSP
+> without `unsafe-eval`. It runs with no build step from a script tag, or with
+> Vite and single-file `.lego` blocks.
+
+This file is meant to be read whole, by a model writing LegoDOM code. Every
+rule in it has been checked against the runtime. LegoDOM is not React, Vue,
+Svelte, Lit or Alpine; when its syntax looks like one of them, use the rules
+here, not the other framework's.
+
+Source of truth for an installed version: `node_modules/lego-dom/dist/lego.d.ts`
+(browser runtime) and `node_modules/lego-dom/dist/lego.server.d.ts` (server
+renderer). Human documentation: https://rayattack.github.io/legodom/
+
+---
+
+## 1. Model
+
+- A **block** is a custom element defined from a template plus a logic object.
+  Its tag must contain a hyphen (`user-card`).
+- The logic object becomes the block's **state**: a deep reactive proxy. A
+  binding that reads a key re-runs when that key changes, and nothing else does.
+- Updates are batched to the next animation frame. `await Lego.nextTick()`
+  resolves after the DOM has been written and `updated()` hooks have run.
+- Each block renders into its own shadow root unless it opts out with
+  `b-shadow="false"`.
+- `Lego.init()` starts the runtime: it registers inline templates, wires the
+  router and mounts blocks already on the page. Blocks can be defined before or
+  after `init()`.
+
+## 2. Defining a block
+
+### 2a. A `.lego` file with Vite (the default for applications)
+
+```html
+<!-- src/user-card.lego  ->  <user-card> -->
+<script>
+export default {
+  following: false,
+  toggle() {
+    this.following = !this.following;
+    this.$emit('follow-changed', { following: this.following });
+  }
+}
+</script>
+
+<template b-props="name: String = 'Anonymous', followers: Number = 0">
+  <h3>[[ name ]]</h3>
+  <p>[[ followers + (following ? 1 : 0) ]] followers</p>
+  <button @click="toggle()">[[ following ? 'Unfollow' : 'Follow' ]]</button>
+</template>
+
+<style>
+  self { display: block; padding: 1rem; border: 1px solid #ddd; }
+  h3 { margin: 0; }
+</style>
+```
+
+- Sections: `<script>`, `<template>`, `<style>`, all optional, at least one
+  required. Convention: script, template, style.
+- The file name is the tag. `user-card.lego` is `<user-card>`, `UserCard.lego`
+  and `user_card.lego` become `user-card`. A name without a hyphen fails the
+  build. Pattern: `[a-z][a-z0-9]*(-[a-z0-9]+)+`.
+- The `<template>` tag carries the block's settings: `b-props`, `b-shadow="false"`,
+  `b-form`, `b-error="tag"`, `b-stylesheets="keys"`, `b-cascade="keys"`.
+- **The script section is an ES module.** Import what it needs, declare
+  top-level helpers and constants, and `export default { … }` the block's
+  logic object. `Lego` (the app) and `$db` are in scope without an import; a
+  script that imports or declares either name keeps its own.
+
+  ```js
+  import { fetchTodos } from './api.js';
+  const PAGE = 20;
+  export default {
+    todos: [],
+    async mounted() { this.todos = await fetchTodos(PAGE); }
+  }
+  ```
+
+  Imports need the Vite plugin. A `.lego` file loaded at runtime (`loader`,
+  `manifest`, `Lego.defineLegoFile`) or handed to the server's
+  `defineLegoFile` as text has no bundler behind it: its top-level helpers
+  work, and an `import` is reported as an error.
+- `<script lang="ts">` is compiled with esbuild.
+- `<story name="Busy" args="{ busy: true }"></story>` sections are Lego Studio
+  metadata and are stripped from production builds.
+
+Vite setup:
+
+```js
+// vite.config.js
+import { defineConfig } from 'vite';
+import lego from 'lego-dom/vite-plugin';
+
+export default defineConfig({
+  plugins: [lego({ blocksDir: './src', include: ['**/*.lego'] })]  // these are the defaults
+});
+```
+
+```js
+// src/app.js
+import { Lego } from 'lego-dom';
+import 'virtual:lego-blocks';            // registers every discovered .lego file
+
+Lego.config.strict = import.meta.env.DEV;  // unknown names throw in dev
+Lego.route('/', 'home-page');
+Lego.route('/users/:id', 'user-page');
+Lego.route('*', 'not-found');
+await Lego.init();
+```
+
+```html
+<!-- index.html -->
+<body>
+  <lego-router></lego-router>
+  <script type="module" src="/src/app.js"></script>
+</body>
+```
+
+Scaffold a project with `npm create legodom@latest my-app`.
+
+### 2b. `Lego.block()` in JavaScript
+
+```js
+import { Lego } from 'lego-dom';   // default import works too
+
+Lego.block('order-row', {
+  template: `<span>[[ id ]]</span> <b>[[ total.toFixed(2) ]]</b>`,
+  logic: { mounted() { /* … */ } },
+  props: 'id: String, total: Number = 0',
+  shadow: true,       // false renders into the light DOM
+  form: false,        // true makes it form associated
+  styles: '',         // b-stylesheets keys
+  cascade: '',        // b-cascade keys
+  error: ''           // fallback block tag
+});
+```
+
+The template may start with a `<style>` element. A positional form also exists,
+`Lego.block(tag, template, logic, styles, cascade, error, props)`, but `shadow`
+and `form` are only available in the options form. Redefining a tag re-mounts
+its live instances (that is how hot reload works).
+
+In a JavaScript template literal `${}` is JavaScript interpolation, evaluated
+once at definition time. Write bindings as `[[ ]]`, and escape `\${` when a
+binding itself contains a template literal.
+
+### 2c. No build step
+
+```html
+<!doctype html>
+<html>
+<body>
+  <counter-button></counter-button>
+
+  <script src="https://unpkg.com/lego-dom/dist/lego.min.js"></script>
+  <script>
+    Lego.block('counter-button', {
+      template: `<button @click="inc()">Clicked [[ count ]] times</button>`,
+      logic: { count: 0, inc() { this.count++; } }
+    });
+    Lego.init();
+  </script>
+</body>
+</html>
+```
+
+The script exposes `window.Lego`. Pin a version (`lego-dom@x.y.z`) in
+production. An inline `<template b-id="tag-name">…</template>` in the page is
+registered by `Lego.init()`; give it data with `b-logic="{ … }"` on the template
+or on an instance. Methods with statement bodies inside a `b-logic` attribute
+fall back to `Function()` (needs CSP `unsafe-eval`, warns once), so put methods
+in `Lego.block()` logic instead.
+
+## 3. The logic object
+
+```js
+{
+  count: 0,                         // state
+  items: [],
+  inc() { this.count++; },          // method: shorthand only
+  async load() {
+    const res = await fetch('/api/items');
+    this.items = await res.json();
+  },
+  get total() {                     // cached computed value
+    return this.items.reduce((sum, i) => sum + i.price, 0);
+  },
+  mounted() { this.load(); },
+  unmounted() { /* clear timers, close sockets */ }
+}
+```
+
+- `this` is the reactive state. Assignment and in-place mutation of objects and
+  arrays both re-render (`this.items.push(x)`, `this.items[0].done = true`,
+  `this.user = { … }`).
+- `Set`, `Map`, `Date`, `Promise` and typed arrays are stored unproxied so their
+  methods work. Mutating them in place does not re-render; assign a new value.
+- Arrow-function methods (`inc: () => …`) do not receive the state as `this`.
+  Use method shorthand. Arrow functions inside a method body are fine.
+- Getters are computed values, cached until something they read changes.
+- Helpers on `this`:
+
+| Helper | Meaning |
+|---|---|
+| `$element` | The host element. `null` after unmount, so `if (!this.$element) return;` guards async work. |
+| `$vars` | Element refs collected by `b-var`. |
+| `$emit(name, detail)` | Dispatch a `bubbles: true, composed: true` `CustomEvent` from the host. |
+| `$watch(source, cb, { immediate })` | Watch a dotted path or `state => value`; `cb(value, oldValue)`. Stopped on unmount; returns a stop function. |
+| `$route`, `$go`, `$mount` | The app's route state, navigation and imperative mount. |
+| `$parent` | The nearest ancestor block element. |
+| `$loading` | Present only when `mounted()` returned a promise; true until it settles. |
+| `$form`, `$disabled` | Form-associated blocks only (section 11). |
+
+## 4. Template expressions
+
+`[[ expr ]]` interpolates in text and in attribute values, including partial
+values (`class="row [[ active ? 'on' : '' ]]"`). Directive, `@event` and
+`:name` values are bare expressions. `Lego.config.syntax = 'mustache'`
+switches to `{{ }}`.
+
+`:name="expr"` on a built-in element (a tag with no hyphen) binds the
+attribute. A boolean attribute (`disabled`, `hidden`, `checked`, `selected`,
+`open`, `required`, `readonly`, `multiple`, `inert`, …) is present when the
+value is truthy and removed when it is falsy: `<button :disabled="busy">`. Any
+other attribute is removed only for `null` or `undefined` and otherwise holds
+`String(value)`, so `:aria-expanded="open"` writes `"false"`. `:value`,
+`:checked` and `:selected` also set the live property, which stops following
+its attribute once the user edits the control. In strict mode a dangerous URL
+in `:href`, `:src` and similar is dropped. The server renderer writes the same
+attribute state, so hydration needs no DOM writes. On a block (a tag with a
+hyphen), `:name` passes a prop instead (section 7).
+
+Expressions go through LegoDOM's own parser and compiler, never `eval`.
+
+**Supported**: property access, calls, `?.`, `??`, ternaries, arithmetic,
+comparison and logical operators, template literals, array and object
+literals, arrow functions with an expression body (`items.filter(i => i.done)`),
+`typeof`, `new` on the allowed globals, `=`, `+=`, `-=`, `*=`, `/=`, `++`, `--`,
+and the comma operator (`a = 1, b = 2`). `this` refers to the state.
+
+**Not supported**: `;` and multiple statements, `{ }` bodies, spread `...`,
+destructuring, regex literals, `||=`, `&&=`, `??=`, `if`, `for`, `await`.
+Move that logic into a method.
+
+**Name resolution**, first match wins:
+
+1. Helpers: `$emit`, `$go`, `$mount`, `$db`, `$route`, `$params`
+   (`$route.params`), `$element`, `$ancestors(tag)`, `$registry(tag)`.
+2. Block state (inside `b-for`, the row scope first: the loop variable and
+   `$index`).
+3. `global` (the app's globals), `self` (the DOM element the binding is on),
+   `event` and `$event` (event handlers only), `helpers`.
+4. Only these globals: `Math JSON Date Number String Boolean Array Object
+   parseInt parseFloat isNaN isFinite encodeURIComponent decodeURIComponent
+   encodeURI decodeURI console Intl Promise Set Map RegExp NaN Infinity
+   undefined`.
+
+`window`, `document`, `fetch`, `localStorage`, `location` and `setTimeout` are
+not reachable; call a method. `__proto__` is always denied, and `constructor` /
+`prototype` are denied when the read would yield a function. The sandbox is
+CSP and prototype-pollution protection, not a trust boundary: do not render
+templates from untrusted sources.
+
+An unknown name renders as empty text. With `Lego.config.strict = true` it is
+an error instead, reported through error boundaries and `config.onError`.
+
+A method named without parentheses in `[[ ]]` renders the function's source
+text; call it (`[[ total() ]]`) or make it a getter. In an event handler a bare
+name is called with the event: `@click="save"` is `save($event)`.
+
+## 5. Directives
+
+| Directive | Behavior |
+|---|---|
+| `b-if="cond"` | Removes the element when falsy (a comment anchor holds its place) and re-inserts it when truthy. Bindings inside a false branch do not run. |
+| `b-show="cond"` | Toggles `display: none`, restoring the original `display` value. Keeps state, focus and input values. |
+| `b-for="item in list"` | Clones the element once per array item. `$index` is the zero-based position, in bindings and in event handlers. One loop variable only. Works with nested loops (an inner row sees the outer loop variable) and every other directive inside the row, and with `:name` bindings on the looped element itself. |
+| `b-key="path"` | Item key for `b-for`, dot paths allowed. Default: `item.id`, `item._id`, `item.uuid`, `item.key`, then object identity; primitives use index and value. |
+| `b-sync="path"` | Two-way binding for `input` (text, number, email, checkbox, radio), `textarea`, `select`. Radios match their `value`. Modifiers: `.lazy` (on `change`), `.number`, `.trim`. Works on loop items (`b-sync="todo.done"`). |
+| `b-text="path"` | Text content from a property path; no expressions. A `global.` prefix reads globals. |
+| `b-html="expr"` | Sets `innerHTML`, unsanitized. Trusted content only. |
+| `b-html.safe="expr"` | Sanitizes through `Lego.config.sanitize` (set it to `DOMPurify.sanitize` in production) or a small built-in fallback. |
+| `b-var="name"` | Stores the element at `this.$vars.name`. |
+| `b-init="expr"` | Runs once, the first time the element binds. |
+| `b-enter="expr"` / `b-leave="expr"` | Run when the element enters or leaves the viewport (IntersectionObserver). `.once` disconnects after the first run. |
+| `b-mount="tagExpr"` | Mounts the block whose tag name the expression returns, swapping when it changes; `null` clears. |
+| `b-logic` / `b-data` | Object literal merged into a block's state (section 8). |
+| `b-props` | Prop contract on a block's template (section 7). |
+| `b-id` | Names an inline `<template>` so `Lego.init()` registers it. |
+| `b-error="tag"` | Error fallback block (section 16). |
+| `b-stylesheets` / `b-cascade` | Adopt shared stylesheets (section 10). |
+| `b-shadow="false"` / `b-form` | Light DOM rendering / form association, on the template tag. |
+| `b-link`, `b-target`, `b-action` | Router attributes on `<a>` and `<form>` (section 13). |
+
+`b-if` placed on the same element as `b-for` is ignored. Filter in the loop
+expression (`b-for="t in todos.filter(t => !t.done)"`) or put the `b-if` on a
+child element. `b-for` iterates arrays only; for an object use
+`b-for="entry in Object.entries(obj)"`.
+
+## 6. Events
+
+`@name="expr"` adds a listener, removed automatically on unmount. `event` and
+`$event` are the DOM event. Custom events from child blocks work the same way:
+`<user-card @follow-changed="sync($event.detail)">`.
+
+| Modifier | Effect |
+|---|---|
+| `.prevent` | `preventDefault()`, only when the handler actually fires |
+| `.stop` | `stopPropagation()`, likewise |
+| `.self` | Only when `event.target === event.currentTarget` |
+| `.ctrl` `.alt` `.shift` `.meta` | Require the modifier key (all listed must be held) |
+| `.enter` `.esc` / `.escape` `.space` `.tab` `.delete` `.backspace` `.up` `.down` `.left` `.right` | Named keys (any listed key matches) |
+| `.alpha` / `.numbers` | Any single letter / any digit |
+| any other | Case-insensitive match against `event.key`, as in `@keydown.ctrl.s.prevent="save()"` |
+
+Inside a `b-for` row, a handler runs in the row's scope: the loop variable,
+`$index`, any outer loop's variable, then the block state. It acts on the item
+the row is showing: `@click="remove(todo)"`, `@click="removeAt($index)"`.
+
+## 7. Props
+
+```html
+<template b-props="title: String = 'Untitled', count: Number = 0, items: Array = [], onPick: Function, open: Boolean">
+```
+
+- Each entry is `name`, `name: Type`, `name = default` or `name: Type = default`;
+  braces optional. Types: `String Number Boolean Array Object Function`.
+  Defaults are template expressions evaluated once per instance, so
+  `items: Array = []` gives each instance its own array. Renames are not
+  supported. From JavaScript, pass the same string as `props`.
+- **Live binding**: `<user-card :name="lead.name" :user-id="lead.id">`. The
+  expression runs in the parent's scope and is re-applied whenever it changes,
+  in the same frame. Kebab-case attribute names map to camelCase props
+  (`:user-id` sets `userId`). Works inside `b-for` rows.
+- **Static attribute**: `<user-card name="Ada" count="42" open>`. Coerced by
+  type: `Number(value)`; Boolean is `true` when present and `false` when absent
+  or `"false"`; Array and Object parse JSON. Attribute changes after mount are
+  reflected.
+- **Resolution order at mount**, later wins: block logic, template `b-logic`,
+  instance `b-logic`, declared default (only if still `undefined`), `:prop`
+  bindings, plain attributes.
+- **One-way**: a child may write its own prop, and the parent's next update
+  overwrites it. Report changes upward with `$emit`.
+- With `b-props` declared, the runtime warns about a declared prop that ends up
+  `undefined` with no default, and about `b-logic` keys that were never
+  declared (usually a typo).
+- `:name` is a prop on any tag with a hyphen, including a block that registers
+  after its parent rendered: the value waits and is applied when the block
+  mounts. On a built-in element it binds the attribute instead (section 4).
+
+## 8. Logic tiers and `b-logic`
+
+State merges three sources, later wins: the block's own logic (`.lego` script
+or `logic` option), `b-logic` on the definition `<template>`, then `b-logic` on
+the instance tag. An instance `b-logic` is evaluated in the parent block's
+scope, so it can pass values: `<child-card b-logic="{ user: currentUser }">`.
+Prefer declared props with `:prop` for anything that should stay live.
+`b-data` is an alias of `b-logic`.
+
+## 9. Slots
+
+Shadow blocks use native slots: `<slot></slot>`, `<slot name="header"></slot>`,
+fallback content inside the slot, and `<h1 slot="header">` in the caller.
+Light DOM blocks (`b-shadow="false"`) emulate default and named slots by moving
+the caller's children once at mount.
+
+## 10. Styling
+
+- A block's `<style>` is scoped by its shadow root. `self` in a selector targets
+  the host element (rewritten to `:host`). Page CSS does not reach inside;
+  inherited properties and CSS custom properties (`var(--brand)`) do.
+- `b-shadow="false"` (or `shadow: false`) renders into the light DOM: page CSS
+  applies, ARIA id references and native form submission work, the block's own
+  `<style>` is scoped by prefixing every selector with the tag name (`self`
+  becomes the tag) and is injected into `<head>` once per tag.
+- Shared sheets: `Lego.init(document.body, { styles: { base: ['/reset.css', '/theme.css'] } })`
+  registers named keys (URLs or `CSSStyleSheet` objects). `b-stylesheets="base"`
+  on a template or instance adopts them; `b-cascade="base"` passes them to every
+  descendant block.
+
+## 11. Forms
+
+- Inputs inside a block bind with `b-sync`. Handle submission with
+  `<form @submit.prevent="save()">`.
+- A form-associated block (`<template b-form>` or `form: true`) takes part in an
+  outer `<form>`: its `value` state key is submitted under the element's `name`.
+  `this.$form` exposes `setValue(value, state?)`, `setValidity(flags, message?, anchor?)`
+  (`setValidity({})` clears), `checkValidity()`, `reportValidity()`, and
+  read-only `form`, `name`, `validity`. A form reset restores `value` to its
+  mount-time value; a disabled fieldset sets `$disabled`. Blocks lazily loaded
+  from a manifest cannot be form associated.
+
+## 12. Global and shared state
+
+- `Lego.globals` is a reactive object shared by every block of the app. Write
+  it from JavaScript (`Lego.globals.user = await fetchMe()`), read it in
+  templates as `global.user.name` and in methods as `Lego.globals.user`.
+- Built-in globals: `$route`, `$go`, `$mount`, `$db`.
+- `$ancestors('tag-name')` returns the nearest ancestor element with that tag,
+  across shadow boundaries; read its `.state`.
+- `$registry('tag-name')` returns a per-tag reactive object built from that
+  block's logic at definition time. It is not any instance's state. Prefer
+  `Lego.globals` for shared data.
+- From outside, a mounted block's state is `element.state`.
+
+## 13. Routing
+
+```js
+Lego.route('/', 'home-page');
+Lego.route('/users/:id', 'user-page');
+Lego.route('/files/*', 'files-page');
+Lego.route('/admin', 'admin-page', async ({ path, params }) => {
+  if (!Lego.globals.user) { Lego.globals.$go('/login').get(); return false; }
+  return true;
+});
+Lego.route('*', 'not-found');
+```
+
+- `:name` captures a segment, `*` matches anything. The first match wins, so
+  register catch-alls last. Routes can be added before or after `init()`.
+- Middleware runs before `$route` is committed; returning `false` cancels the
+  navigation. Only the latest navigation's verdict counts.
+- A matched route renders into `<lego-router>` (every one on the page), or into
+  `init(root, { routerTarget: '#main' })`.
+- Links: `<a href="/users/42" b-link>` navigates client side and pushes history.
+  `b-target="#main #side"` renders into the listed elements instead.
+  `b-link="false"` navigates without changing the URL. A plain `<a href>` is a
+  full page load.
+- `<form b-action>` suppresses the browser's default submit.
+- `$route` is `{ url, route, params, query, method, body }`. `$params` is
+  `$route.params`.
+- Navigate in code: `this.$go('/users/42').get()`, `$go(path, '#panel').get(false)`
+  (no history entry), `$go(path).post(data)`; also `put`, `patch`, `delete`.
+  The verb is recorded in `history.state`; matching is by path only.
+- `$mount('user-card', '#main', { id: 42 })` mounts a block into a target with
+  initial state; `$mount(null, '#main')` clears it; with no target it returns a
+  detached element.
+
+## 14. Persistence
+
+```js
+{
+  theme: $db('theme').default('light'),
+  draft: $db('draft').default('').debounce(500)
+}
+```
+
+A `$db` descriptor in the logic object makes that key persistent in
+localStorage, synced across tabs through the `storage` event. From JavaScript:
+`Lego.db('user').set(value)`, `.get()`, `.delete()`. A full storage quota is
+reported through `config.onError(err, 'quota', key)` and the write is skipped;
+no other keys are evicted.
+
+## 15. Lifecycle and timing
+
+| Hook | When |
+|---|---|
+| `mounted()` | After the first render, before child blocks mount. May return a promise (sets `$loading`). |
+| `beforeUpdate()` | Before a re-render, with the old DOM still in place. Not on first render. |
+| `updated()` | Synchronously after each render flush, once per block per flush. Safe for measuring. Not on first render. |
+| `unmounted()` | When the element leaves the DOM. Event listeners, watchers and observers are cleaned up automatically. |
+| `errorCaptured(err, info)` | An error in this block or a descendant, innermost first. `info` is `{ type, source }`. Return `false` to claim it. |
+
+Moving a block in the DOM (reordering, `appendChild`) keeps its state;
+teardown waits a microtask. In tests and scripts, change state then
+`await Lego.nextTick()` before reading the DOM.
+
+## 16. Errors
+
+- `b-error="error-card"` on a template or instance renders that block in place
+  when a descendant fails in render, mount, update, unmount or an event
+  handler. The fallback's state has `$error: { message, stack, component }`.
+- `errorCaptured` runs first; returning `false` stops the boundary and
+  `config.onError`.
+- `Lego.config.onError = (err, type, el) => { … }` is the last resort.
+
+## 17. The `Lego` object
+
+`Lego` (default export, `window.Lego`) is an app. `Lego.createApp(options)` or
+`import { createApp } from 'lego-dom'` makes more, each with its own config,
+globals, routes and plugins. Custom element names are document-wide, so the
+first app to define a tag owns it.
+
+| Member | Purpose |
+|---|---|
+| `init(root?, { styles, loader, manifest, debug, routerTarget })` | Start the runtime. Returns a promise. |
+| `block(tag, options)` | Define a block (section 2b). |
+| `defineLegoFile(source, 'tag-name.lego')` | Define a block from `.lego` source text at runtime. Upgrades matching elements already in the document. |
+| `route(path, tag, middleware?)` | Register a route. |
+| `globals` | Reactive app state, plus `$route`, `$go`, `$mount`, `$db`. |
+| `config` | Section 18. |
+| `mount(tag, target?, props?)` | Imperative mount; same as `$mount`. |
+| `snap(el)` / `unsnap(el)` | Manually mount or unmount an element. |
+| `db(key)` | Persistence descriptor. |
+| `watch(source, cb, { immediate })` | Watch a path or getter on `globals`. Returns a stop function. |
+| `effect(fn)` | Run `fn` now and whenever reactive values it read change. Returns a stop function. |
+| `nextTick()` | Promise for the next committed render flush. |
+| `use(plugin, options?)` | Install `{ install(app, options) }` or `(app, options) => {}` once per app. |
+| `createApp({ config, globals })` | Another independent app. |
+| `getLegos()`, `getActiveBlocksCount()`, `getDefinitions()` | Introspection. `getDefinitions()` feeds the server renderer. |
+
+`init` options: `styles` (section 10); `loader(tag)` returning a URL or `.lego`
+source for unknown hyphenated tags (always set `config.loaderAllowlist` with it);
+`manifest` to pre-register remote `.lego` files
+(`[{ base: '/blocks/', suffix: true, legos: ['user-card'] }]`, a URL, or
+`{ url, headers, credentials }`); `debug`; `routerTarget`.
+
+## 18. Configuration
+
+| Key | Meaning |
+|---|---|
+| `syntax` | `'brackets'` (`[[ ]]`, default) or `'mustache'` (`{{ }}`). |
+| `strict` | Unknown template names throw; dangerous URL schemes are dropped from `href`, `src`, `action` and similar attributes. |
+| `sanitize` | Function used by `b-html.safe`. |
+| `onError(err, type, el)` | Last-resort error handler. |
+| `loader`, `loaderAllowlist` | Auto-loading of unknown tags, restricted to matching names (string, RegExp, function or array). |
+| `debug` | Verbose `[Lego Trace]` logging. |
+| `metrics` | `onRenderStart` / `onRenderEnd` hooks. |
+
+## 19. Server rendering and hydration
+
+```js
+import { Lego } from 'lego-dom';
+import { createRenderer } from 'lego-dom/server';
+import './blocks.js';                          // calls Lego.block(...); needs no DOM
+
+const renderer = createRenderer({ definitions: Lego.getDefinitions() });
+// or: createRenderer().defineFrom(Lego), or renderer.defineLegoFile(source, 'user-card.lego')
+const html = renderer.renderToString('user-card', {
+  props: { name: 'Ada' },                                      // merged over logic defaults
+  globals: { user: { id: 1 } },                                // what templates read as `global`
+  route: { url: '/u/1', params: { id: '1' }, query: {} },      // what `$route` returns
+  slots: { default: '<p>hi</p>', header: '<b>Title</b>' },     // slot content as HTML
+  attrs: { class: 'card' }                                     // extra host attributes
+});
+```
+
+- Pure Node, no DOM. Lifecycle hooks do not run on the server.
+- `renderer.defineLegoFile(source, filename)` evaluates the script without a
+  bundler, so it takes self-contained scripts only. For blocks whose scripts
+  import modules, load them through Vite (`ssrLoadModule`, which runs the same
+  plugin) and pass `Lego.getDefinitions()` to `createRenderer`.
+- Output marks each block host with `b-hydrate`. Shadow blocks emit
+  `<template shadowrootmode="open">`. On the client, `Lego.init()` adopts that
+  markup in place, and a correct page needs no DOM writes. A block whose markup
+  does not match its template warns once and re-renders from the template.
+- Known gaps: keyless object lists and light DOM blocks with caller slot
+  content re-render instead of hydrating.
+
+## 20. Lego Studio
+
+Ships with `lego-dom`, run with `npx`:
+
+| Command | Purpose |
+|---|---|
+| `lego-studio` | Workshop at http://localhost:6006: blocks in isolation, controls generated from `b-props`, event log, hydration diff. |
+| `lego-studio snap [--check] [--update]` | Render every block and story through the server renderer to `__snapshots__/` HTML. Exits 1 on a render error, or with `--check` when output changed. No browser. |
+| `lego-studio graph` | Block composition graph (`--json`, `--svg file`). |
+| `lego-studio hydrate` | Validate the server output contract. |
+| `lego-studio build --out dir` | Static, deployable studio. |
+
+Options: `--root`, `--include`, `--exclude`, `--only`, `--affected`, `--base`,
+`--out`, `-p/--port`, `--open`. Every block gets a `Default` story from its
+`b-props` defaults; add more with `<story>` sections.
+
+`npx lego-studio snap --root src` is the quickest check that every block's
+template compiles and renders, without a browser. Scripts that import modules
+or are TypeScript are bundled with esbuild (installed with Vite) for this:
+relative imports are followed, packages load from the project, and `lego-dom`
+is an inert stand-in. Vite `resolve.alias` paths are not applied.
+
+## 21. Sharp edges
+
+Each of these looks right and is wrong:
+
+1. Arrow-function methods have the wrong `this`. Use method shorthand.
+2. `@click="a = 1; b = 2"` is a syntax error and nothing runs. Use
+   `a = 1, b = 2` or a method.
+3. Spread, destructuring and statements are not template syntax. The binding
+   fails, and the raw `[[ … ]]` text can end up on the page.
+4. `[[ method ]]` without `()` prints source code.
+5. `b-for="(item, i) in list"` does not work. Write `item in list` and use
+   `$index`.
+6. `b-if` on the same element as `b-for` is ignored. Filter in the loop
+   expression (`b-for="t in todos.filter(t => !t.done)"`) or put `b-if` on a
+   child element.
+7. `b-for` iterates arrays only. For an object use
+   `b-for="entry in Object.entries(obj)"` and read `entry[0]`, `entry[1]`.
+8. `disabled="[[ busy ]]"` leaves the attribute present, so the element is
+   disabled even when `busy` is false. Write `:disabled="busy"`.
+9. Mutating a `Set`, `Map` or `Date` in place does not re-render. Assign a new
+   one.
+10. Outside strict mode an unknown name renders as empty text, so a typo fails
+    silently.
+11. A plain `<a href>` reloads the page. Add `b-link`.
+12. A block's tag must contain a hyphen, and the `.lego` file name decides it.
+13. In a `Lego.block()` JavaScript template string, `${}` is JavaScript
+    interpolation. Use `[[ ]]` for bindings and escape `\${` inside a template
+    literal that belongs to a `[[ ]]` expression.
+14. `import` in a `.lego` script needs the Vite plugin. A `.lego` file loaded
+    at runtime (`loader`, `manifest`, `Lego.defineLegoFile`) or passed to the
+    server's `defineLegoFile` as text must be self-contained; top-level helpers
+    are fine there, imports are an error.

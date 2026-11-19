@@ -1,9 +1,8 @@
 // Import Tailwind CSS
 import './app.css';
 
-// Import Lego core (local for testing)
-import { Lego } from '../../../lego.js';
-import '../../../lego-studio/src/lego-studio.lego';
+// Import Lego core (local source, so the example tracks the working tree)
+import { Lego } from '../../../src/index.js';
 
 // Import virtual module that auto-discovers and registers all .lego blocks
 import 'virtual:lego-blocks';
@@ -23,6 +22,5 @@ Lego.route('/admin', 'admin-panel', async (params, globals) => {
 
 // Initialize Lego
 await Lego.init(document.body, {
-  tailwind: ['/src/app.css'],
-  studio: true
+  tailwind: ['/src/app.css']
 })

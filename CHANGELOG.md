@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+**Docs for coding agents**
+- `llms.txt` and `llms-full.txt` at the docs site root: an index in the llmstxt.org format, and the whole API plus its sharp edges in one file meant to be read into a model's context.
+- `npm create legodom` writes `AGENTS.md` and a `CLAUDE.md` that imports it into every new project.
+- `tests/agent-docs.test.js` runs the examples in those files against the bundle, checks the template globals list against the compiler's allowlist, and asserts each documented limitation still holds, so lifting one fails the test until the docs are updated.
+
+**Fixes**
+- `.lego` scripts are ES modules. The Vite plugin used to keep only the default export's object literal, so `import` lines, top-level constants and helper functions were silently dropped and the code using them failed at runtime. The plugin now emits the whole script and rebinds the default export; `Lego` and `$db` are still in scope unless the script declares them. Paths with no bundler (runtime `loader`/`manifest`/`Lego.defineLegoFile()`, and the server's text `defineLegoFile`) run the script as a function body: top-level helpers work, and an `import` is reported as an error instead of being dropped. Lego Studio bundles scripts that import modules, or are TypeScript, with esbuild, so `lego-studio snap` renders them.
+- `:name="expr"` on a built-in element binds the attribute; it used to be ignored on anything that was not a registered block, which left no declarative way to toggle `disabled`, `hidden`, `checked` or `open`. Boolean attributes are present when truthy and removed when falsy; other attributes are removed for `null`/`undefined` and otherwise hold `String(value)`, so `:aria-expanded="open"` writes `"false"`. `:value`, `:checked` and `:selected` also set the live property. Strict mode's dangerous-URL guard applies. The server renderer writes the same state, so hydration makes no writes.
+- `:name` on a tag with a hyphen that is not registered yet is now kept as a prop and applied when the block mounts, instead of being dropped.
+- `:name` on the `b-for` element itself (`<user-card b-for="u in users" :user="u">`) is bound, on the client and in hydration. Only interpolations were read off a row's own element before.
+- `b-for` row event handlers run in the row's scope: `$index` is defined there (it was a ReferenceError), a nested loop's handler sees the outer loop variable, and the handler acts on the item the row shows rather than re-reading `list[index]`.
+- Studio: a script error found during discovery is no longer listed twice once stories render.
+- Event modifiers: `.prevent` and `.stop` now apply only to an event the handler actually fires for. `@keydown.enter.prevent` used to call `preventDefault()` on every keystroke, which made the input impossible to type into.
+- `b-for`: the loop variable and `$index` are defined as own properties of the row scope. Assigning them used to travel up the prototype chain into the reactive state, so a block whose state already had a key named like the loop variable (`m` with `b-for="m in items"`) had that key overwritten by the last row.
+
+
 **Component contract**
 - Reactive props: `b-props="name, count: Number = 0, tags: Array = []"` declares props with optional types and defaults. Parents bind them with `:prop="expr"` (kebab-case maps to camelCase) and the child re-renders when the expression changes. Plain attributes on declared props are coerced by type. Declared props always exist on state; a Boolean with no attribute is `false`.
 - `Lego.block(tag, { template, logic, styles, cascade, error, props, shadow, form })` options form. The positional form still works.

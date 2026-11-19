@@ -1,0 +1,49 @@
+<template b-props="heading: String = 'Team activity', entries: Array = []">
+  <ui-card :title="heading">
+    <ui-badge slot="header" tone="brand" :count="entries.length">[[heading]]</ui-badge>
+
+    <p b-if="entries.length === 0" class="panel__empty">Nothing has happened yet.</p>
+
+    <ul b-if="entries.length > 0" class="panel__list">
+      <li b-for="entry in entries" b-key="id" class="panel__row">
+        <ui-avatar :user="entry.who" :size="28"></ui-avatar>
+        <span class="panel__what">[[entry.what]]</span>
+      </li>
+    </ul>
+
+    <ui-button slot="footer" label="Refresh" variant="ghost"></ui-button>
+  </ui-card>
+</template>
+
+<style>
+  self {
+    display: block;
+    max-width: 32rem;
+  }
+
+  .panel__empty {
+    margin: 0;
+    color: #7a839b;
+  }
+
+  .panel__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .panel__row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .panel__what {
+    color: #46506b;
+  }
+</style>
+
+<story name="Busy team" args="{ entries: [{ id: 1, who: { name: 'Ada Lovelace', role: 'Engineer' }, what: 'merged the parser' }, { id: 2, who: { name: 'Grace Hopper', role: 'Compilers' }, what: 'reviewed the renderer' }] }"></story>

@@ -1,0 +1,39 @@
+<ui-badge b-hydrate b-id="ui-badge">
+  <style data-lego-style="ui-badge">ui-badge {
+    display: inline-block;
+  }
+
+  ui-badge .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  ui-badge .badge--neutral {
+    background: #eef1f6;
+    color: #46506b;
+  }
+
+  ui-badge .badge--brand {
+    background: #e5edff;
+    color: #2f6df6;
+  }
+
+  ui-badge .badge--warn {
+    background: #fdf0d5;
+    color: #8a5a00;
+  }
+
+  ui-badge .badge__count {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+  }</style>
+  <span class="badge badge--neutral">
+    <!--b-if: count > 0-->
+  </span>
+</ui-badge>

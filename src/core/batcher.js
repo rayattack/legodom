@@ -8,6 +8,41 @@ import { handleError, guardResult } from '../features/error.js';
 // main thread.
 const MAX_FLUSH_PASSES = 100;
 
+/**
+ * How long to wait before assuming no frame is coming.
+ *
+ * Deliberately much longer than a frame, so a visible tab always renders on
+ * the animation frame exactly as it did before and this timer never wins.
+ */
+const NO_FRAME_FALLBACK_MS = 100;
+
+/**
+ * Ask for a frame, with a timer as a backstop.
+ *
+ * `requestAnimationFrame` does not fire while the document is hidden, and
+ * every scheduling path below sets `queued` before asking for the frame. A
+ * tab backgrounded at the wrong moment therefore stopped rendering and, worse,
+ * stopped settling `nextTick()`, so any `await Lego.nextTick()` in application
+ * code deadlocked until the tab was looked at again.
+ *
+ * This is a backstop rather than a second scheduler: whichever callback
+ * arrives first runs the batch and the other becomes a no-op.
+ */
+const scheduleFlush = (fn) => {
+  let ran = false;
+  const run = () => {
+    if (ran) return;
+    ran = true;
+    fn();
+  };
+  if (typeof requestAnimationFrame !== 'function') {
+    setTimeout(run, 0);
+    return;
+  }
+  requestAnimationFrame(run);
+  setTimeout(run, NO_FRAME_FALLBACK_MS);
+};
+
 export const createBatcher = (renderHandler = null) => {
   let queued = false;
   const blocksToUpdate = new Set();
@@ -64,7 +99,7 @@ export const createBatcher = (renderHandler = null) => {
       // Trigger next batch if not already queued
       if (!queued && blocksToUpdate.size > 0) {
         queued = true;
-        requestAnimationFrame(processBatch);
+        scheduleFlush(processBatch);
       }
     }
   };
@@ -110,7 +145,7 @@ export const createBatcher = (renderHandler = null) => {
     processPendingQueue();
     if (stalled && !queued) {
       queued = true;
-      requestAnimationFrame(processBatch);
+      scheduleFlush(processBatch);
     }
 
     // The DOM for this batch is committed and its hooks have run.
@@ -123,7 +158,7 @@ export const createBatcher = (renderHandler = null) => {
       pendingTickResolvers = [];
       if (!queued) {
         queued = true;
-        requestAnimationFrame(processBatch);
+        scheduleFlush(processBatch);
       }
     }
   };
@@ -142,7 +177,7 @@ export const createBatcher = (renderHandler = null) => {
       if (queued) return;
       queued = true;
 
-      requestAnimationFrame(processBatch);
+      scheduleFlush(processBatch);
     },
     /**
      * Resolves after the next flush commits its DOM writes and runs its
@@ -162,7 +197,7 @@ export const createBatcher = (renderHandler = null) => {
       tickResolvers.push(resolve);
       if (queued) return;
       queued = true;
-      requestAnimationFrame(processBatch);
+      scheduleFlush(processBatch);
     }),
     setHandler
   };

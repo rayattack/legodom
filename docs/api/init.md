@@ -22,7 +22,6 @@ interface InitOptions {
   styles?: Record<string, (string | CSSStyleSheet)[]>;
   loader?: (tagName: string) => string | Promise<string> | void;
   manifest?: ManifestGroup | ManifestGroup[] | string | { url: string; headers?: Headers; credentials?: RequestCredentials };
-  studio?: boolean;
   debug?: boolean;
   routerTarget?: string;
 }
@@ -101,10 +100,6 @@ manifest: {
 For each entry the runtime registers a custom element that, on first connect, fetches the file, parses it via `Lego.defineLegoFile()`, and snaps the live element. While the fetch is in-flight, additional instances are queued and snapped when the response lands, so a list of 50 `<user-card>` elements triggers exactly one network round-trip.
 
 Header values may be functions (called per-fetch) or strings. Strings prefixed `$db.` resolve through the persistence layer; strings prefixed `$globals.` read from `Lego.globals`.
-
-#### `options.studio`
-
-When `true`, side-loads `@legodom/studio` from the unpkg CDN and registers `/_/studio` and `/_/studio/:block` routes. Useful for in-app component browsing during development.
 
 #### `options.debug`
 

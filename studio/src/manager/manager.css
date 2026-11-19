@@ -1,0 +1,280 @@
+/*
+ * Lego Studio manager: shell chrome and the design tokens.
+ *
+ * This file styles the page itself and nothing else. Every block in the
+ * manager renders into its own shadow root, so its rules are written next to
+ * its template and cannot reach anything here. What does cross the boundary
+ * is custom properties: they inherit, so the tokens declared on :root below
+ * are the single palette every block draws from, and a theme change is one
+ * set of redefinitions rather than a sweep through six stylesheets.
+ *
+ * The palette is Geist, and it is monochrome on purpose. Light is a white
+ * page with near black text, dark is a black page with near white text, and
+ * everything between the two is one gray ramp. No token carries a hue, which
+ * means no state may be encoded as one: selection, warning and failure all
+ * have to read through fill, border weight, type weight or outright
+ * inversion. Every semantic token below is written in terms of --gray-*, so
+ * a theme is exactly one set of ramp redefinitions and a block this file has
+ * never heard of re-themes with the rest of them.
+ *
+ * There is exactly one exception to the monochrome rule, and it is at the
+ * bottom of the token block: the diff colours. The line is chrome is
+ * monochrome, content is not. A unified diff's additions and deletions are
+ * content, and red and green with a + and - gutter is a convention people
+ * read without thinking about it. Spending weight and borders on that instead
+ * made the panel worse, so these five tokens are deliberate, they are the
+ * only hues in the manager, and nothing but diff content may use them.
+ *
+ * None of this reaches the preview. The preview is a separate document in an
+ * iframe, and nothing here is ever injected into it.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /*
+   * Geist Sans and Geist Mono come from Google Fonts, linked in index.html.
+   * The stacks behind them are not decoration: a studio started on a laptop
+   * with no network still has to be legible, and Geist sits close enough to
+   * the system UI faces that the fallback is a change of texture rather than
+   * a change of layout.
+   */
+  --font-ui: 12px/1.5 "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-code: 11px/1.5 "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /*
+   * Geist runs a little larger on the body than the system stack it replaced,
+   * so the two small sizes came up half a step and the two fixed chrome bars
+   * came up with them. 10.5px in Geist is a smear at 100% zoom.
+   */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+
+  --gap-1: 2px;
+  --gap-2: 8px;
+  --gap-3: 12px;
+  --gap-4: 20px;
+
+  /* Geist's default corner. --radius-sm is the badge and chip corner. */
+  --radius: 6px;
+  --radius-sm: 4px;
+
+  /* Short and flat. Geist moves, it does not animate. */
+  --tr: 120ms ease;
+
+  --sidebar-w: 252px;
+  --panel-w: 320px;
+  --topbar-h: 40px;
+  --tabs-h: 34px;
+
+  /*
+   * The Geist gray ramp, light. --base is the page itself and is pure white
+   * here and pure black in dark, which is the one pair of values that is not
+   * a ramp step: the ramp starts one notch in from the page so that a raised
+   * surface has somewhere to go.
+   */
+  --base: #ffffff;
+  --gray-100: #f2f2f2;
+  --gray-200: #ebebeb;
+  --gray-300: #e6e6e6;
+  --gray-400: #ebebeb;
+  --gray-500: #c9c9c9;
+  --gray-600: #a8a8a8;
+  --gray-700: #8f8f8f;
+  --gray-800: #7d7d7d;
+  --gray-900: #666666;
+  --gray-1000: #171717;
+
+  /*
+   * Surfaces. Chrome sits on the page plane and is separated by hairlines
+   * rather than by fill, which is the whole trick of the Geist shell: the
+   * only thing that moves off the plane is the stage the preview sits in and
+   * the transient states (hover, selection).
+   */
+  --bg: var(--base);
+  --bg-raised: var(--base);
+  --bg-canvas: var(--gray-100);
+  --bg-stage: var(--base);
+  /*
+   * Inputs and buttons sit one step off whatever they are on, which is the
+   * one place fill is doing work that a border cannot: a pure black field on
+   * a pure black page has no shape at all until it is focused.
+   */
+  --bg-input: var(--gray-100);
+  --bg-hover: var(--gray-100);
+
+  /*
+   * Three tiers, and the bottom one is Geist's own gray-800, which is a label
+   * colour and not a reading colour: counts, uppercase group headers, chip
+   * text and placeholders live there. Anything the developer is meant to
+   * actually read sits at --fg-dim or above.
+   */
+  --fg: var(--gray-1000);
+  --fg-dim: var(--gray-900);
+  --fg-faint: var(--gray-800);
+
+  --line: var(--gray-400);
+  --line-strong: var(--gray-500);
+  --grid: color-mix(in srgb, var(--gray-1000) 6%, transparent);
+
+  /*
+   * --accent used to be a blue. It is now simply the foreground, because in a
+   * monochrome shell "emphasised" can only mean "at full strength". Anything
+   * that wants to look picked pairs it with --accent-bg, which is one step up
+   * from the surface: a filled row plus a solid rule down its edge, never a
+   * tint.
+   */
+  --accent: var(--gray-1000);
+  --accent-bg: var(--gray-200);
+
+  /*
+   * The three status families, with no hue to lean on. They separate by how
+   * loud the border is and by how much fill sits behind them: good and bad
+   * both take a full strength hairline, warn takes a mid gray one, and the
+   * call sites add weight on top. Wherever a state has to be unmissable
+   * rather than merely visible, the site inverts (--fg on --bg becomes --bg
+   * on --fg) instead of reaching for a colour that is not here.
+   */
+  --good-fg: var(--gray-1000);
+  --good-line: var(--gray-1000);
+
+  --warn-fg: var(--gray-1000);
+  --warn-bg: var(--gray-200);
+  --warn-line: var(--gray-700);
+
+  --bad-fg: var(--gray-1000);
+  --bad-bg: var(--gray-300);
+  --bad-line: var(--gray-1000);
+  --bad-scrim: color-mix(in srgb, var(--base) 88%, transparent);
+
+  /* The quiet chip: a fact about a block, not a state to act on. */
+  --tint-fg: var(--gray-900);
+  --tint-bg: var(--gray-100);
+  --tint-line: var(--gray-500);
+
+  /*
+   * Diff content, and nothing else. The only hues in the manager. The washes
+   * are low alpha so they sit under the text rather than fight it, and the
+   * gutter characters carry the same information for a reader who cannot
+   * separate the two hues, so nothing here is encoded in colour alone.
+   */
+  --diff-add-fg: #0a7c42;
+  --diff-add-bg: rgba(10, 124, 66, 0.10);
+  --diff-del-fg: #b3261e;
+  --diff-del-bg: rgba(179, 38, 30, 0.10);
+  --diff-meta-fg: var(--gray-800);
+}
+
+/*
+ * "System" is the default and stamps no attribute, so the media query has to
+ * carry it, guarded so an explicit light choice still wins on a dark OS.
+ * Only the ramp is redeclared. Every semantic token above resolves against
+ * whichever --gray-* won the cascade on this same element, so the inversion
+ * is these twelve lines and nothing else.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #000000;
+    --gray-100: #1a1a1a;
+    --gray-200: #1f1f1f;
+    --gray-300: #292929;
+    --gray-400: #2e2e2e;
+    --gray-500: #454545;
+    --gray-600: #878787;
+    --gray-700: #8f8f8f;
+    --gray-800: #7d7d7d;
+    --gray-900: #a1a1a1;
+    --gray-1000: #ededed;
+
+    /* Lifted and desaturated, so they read on black without glowing. */
+    --diff-add-fg: #4ade80;
+    --diff-add-bg: rgba(74, 222, 128, 0.13);
+    --diff-del-fg: #ff8a80;
+    --diff-del-bg: rgba(255, 138, 128, 0.13);
+    --diff-meta-fg: var(--gray-800);
+  }
+}
+
+/* The explicit override, so a picker wins in both directions. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --base: #000000;
+  --gray-100: #1a1a1a;
+  --gray-200: #1f1f1f;
+  --gray-300: #292929;
+  --gray-400: #2e2e2e;
+  --gray-500: #454545;
+  --gray-600: #878787;
+  --gray-700: #8f8f8f;
+  --gray-800: #7d7d7d;
+  --gray-900: #a1a1a1;
+  --gray-1000: #ededed;
+
+  --diff-add-fg: #4ade80;
+  --diff-add-bg: rgba(74, 222, 128, 0.13);
+  --diff-del-fg: #ff8a80;
+  --diff-del-bg: rgba(255, 138, 128, 0.13);
+  --diff-meta-fg: var(--gray-800);
+}
+
+/*
+ * A picked theme has to reach the form controls too, or a dark manager on a
+ * light OS renders a bright native checkbox in the controls panel and a
+ * bright native scrollbar down the log.
+ */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  height: 100%;
+}
+
+/*
+ * Inherited, so it crosses into every shadow root in the manager and the
+ * scrollbars stop being the one piece of the page still painted by the OS.
+ */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-500) transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100%;
+}
+
+lego-studio-shell {
+  display: block;
+  height: 100%;
+}
+
+/* Before the block upgrades there is nothing to show, so show nothing. */
+lego-studio-shell:not(:defined) {
+  visibility: hidden;
+}
+
+.boot {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--fg-dim);
+}
+
+.boot code {
+  font: var(--font-code);
+  color: var(--fg-dim);
+}

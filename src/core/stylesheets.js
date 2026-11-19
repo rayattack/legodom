@@ -87,7 +87,70 @@ const scopeRules = (rules, tagName) => {
 };
 
 /**
- * Move a light-DOM block's <style> into document.head, scoped to its tag.
+ * Where a light DOM block's scoped `<style>` has to live.
+ *
+ * A style in `document.head` cannot reach inside a shadow root, so a light
+ * DOM block nested in a shadow block used to render completely unstyled while
+ * the same block at the top level rendered correctly. The server has always
+ * emitted the style next to the block, which made this a real server/client
+ * divergence rather than only a missing feature.
+ *
+ * The style therefore goes wherever the block actually is: `document.head`
+ * for a block in the main tree, and the containing shadow root for a nested
+ * one. Deduplication follows, keyed per root, so one shadow root holding
+ * three instances of a block still ends up with a single copy.
+ */
+const rootFor = (styleEl) => {
+  const root = styleEl.getRootNode ? styleEl.getRootNode() : document;
+  if (root && root.nodeType === 11 && root.host) return root;
+  return document.head;
+};
+
+const adoptedByRoot = new WeakMap();
+
+/**
+ * The fallback when the environment hands back no CSSOM to read.
+ *
+ * Leaving the CSS exactly as authored used to be harmless, because an
+ * unscoped rule injected into `document.head` is at least a working global
+ * rule. Once a nested block's style goes into the shadow root that contains
+ * it, that stopped being true: `self` matches no element, so the fallback
+ * silently produced rules that can never apply.
+ *
+ * Rewriting the one selector that cannot survive on its own is not full
+ * scoping, and it does not pretend to be. It only keeps the fallback from
+ * being worse than doing nothing. Strings and comments are stashed first for
+ * the same reason `rewriteHostSelectors` does it in lifecycle.js: a
+ * `content: "self"` declaration is not a selector.
+ */
+const rewriteSelfToTag = (css, tagName) => {
+  const segments = [];
+  const SENTINEL = '__LEGO_SEG_';
+  const protectedCss = css.replace(
+    /\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,
+    (m) => {
+      segments.push(m);
+      return `${SENTINEL}${segments.length - 1}__`;
+    }
+  );
+  return protectedCss
+    .replace(/(?<![-\w])self(?![-\w])/g, tagName)
+    .replace(new RegExp(`${SENTINEL}(\\d+)__`, 'g'), (_, i) => segments[+i]);
+};
+
+const alreadyAdopted = (root, tagName) => {
+  let seen = adoptedByRoot.get(root);
+  if (!seen) {
+    seen = new Set();
+    adoptedByRoot.set(root, seen);
+  }
+  if (seen.has(tagName)) return true;
+  seen.add(tagName);
+  return false;
+};
+
+/**
+ * Move a light-DOM block's <style> into its root, scoped to its tag.
  *
  * There is no shadow boundary to do the confining, so every selector is
  * rewritten. The injected element is also the parser: appending it gives us a
@@ -100,18 +163,21 @@ const scopeRules = (rules, tagName) => {
  */
 export const adoptLightStyle = (tagName, styleEl) => {
   const css = styleEl.textContent;
+  const root = rootFor(styleEl);
   styleEl.remove();
-  if (injectedLightStyles.has(tagName)) return;
-  injectedLightStyles.add(tagName);
+  if (root === document.head) injectedLightStyles.add(tagName);
+  if (alreadyAdopted(root, tagName)) return;
 
   const injected = document.createElement('style');
   injected.setAttribute('data-lego-style', tagName);
   injected.textContent = css;
-  document.head.appendChild(injected);
+  root.appendChild(injected);
 
   try {
     if (injected.sheet && injected.sheet.cssRules) {
       injected.textContent = scopeRules(injected.sheet.cssRules, tagName);
+    } else {
+      injected.textContent = rewriteSelfToTag(css, tagName);
     }
   } catch (e) {
     console.warn(`[Lego] Could not scope styles for light-DOM block <${tagName}>:`, e);
@@ -132,16 +198,23 @@ export const adoptLightStyle = (tagName, styleEl) => {
  * @param {HTMLStyleElement} styleEl - the <style> the server emitted
  */
 export const adoptServerLightStyle = (tagName, styleEl) => {
-  const alreadyInHead = injectedLightStyles.has(tagName)
-    || !!document.head.querySelector(`style[data-lego-style="${tagName}"]`);
-  injectedLightStyles.add(tagName);
-  if (!styleEl) return;
-  if (alreadyInHead) {
+  if (!styleEl) {
+    injectedLightStyles.add(tagName);
+    return;
+  }
+  // Same rule as the client path: the style belongs to the root the block is
+  // actually in, so a nested light DOM block keeps its rules inside the shadow
+  // root that contains it rather than losing them to document.head.
+  const root = rootFor(styleEl);
+  if (root === document.head) injectedLightStyles.add(tagName);
+  const present = alreadyAdopted(root, tagName)
+    || !!root.querySelector(`style[data-lego-style="${tagName}"]`);
+  if (present) {
     styleEl.remove();
     return;
   }
   styleEl.setAttribute('data-lego-style', tagName);
-  document.head.appendChild(styleEl);
+  root.appendChild(styleEl);
 };
 
 export const applyStyles = (el) => {

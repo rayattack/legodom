@@ -47,6 +47,16 @@ Inside the loop, `$index` is the zero-based position.
 <li b-for="task in tasks">#[[ $index + 1 ]] · [[ task.title ]]</li>
 ```
 
+Event handlers in a row run in the row's own scope, so they see the loop
+variable, `$index` and any outer loop's variable, and act on the item the row
+is showing:
+
+```html
+<li b-for="task in tasks">
+  <button @click="removeAt($index)">Remove</button>
+</li>
+```
+
 ### Keys
 
 By default, items are tracked by:
@@ -66,7 +76,7 @@ By default, items are tracked by:
 
 ### Inner directives in loops
 
-`b-if`, `b-show`, `b-html`, `b-mount`, `b-enter`, `b-leave`, `b-init`, and `b-sync` all work inside `b-for`. Reactivity is granted at the loop level, mutating any item triggers a full loop re-iteration, not a per-binding update. (Reading the design notes in `src/directives/b-for.js` shows why.)
+`b-if`, `b-show`, `b-html`, `b-mount`, `b-enter`, `b-leave`, `b-init`, and `b-sync` all work inside `b-for`. Each row owns the effects for its own bindings, so changing one item's field re-runs only that row's bindings; the loop itself re-runs only when the list changes.
 
 ## b-text
 
@@ -242,9 +252,9 @@ Syntax: comma-separated entries of `name`, `name = default`, `name: Type`, or `n
 What it gets you:
 
 - **Typo guard**: `<user-card b-logic="{ usre: ... }">` warns that `usre` is not declared.
-- **Missing-prop warning**: `<user-card>` without `user` warns at mount (when no script default fills it).
+- **Missing-prop warning**: `<user-card>` without `user` warns at mount (when no default fills it).
 
-Defaults still come from the script tier.
+Defaults are declared inline (`count: Number = 0`) and evaluated once per instance; a value the block's own logic already sets takes precedence.
 
 ## b-id
 

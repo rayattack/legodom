@@ -16,7 +16,7 @@
  * features/, and nothing that touches `document` or `window`.
  */
 import { compile } from '../utils/expression.js';
-import { mergeDescriptors, resolve } from '../utils/helpers.js';
+import { mergeDescriptors, resolve, bindsAsProp, boundAttrText } from '../utils/helpers.js';
 import {
   VOID_ELEMENTS,
   attrValue,
@@ -128,9 +128,18 @@ const interpolate = (frame, template, scope, escape) => {
  * here writes to state, but a method an author calls from a template could.
  * Treat a definition's logic as read only, or pass mutable data in as a prop.
  */
-export const buildState = (logic, props) => {
+export const buildState = (logic, props, propDefaults = []) => {
   const state = {};
   mergeDescriptors(logic, state);
+  // Declared defaults fill only what is still undefined, layered between the
+  // logic and the incoming props. That is the client's order in applyProps:
+  // logic first, then defaults for the gaps, then whatever the parent passed.
+  // Skipping this step was a silent server/client divergence, since a block
+  // declaring `count: Number = 0` rendered an empty string on the server and
+  // a 0 on the first client render.
+  for (const prop of propDefaults) {
+    if (state[prop.name] === undefined) state[prop.name] = prop.get();
+  }
   mergeDescriptors(props, state);
   return state;
 };
@@ -206,6 +215,19 @@ const renderAttributes = (frame, node, scope) => {
     name,
     value === null ? null : interpolate(frame, value, scope, escapeAttr)
   ]);
+
+  // `:name="expr"` on a built-in element binds the attribute, by the rule the
+  // client's renderer applies (boundAttrText), so hydration finds it already
+  // right. On a block it is a prop, which collectProps handles.
+  if (!bindsAsProp(node.tag)) {
+    node.attrs.forEach(([name, value]) => {
+      if (name[0] !== ':' || name.length === 1) return;
+      const attrName = name.slice(1);
+      const text = boundAttrText(attrName, evaluate(frame, value === null ? '' : value, scope));
+      if (text === null) setFlagAttr(attrs, attrName, false);
+      else setAttr(attrs, attrName, text === '' ? null : escapeAttr(text));
+    });
+  }
 
   const show = findAttr(node, 'b-show');
   if (show && !truthy(frame, show.value, scope)) hide(attrs);
@@ -526,7 +548,7 @@ function renderNested(frame, node, scope, def) {
  * @returns {string} HTML
  */
 export function renderHost(ctx, tagName, def, props, slots, hostAttrs, depth) {
-  const state = buildState(def.logic, props);
+  const state = buildState(def.logic, props, def.propDefaults);
   const frame = {
     ctx,
     name: tagName,

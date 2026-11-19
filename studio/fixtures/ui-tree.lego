@@ -1,0 +1,36 @@
+<template b-props="node: Object = { label: 'Project', children: [] }, depth: Number = 0">
+  <div class="tree">
+    <p class="tree__label">[[node.label]]</p>
+
+    <ul b-if="depth < 3 && node.children && node.children.length > 0" class="tree__children">
+      <li b-for="child in node.children" b-key="label" class="tree__child">
+        <ui-tree :node="child" :depth="depth + 1"></ui-tree>
+      </li>
+    </ul>
+  </div>
+</template>
+
+<style>
+  self {
+    display: block;
+  }
+
+  .tree__label {
+    margin: 0;
+    padding: 0.2rem 0;
+    font-weight: 600;
+  }
+
+  .tree__children {
+    margin: 0;
+    padding: 0 0 0 1rem;
+    list-style: none;
+    border-left: 1px solid #e4e8f0;
+  }
+
+  .tree__child {
+    padding-left: 0.4rem;
+  }
+</style>
+
+<story name="Nested" args="{ node: { label: 'studio', children: [{ label: 'src', children: [{ label: 'core', children: [] }] }, { label: 'fixtures', children: [] }] } }"></story>

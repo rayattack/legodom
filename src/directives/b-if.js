@@ -10,12 +10,18 @@ export const bIf = {
     return { anchor };
   }),
 
-  execute({ binding, state, global, app }) {
+  execute({ binding, state, global, app, helpers }) {
     const { node, anchor, expr } = binding;
     const condition = !!safeEval(expr, { state, global, self: node, app });
     const isAttached = !!node.parentNode;
     if (condition && !isAttached) {
-      if (anchor.parentNode) anchor.parentNode.replaceChild(node, anchor);
+      if (!anchor.parentNode) return;
+      anchor.parentNode.replaceChild(node, anchor);
+      // The bindings in this branch were skipped while it was detached, so
+      // they hold whatever the template was cloned with. Wake them now.
+      if (helpers && helpers.reviveBindings) {
+        helpers.reviveBindings(node, helpers.contextEl, binding);
+      }
     } else if (!condition && isAttached) {
       node.parentNode.replaceChild(anchor, node);
     }

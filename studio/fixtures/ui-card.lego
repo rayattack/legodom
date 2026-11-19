@@ -1,0 +1,60 @@
+<template b-props="title: String = 'Untitled', muted: Boolean">
+  <article class="card">
+    <header class="card__head">
+      <slot name="header">
+        <h3 class="card__title">[[title]]</h3>
+      </slot>
+    </header>
+    <div class="card__body">
+      <slot></slot>
+    </div>
+    <footer class="card__foot">
+      <slot name="footer"></slot>
+    </footer>
+  </article>
+</template>
+
+<style>
+  self {
+    display: block;
+  }
+
+  .card {
+    border: 1px solid #e4e8f0;
+    border-radius: 12px;
+    background: #fff;
+    color: #2b3245;
+    overflow: hidden;
+  }
+
+  .card__head {
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid #eef1f6;
+  }
+
+  .card__title {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .card__body {
+    padding: 1.1rem;
+    line-height: 1.55;
+  }
+
+  .card__foot {
+    padding: 0.75rem 1.1rem;
+    border-top: 1px solid #eef1f6;
+    background: #fbfcfe;
+  }
+</style>
+
+<story name="With a footer" args="{ title: 'Release notes' }">
+  <p>Blocks now register without a document, so a Node process can define them.</p>
+  <div slot="footer"><small>Shipped this morning</small></div>
+</story>
+
+<story name="Custom header" args="{ title: 'Ignored when the slot is filled' }">
+  <h3 slot="header">Anything the caller wants</h3>
+  <p>The named slot replaces the fallback the block declared.</p>
+</story>

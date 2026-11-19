@@ -77,7 +77,16 @@ Props work inside `b-for` exactly as anywhere else, with the row's scope:
 <li b-for="member in team">
   <user-card :name="member.name" :role="member.title"></user-card>
 </li>
+
+<!-- or with the block itself as the looped element -->
+<user-card b-for="member in team" :name="member.name"></user-card>
 ```
+
+The colon is a prop on any tag with a hyphen. A block that registers after
+its parent rendered (a lazily loaded one, say) still gets the value: it waits
+on the element and is applied when the block mounts. On a built-in element
+such as `<button>` the colon binds the attribute instead; see
+[Boolean attributes](/tutorial/templating#boolean-attributes-name).
 
 ## Passing props: plain attributes
 

@@ -1,0 +1,47 @@
+<ui-avatar b-hydrate b-id="ui-avatar">
+  <template shadowrootmode="open">
+    <style>:host {
+    display: inline-block;
+  }
+
+  .avatar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.3rem;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .avatar__initials {
+    display: grid;
+    place-items: center;
+    width: var(--avatar-size, 40px);
+    height: var(--avatar-size, 40px);
+    border-radius: 50%;
+    background: #2f6df6;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .avatar__meta {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .avatar__role {
+    color: #7a839b;
+  }</style>
+    <button class="avatar" style="--avatar-size: 40px" @click="open()">
+      <span class="avatar__initials">?</span>
+      <span class="avatar__meta">
+        <b class="avatar__name"></b>
+        <small class="avatar__role">Invited</small>
+      </span>
+    </button>
+  </template>
+</ui-avatar>

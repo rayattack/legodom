@@ -282,15 +282,19 @@ The `<template>` tag itself carries the block's definition-level settings:
 
 ### Script Section
 
-Exports the block's reactive state and methods:
+An ES module whose default export is the block's reactive state and methods:
 
 ```html
 <script>
+import { fetchItems } from './api.js';
+
+const PAGE_SIZE = 20;
+
 export default {
   // Reactive properties
   title: 'Welcome',
   count: 0,
-  items: ['apple', 'banana'],
+  items: [],
   
   // Methods
   increment() {
@@ -298,12 +302,21 @@ export default {
   },
   
   // Lifecycle hooks
-  mounted() {
-    console.log('Block mounted!');
+  async mounted() {
+    this.items = await fetchItems(PAGE_SIZE);
   }
 }
 </script>
 ```
+
+Everything in the section is kept: imports, top-level constants and helper
+functions. `Lego` and `$db` are in scope without an import; a script that
+imports or declares either name itself uses its own.
+
+Imports need a bundler, which the Vite plugin is. A `.lego` file loaded at
+runtime (`loader`, `manifest` or `Lego.defineLegoFile()`) has none, so its
+script must be self-contained: top-level helpers work, and an `import` is
+reported through `Lego.config.onError` with the type `'script'`.
 
 ### Style Section
 

@@ -202,7 +202,6 @@ export interface LegoInitOptions {
   debug?: boolean;
   styles?: Record<string, string>;
   loader?: (tagName: string) => Promise<string> | string | void;
-  studio?: boolean;
   /** Pre-register lazy-loaded blocks from a manifest (URL, inline group(s), or an auth-wrapped URL). */
   manifest?: LegoManifest;
   /**

@@ -132,6 +132,40 @@ export const camelCase = (name) => name.replace(/-([a-z0-9])/g, (_, c) => c.toUp
 export const kebabCase = (name) => name.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`);
 
 /**
+ * `:name="expr"` on an element. On a block, or any tag with a hyphen (a block
+ * that may not be registered yet), it is a prop. On a built-in element it
+ * binds the attribute, which is the only way to toggle `disabled`, `hidden`
+ * and the rest: an interpolated `disabled="[[ busy ]]"` is always present.
+ * @param {string} tagName - lowercase tag name
+ * @returns {boolean} whether `:name` on this tag is a prop
+ */
+export const bindsAsProp = (tagName) => tagName.includes('-');
+
+/** HTML boolean attributes: present means true, whatever the value says. */
+export const BOOLEAN_ATTRS = new Set((
+  'allowfullscreen async autofocus autoplay checked controls default defer disabled ' +
+  'formnovalidate hidden inert ismap itemscope loop multiple muted nomodule novalidate ' +
+  'open playsinline readonly required reversed selected'
+).split(' '));
+
+/**
+ * The attribute text a `:name` binding writes on a built-in element, or null
+ * to remove the attribute. A boolean attribute is present when the value is
+ * truthy (or `''`) and absent otherwise. Any other attribute is absent only
+ * for `null` and `undefined`, so `:aria-expanded="open"` writes `"false"`,
+ * which is what assistive technology needs, rather than dropping it.
+ * Shared by the client renderer and the server so both write the same thing.
+ * @param {string} name - attribute name
+ * @param {*} value - the expression's value
+ * @returns {?string}
+ */
+export const boundAttrText = (name, value) => {
+  if (BOOLEAN_ATTRS.has(name)) return value || value === '' ? '' : null;
+  if (value === null || value === undefined) return null;
+  return String(value);
+};
+
+/**
  * Resolve a path in an object
  * @param {string} path - The path to resolve
  * @param {object} obj - The object to resolve the path in

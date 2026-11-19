@@ -1,0 +1,65 @@
+# LegoDOM
+
+> LegoDOM (npm `lego-dom`) is a zero-dependency, ~18 KB gzipped framework that turns HTML templates into reactive custom elements called blocks. State is a plain object behind an ES Proxy, updates are direct DOM writes with no virtual DOM, blocks render into Shadow DOM by default, and template expressions are compiled rather than evaluated, so pages run under a CSP without `unsafe-eval`. It works from a script tag with no build, or with Vite and single-file `.lego` blocks, and ships a Node server renderer with client hydration.
+
+LegoDOM is not React, Vue, Svelte, Lit or Alpine. Before writing LegoDOM code, read llms-full.txt: it is the whole API and every non-obvious rule in one file, checked against the runtime. In brief:
+
+- Interpolation is `[[ expr ]]`, events are `@click="save()"`, directives are `b-if`, `b-show`, `b-for="item in list"`, `b-sync`, `b-html`, `b-var`, `b-mount`. Props are declared with `b-props="name: Type = default"` and bound with `:name="expr"`.
+- A `.lego` file's `<script>` is an ES module whose `export default { … }` is the block's logic. Imports need the Vite plugin; a `.lego` loaded at runtime must be self-contained.
+- `:name="expr"` passes a prop on a block and binds the attribute on a built-in element (`<button :disabled="busy">`). An interpolated `disabled="[[ busy ]]"` is always present.
+- Template expressions are a JavaScript subset: no `;`, no statements, no spread or destructuring, and no access to `window`, `document` or `fetch`. Logic belongs in methods.
+- Methods use shorthand (`save() { … }`), never arrow functions, because `this` is the reactive state.
+
+## Start here
+
+- [llms-full.txt](https://rayattack.github.io/legodom/llms-full.txt): complete reference for writing LegoDOM: block definitions, logic, expression grammar, directives, events, props, styling, forms, routing, persistence, lifecycle, the `Lego` API, server rendering, Studio, and the list of sharp edges.
+- [AGENTS.md for LegoDOM apps](https://raw.githubusercontent.com/rayattack/legodom/main/create-legodom/template/AGENTS.md): the agent instructions `npm create legodom` puts in every new project. Copy it into an existing project's root.
+- [Quickstart](https://raw.githubusercontent.com/rayattack/legodom/main/docs/quickstart/index.md): build a task tracker with Vite and `.lego` files, step by step.
+- [Getting started](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/getting-started.md): install options and a first block.
+
+## Core concepts
+
+- [Blocks](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/blocks.md): what a block is and the three logic tiers.
+- [Templating](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/templating.md): interpolation and expressions.
+- [Props](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/props.md): `b-props`, `:prop` bindings, attribute coercion, resolution order.
+- [Slots](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/slots.md): native and emulated content projection.
+- [Layouts](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/layouts.md): composing pages from blocks.
+- [Reactivity](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/reactivity.md): the proxy, effects, computed getters, `$watch`, globals.
+- [Directives](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/directives.md): every `b-*` attribute with examples.
+- [Routing](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/routing.md): routes, `<lego-router>`, `b-link`, `b-target`, middleware.
+- [Error handling](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/error-handling.md): `b-error` boundaries and `errorCaptured`.
+- [Persistence](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/persistence.md): `$db` localStorage state with cross-tab sync.
+- [Lifecycle](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/lifecycle.md): hooks and render timing.
+- [.lego files](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/lego-files.md): the single-file block format and the Vite plugin.
+- [CDN usage](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/cdn-usage.md): no-build pages from a script tag.
+
+## API reference
+
+- [API overview](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/index.md): every public symbol on one page.
+- [Lego.block()](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/block.md): options, `shadow: false`, `form: true`.
+- [Lego.init()](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/init.md): styles, loader, manifest, `routerTarget`.
+- [Lego.route()](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/route.md): path patterns, middleware, outlets.
+- [Lego.globals](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/globals.md): `$route`, `$go`, `$mount`, `$db`.
+- [Lego.config](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/config.md): `syntax`, `strict`, `sanitize`, `onError`, `loaderAllowlist`.
+- [Lego.createApp()](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/create-app.md): independent app instances and plugins.
+- [Directives reference](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/directives.md): exact behavior and modifiers.
+- [Lifecycle hooks](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/lifecycle.md): order of operations.
+- [Advanced API](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/advanced.md): `snap`, `mount`, `db`, introspection.
+- [Vite plugin](https://raw.githubusercontent.com/rayattack/legodom/main/docs/api/vite-plugin.md): options and HMR.
+
+## Tooling
+
+- [Lego Studio](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/studio.md): block workshop, generated controls, HTML snapshots, composition graph, hydration checks.
+- [Server-side rendering](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/ssr.md): `lego-dom/server`, the output contract, hydration.
+- [TypeScript](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/typescript.md): typed blocks and `<script lang="ts">`.
+- [Testing](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/testing.md): testing blocks in JSDOM.
+
+## Optional
+
+- [Project structure for large apps](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/directory-structure.md)
+- [Authentication patterns](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/authentication.md)
+- [Router: surgical swaps](https://raw.githubusercontent.com/rayattack/legodom/main/docs/router/surgical-swaps.md): updating part of a page on navigation.
+- [Router: cold entry](https://raw.githubusercontent.com/rayattack/legodom/main/docs/router/cold-entry.md): first render after a refresh.
+- [Examples](https://raw.githubusercontent.com/rayattack/legodom/main/docs/examples/index.md)
+- [FAQ](https://raw.githubusercontent.com/rayattack/legodom/main/docs/tutorial/faq.md)
+- [Changelog](https://raw.githubusercontent.com/rayattack/legodom/main/CHANGELOG.md)

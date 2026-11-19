@@ -40,6 +40,14 @@ var deriveBlockName = (filename) => {
   }
   return name;
 };
+var kebabCase = (name) => name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+var bindsAsProp = (tagName) => tagName.includes("-");
+var BOOLEAN_ATTRS = new Set("allowfullscreen async autofocus autoplay checked controls default defer disabled formnovalidate hidden inert ismap itemscope loop multiple muted nomodule novalidate open playsinline readonly required reversed selected".split(" "));
+var boundAttrText = (name, value) => {
+  if (BOOLEAN_ATTRS.has(name)) return value || value === "" ? "" : null;
+  if (value === null || value === void 0) return null;
+  return String(value);
+};
 var resolve = (path, obj) => {
   if (!path) return "";
   const parts = path.trim().split(".");
@@ -52,6 +60,11 @@ var resolve = (path, obj) => {
 };
 
 // src/utils/parser-utils.js
+var readAttr = (attrs, name) => {
+  const match = attrs.match(new RegExp(`(?:^|\\s)${name}=(?:"([^"]*)"|'([^']*)')`, "i"));
+  if (!match) return null;
+  return match[1] !== void 0 ? match[1] : match[2];
+};
 function parseLego(content, filename = "block.lego") {
   const result = {
     template: "",
@@ -66,10 +79,14 @@ function parseLego(content, filename = "block.lego") {
     blockName: deriveBlockName(filename),
     hasTemplate: false,
     hasScript: false,
-    hasStyle: false
+    hasStyle: false,
+    // `<story>` sections are development metadata for Lego Studio. They are
+    // parsed out here so they never reach the template, and the Vite plugin
+    // drops them, so nothing a story declares is shipped to production.
+    stories: []
   };
   let remaining = content;
-  const startTagRegex = /<(template|script|style)\b((?:\s+(?:[^>"']|"[^"]*"|'[^']*')*)*)>/i;
+  const startTagRegex = /<(template|script|style|story)\b((?:\s+(?:[^>"']|"[^"]*"|'[^']*')*)*)>/i;
   while (remaining) {
     const match = remaining.match(startTagRegex);
     if (!match) break;
@@ -88,26 +105,16 @@ function parseLego(content, filename = "block.lego") {
     if (tagName === "template") {
       result.hasTemplate = true;
       result.template = innerContent.trim();
-      const bStylesMatch = attrs.match(/b-stylesheets=["']([^"']+)["']/);
-      if (bStylesMatch) {
-        result.stylesAttr = bStylesMatch[1];
-      }
-      const bCascadeMatch = attrs.match(/b-cascade=["']([^"']+)["']/);
-      if (bCascadeMatch) {
-        result.cascadeAttr = bCascadeMatch[1];
-      }
-      const bErrorMatch = attrs.match(/b-error=["']([^"']+)["']/);
-      if (bErrorMatch) {
-        result.errorAttr = bErrorMatch[1];
-      }
-      const bPropsMatch = attrs.match(/b-props=["']([^"']+)["']/);
-      if (bPropsMatch) {
-        result.propsAttr = bPropsMatch[1];
-      }
-      const bShadowMatch = attrs.match(/b-shadow=["']([^"']*)["']/);
-      if (bShadowMatch) {
-        result.shadowAttr = bShadowMatch[1];
-      }
+      const bStyles = readAttr(attrs, "b-stylesheets");
+      if (bStyles) result.stylesAttr = bStyles;
+      const bCascade = readAttr(attrs, "b-cascade");
+      if (bCascade) result.cascadeAttr = bCascade;
+      const bError = readAttr(attrs, "b-error");
+      if (bError) result.errorAttr = bError;
+      const bProps = readAttr(attrs, "b-props");
+      if (bProps) result.propsAttr = bProps;
+      const bShadow = readAttr(attrs, "b-shadow");
+      if (bShadow !== null) result.shadowAttr = bShadow;
       const bFormMatch = attrs.match(/(?:^|\s)b-form(?:=["']([^"']*)["'])?(?=\s|$)/);
       if (bFormMatch) {
         result.formAttr = bFormMatch[1] !== "false";
@@ -115,412 +122,102 @@ function parseLego(content, filename = "block.lego") {
     } else if (tagName === "script") {
       result.hasScript = true;
       result.script = innerContent.trim();
-      const langMatch = attrs.match(/lang=["']([^"']+)["']/);
-      if (langMatch) {
-        result.scriptLang = langMatch[1];
-      }
+      const lang = readAttr(attrs, "lang");
+      if (lang) result.scriptLang = lang;
     } else if (tagName === "style") {
       result.hasStyle = true;
       result.style = innerContent.trim();
+    } else if (tagName === "story") {
+      const storyName = readAttr(attrs, "name");
+      result.stories.push({
+        name: storyName && storyName.trim() || `Story ${result.stories.length + 1}`,
+        args: (readAttr(attrs, "args") || "").trim(),
+        globals: (readAttr(attrs, "globals") || "").trim(),
+        slotHTML: innerContent.trim()
+      });
     }
     remaining = remaining.slice(contentEnd + closeTag.length);
   }
   return result;
 }
-
-// src/server/html.js
-var COMMENT_OPEN = "<!--";
-var COMMENT_CLOSE = "-->";
-var SELF_CLOSE = "/>";
-var CLOSE_TAG_OPEN = "</";
-var VOID_ELEMENTS = /* @__PURE__ */ new Set([
-  "area",
-  "base",
-  "br",
-  "col",
-  "embed",
-  "hr",
-  "img",
-  "input",
-  "link",
-  "meta",
-  "source",
-  "track",
-  "wbr"
-]);
-var RAW_TEXT_ELEMENTS = /* @__PURE__ */ new Set(["style", "script", "textarea", "title"]);
-var TAG_NAME_START = /[a-zA-Z]/;
-var TAG_NAME_CHAR = /[a-zA-Z0-9-]/;
-var AFTER_TAG_NAME = /[\s/>]/;
-var SPACE = /\s/;
-var ATTR_NAME_END = /[\s/>=]/;
-var TEXT_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
-var ATTR_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
-var escapeText = (value) => String(value).replace(/[&<>]/g, (c) => TEXT_ESCAPES[c]);
-var escapeAttr = (value) => String(value).replace(/[&<>"]/g, (c) => ATTR_ESCAPES[c]);
-var skipSpace = (source, from) => {
-  let i = from;
-  while (i < source.length && SPACE.test(source[i])) i++;
-  return i;
+var SCRIPT_LOGIC = "__lego_logic";
+var DEFAULT_EXPORT_AT = /(^|\n)([ \t]*)export\s+default\s+/;
+var HAS_DEFAULT_EXPORT = /\bexport\s+default\s+/;
+var DEFAULT_SPECIFIER = /(^|\n)[ \t]*export\s*\{\s*([\w$]+)\s+as\s+default\s*,?\s*\}\s*;?/;
+var IMPORT_AT = /(^|\n)[ \t]*import\s*(?:[\w$*{]|['"])/;
+var NAMED_EXPORT_AT = /(^|\n)([ \t]*)export\s+(?=(?:const|let|var|function|class|async\s+function)\b)/g;
+var IMPORTS_NEED_BUNDLER = "`import` in a .lego script needs the Vite plugin (or another bundler). This script is evaluated without one, so it has to be self-contained: top-level helpers and constants are fine, imports are not.";
+var scriptHasImports = (script) => IMPORT_AT.test(script || "");
+var escapeName = (name) => name.replace(/\$/g, "\\$");
+var declaresByText = (source, name) => {
+  const id = escapeName(name);
+  const imported = new RegExp(`\\bimport\\b[^;]*?[{,\\s]${id}\\s*(?:[,}]|\\bfrom\\b)`).test(source);
+  const declared = new RegExp(`(?:^|[\\n;])\\s*(?:export\\s+)?(?:const|let|var|function\\*?|class)\\s+${id}\\b`).test(source);
+  return imported || declared;
 };
-var tagNameEnd = (source, from) => {
-  if (!TAG_NAME_START.test(source[from] || "")) return -1;
-  let i = from + 1;
-  while (i < source.length && TAG_NAME_CHAR.test(source[i])) i++;
-  if (i < source.length && !AFTER_TAG_NAME.test(source[i])) return -1;
-  return i;
+var patternNames = (node, out) => {
+  if (!node) return;
+  if (node.type === "Identifier") out.add(node.name);
+  else if (node.type === "ObjectPattern") {
+    node.properties.forEach((p) => patternNames(p.type === "RestElement" ? p.argument : p.value, out));
+  } else if (node.type === "ArrayPattern") node.elements.forEach((e) => patternNames(e, out));
+  else if (node.type === "RestElement") patternNames(node.argument, out);
+  else if (node.type === "AssignmentPattern") patternNames(node.left, out);
 };
-var rawTextClose = (source, from, tag) => {
-  const needle = `${CLOSE_TAG_OPEN}${tag}`;
-  const lower = source.toLowerCase();
-  let at = lower.indexOf(needle, from);
-  while (at >= 0) {
-    const after = source[at + needle.length];
-    if (after === void 0 || AFTER_TAG_NAME.test(after)) return at;
-    at = lower.indexOf(needle, at + needle.length);
+var topLevelNames = (program) => {
+  const out = /* @__PURE__ */ new Set();
+  for (let node of program.body) {
+    if (node.type === "ExportNamedDeclaration" && node.declaration) node = node.declaration;
+    if (node.type === "ImportDeclaration") node.specifiers.forEach((s) => out.add(s.local.name));
+    else if (node.type === "VariableDeclaration") node.declarations.forEach((d) => patternNames(d.id, out));
+    else if ((node.type === "FunctionDeclaration" || node.type === "ClassDeclaration") && node.id) out.add(node.id.name);
   }
-  return -1;
+  return out;
 };
-var readAttributes = (source, from, fail2) => {
-  const attrs = [];
-  let i = from;
-  for (; ; ) {
-    i = skipSpace(source, i);
-    if (i >= source.length) return fail2("unterminated tag", from);
-    if (source[i] === ">") return { attrs, end: i + 1, selfClosed: false };
-    if (source.startsWith(SELF_CLOSE, i)) {
-      return { attrs, end: i + SELF_CLOSE.length, selfClosed: true };
-    }
-    const nameStart = i;
-    while (i < source.length && !ATTR_NAME_END.test(source[i])) i++;
-    if (i === nameStart) return fail2(`unexpected character "${source[i]}" in tag`, i);
-    const name = source.slice(nameStart, i);
-    const afterName = skipSpace(source, i);
-    if (source[afterName] !== "=") {
-      attrs.push([name, null]);
-      i = afterName;
-      continue;
-    }
-    i = skipSpace(source, afterName + 1);
-    const quote = source[i];
-    if (quote !== '"' && quote !== "'") {
-      const valueStart = i;
-      while (i < source.length && !/[\s>]/.test(source[i])) i++;
-      if (i === valueStart) return fail2(`missing value for attribute "${name}"`, i);
-      attrs.push([name, source.slice(valueStart, i)]);
-      continue;
-    }
-    const close = source.indexOf(quote, i + 1);
-    if (close < 0) return fail2(`unterminated value for attribute "${name}"`, i);
-    const raw = source.slice(i + 1, close);
-    attrs.push([name, quote === "'" ? raw.replace(/"/g, "&quot;") : raw]);
-    i = close + 1;
+var defaultExportSpan = (source, program) => {
+  const node = program && program.body.find((n) => n.type === "ExportDefaultDeclaration");
+  if (node && source.startsWith("export", node.start) && node.declaration && node.declaration.start > node.start) {
+    return { start: node.start, value: node.declaration.start };
   }
+  const match = DEFAULT_EXPORT_AT.exec(source);
+  if (match) return { start: match.index + match[1].length + match[2].length, value: match.index + match[0].length };
+  const loose = HAS_DEFAULT_EXPORT.exec(source);
+  return loose ? { start: loose.index, value: loose.index + loose[0].length } : null;
 };
-function parseHTML(source, label = "template", options = {}) {
-  const lenient = options.lenient === true;
-  const root = { type: "el", tag: null, attrs: [], children: [] };
-  const stack = [{ node: root, tag: null, start: 0 }];
-  let i = 0;
-  let textStart = 0;
-  const fail2 = (message, at) => {
-    throw new Error(`[Lego SSR] ${label}: ${message} at offset ${at}`);
-  };
-  const top = () => stack[stack.length - 1];
-  const push = (node) => top().node.children.push(node);
-  const flushText = (end) => {
-    if (end <= textStart) return;
-    push({ type: "text", value: source.slice(textStart, end), raw: false });
-  };
-  const closeTo = (tag) => {
-    for (let at = stack.length - 1; at > 0; at--) {
-      if (stack[at].tag !== tag) continue;
-      stack.length = at;
-      return true;
-    }
-    return false;
-  };
-  while (i < source.length) {
-    const lt = source.indexOf("<", i);
-    if (lt < 0) break;
-    if (source.startsWith(COMMENT_OPEN, lt)) {
-      const end = source.indexOf(COMMENT_CLOSE, lt + COMMENT_OPEN.length);
-      if (end < 0) return fail2("unterminated comment", lt);
-      flushText(lt);
-      push({ type: "comment", value: source.slice(lt + COMMENT_OPEN.length, end) });
-      i = end + COMMENT_CLOSE.length;
-      textStart = i;
-      continue;
-    }
-    if (source[lt + 1] === "!") {
-      if (lenient) {
-        i = lt + 1;
-        continue;
-      }
-      return fail2("doctypes and markup declarations are not part of a block template", lt);
-    }
-    if (source.startsWith(CLOSE_TAG_OPEN, lt)) {
-      const nameEnd2 = tagNameEnd(source, lt + CLOSE_TAG_OPEN.length);
-      const gt2 = nameEnd2 < 0 ? -1 : skipSpace(source, nameEnd2);
-      if (nameEnd2 < 0 || source[gt2] !== ">") {
-        if (lenient) {
-          i = lt + 1;
-          continue;
-        }
-        return fail2("malformed closing tag", lt);
-      }
-      const tag2 = source.slice(lt + CLOSE_TAG_OPEN.length, nameEnd2).toLowerCase();
-      flushText(lt);
-      i = gt2 + 1;
-      textStart = i;
-      const open = top();
-      if (open.tag === tag2) {
-        stack.pop();
-        continue;
-      }
-      if (lenient) {
-        closeTo(tag2);
-        continue;
-      }
-      if (open.tag === null) return fail2(`closing tag </${tag2}> matches no open element`, lt);
-      return fail2(`closing tag </${tag2}> does not match the open <${open.tag}> element`, lt);
-    }
-    const nameEnd = tagNameEnd(source, lt + 1);
-    if (nameEnd < 0) {
-      i = lt + 1;
-      continue;
-    }
-    const tag = source.slice(lt + 1, nameEnd).toLowerCase();
-    const read = readAttributes(source, nameEnd, fail2);
-    flushText(lt);
-    const node = { type: "el", tag, attrs: read.attrs, children: [] };
-    push(node);
-    i = read.end;
-    textStart = i;
-    if (VOID_ELEMENTS.has(tag) || read.selfClosed) continue;
-    if (!RAW_TEXT_ELEMENTS.has(tag)) {
-      stack.push({ node, tag, start: lt });
-      continue;
-    }
-    const close = rawTextClose(source, i, tag);
-    if (close < 0) return fail2(`unterminated <${tag}> element`, lt);
-    if (close > i) node.children.push({ type: "text", value: source.slice(i, close), raw: true });
-    const gt = source.indexOf(">", close);
-    if (gt < 0) return fail2(`unterminated closing tag for <${tag}>`, close);
-    i = gt + 1;
-    textStart = i;
+function scriptModule(script, parse2 = null) {
+  const source = (script || "").trim();
+  if (!source) return { code: "", logic: "{}", declares: () => false };
+  const specifier = !HAS_DEFAULT_EXPORT.test(source) && DEFAULT_SPECIFIER.exec(source);
+  if (specifier) {
+    const code2 = source.slice(0, specifier.index) + specifier[1] + source.slice(specifier.index + specifier[0].length);
+    const program2 = parse2 ? parse2(source) : null;
+    const names2 = program2 ? topLevelNames(program2) : null;
+    return { code: code2, logic: specifier[2], declares: (name) => names2 ? names2.has(name) : declaresByText(source, name) };
   }
-  flushText(source.length);
-  if (stack.length > 1 && !lenient) {
-    const open = top();
-    return fail2(`unclosed <${open.tag}> element`, open.start);
+  if (!HAS_DEFAULT_EXPORT.test(source)) {
+    if (scriptHasImports(source)) {
+      throw new Error("a script section with imports needs an `export default { \u2026 }` holding the block logic");
+    }
+    return { code: "", logic: `(${source})`, declares: () => false };
   }
-  return root.children;
+  const program = parse2 ? parse2(source) : null;
+  const names = program ? topLevelNames(program) : null;
+  const declares = (name) => names ? names.has(name) : declaresByText(source, name);
+  const span = defaultExportSpan(source, program);
+  const code = `${source.slice(0, span.start)}const ${SCRIPT_LOGIC} = ${source.slice(span.value)}`;
+  return { code, logic: SCRIPT_LOGIC, declares };
 }
-var serializeAttrs = (attrs) => attrs.map(([name, value]) => value === null ? ` ${name}` : ` ${name}="${value}"`).join("");
-var serializeNode = (node) => {
-  if (node.type === "text") return node.value;
-  if (node.type === "comment") return `${COMMENT_OPEN}${node.value}${COMMENT_CLOSE}`;
-  const open = `<${node.tag}${serializeAttrs(node.attrs)}>`;
-  if (VOID_ELEMENTS.has(node.tag)) return open;
-  return `${open}${serialize(node.children)}</${node.tag}>`;
-};
-function serialize(nodes) {
-  return nodes.map(serializeNode).join("");
+function scriptFunctionBody(script) {
+  const source = (script || "").trim();
+  if (!source) return "return {};";
+  if (scriptHasImports(source)) throw new Error(IMPORTS_NEED_BUNDLER);
+  const { code, logic } = scriptModule(source);
+  if (!code) return `return ${logic};`;
+  return `return (() => {
+${code.replace(NAMED_EXPORT_AT, "$1$2")}
+;return ${logic};
+})();`;
 }
-var attrValue = (node, name) => {
-  const found = node.attrs.find(([attrName]) => attrName === name);
-  return found ? found[1] : void 0;
-};
-var findAttr = (node, base) => {
-  const prefix = `${base}.`;
-  const found = node.attrs.find(([name]) => name === base || name.startsWith(prefix));
-  if (!found) return null;
-  return { name: found[0], value: found[1] === null ? "" : found[1], modifiers: found[0].split(".").slice(1) };
-};
-
-// src/server/css.js
-var COMMENT_OPEN2 = "/*";
-var COMMENT_CLOSE2 = "*/";
-var ESCAPE_SEQUENCE_LENGTH = 2;
-var NESTING_AT_RULES = /* @__PURE__ */ new Set(["media", "supports", "container", "layer"]);
-var SEGMENT_SENTINEL = "__LEGO_SEG_";
-var SEGMENT_RE = /__LEGO_SEG_(\d+)__/g;
-var CSS_LITERAL_RE = /\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g;
-var SELF_SELECTOR_RE = /(?<![-\w])self(?![-\w])/g;
-var SELF_SELECTOR_TEST = /(?<![-\w])self(?![-\w])/;
-var LEAD_BODY_TRAIL = /^(\s*)([\s\S]*?)(\s*)$/;
-var withLiteralsStashed = (source, transform) => {
-  const segments = [];
-  const stashed = source.replace(CSS_LITERAL_RE, (match) => {
-    segments.push(match);
-    return `${SEGMENT_SENTINEL}${segments.length - 1}__`;
-  });
-  return transform(stashed).replace(SEGMENT_RE, (_, index) => segments[Number(index)]);
-};
-var skipString = (css, at) => {
-  const quote = css[at];
-  let i = at + 1;
-  while (i < css.length) {
-    if (css[i] === "\\") {
-      i += ESCAPE_SEQUENCE_LENGTH;
-      continue;
-    }
-    if (css[i] === quote) return i + 1;
-    i++;
-  }
-  return i;
-};
-var skipComment = (css, at) => {
-  const end = css.indexOf(COMMENT_CLOSE2, at + COMMENT_OPEN2.length);
-  return end < 0 ? css.length : end + COMMENT_CLOSE2.length;
-};
-var isCommentStart = (css, at) => css[at] === "/" && css[at + 1] === "*";
-var isQuote = (ch) => ch === '"' || ch === "'";
-var matchingBrace = (css, open) => {
-  let depth = 0;
-  let i = open;
-  while (i < css.length) {
-    const ch = css[i];
-    if (isCommentStart(css, i)) {
-      i = skipComment(css, i);
-      continue;
-    }
-    if (isQuote(ch)) {
-      i = skipString(css, i);
-      continue;
-    }
-    if (ch === "{") depth++;
-    if (ch === "}") {
-      depth--;
-      if (depth === 0) return i;
-    }
-    i++;
-  }
-  return css.length;
-};
-var splitRules = (css) => {
-  const rules = [];
-  let i = 0;
-  let start = 0;
-  while (i < css.length) {
-    const ch = css[i];
-    if (isCommentStart(css, i)) {
-      i = skipComment(css, i);
-      continue;
-    }
-    if (isQuote(ch)) {
-      i = skipString(css, i);
-      continue;
-    }
-    if (ch === ";") {
-      const raw = css.slice(start, i + 1);
-      rules.push({ raw, prelude: raw, body: null });
-      i++;
-      start = i;
-      continue;
-    }
-    if (ch === "{") {
-      const end = matchingBrace(css, i);
-      rules.push({
-        raw: css.slice(start, end + 1),
-        prelude: css.slice(start, i),
-        body: css.slice(i + 1, end)
-      });
-      i = end + 1;
-      start = i;
-      continue;
-    }
-    i++;
-  }
-  const tail = css.slice(start);
-  if (tail) rules.push({ raw: tail, prelude: tail, body: null });
-  return rules;
-};
-var splitSelectors = (prelude) => {
-  const parts = [];
-  let depth = 0;
-  let start = 0;
-  let i = 0;
-  while (i < prelude.length) {
-    const ch = prelude[i];
-    if (isQuote(ch)) {
-      i = skipString(prelude, i);
-      continue;
-    }
-    if (ch === "(" || ch === "[") depth++;
-    if (ch === ")" || ch === "]") depth--;
-    if (ch === "," && depth === 0) {
-      parts.push(prelude.slice(start, i));
-      start = i + 1;
-    }
-    i++;
-  }
-  parts.push(prelude.slice(start));
-  return parts;
-};
-var scopeSelector = (part, tagName) => {
-  const [, lead, selector, trail] = part.match(LEAD_BODY_TRAIL);
-  if (!selector) return part;
-  const scoped = withLiteralsStashed(selector, (stashed) => SELF_SELECTOR_TEST.test(stashed) ? stashed.replace(SELF_SELECTOR_RE, tagName) : `${tagName} ${stashed}`);
-  return `${lead}${scoped}${trail}`;
-};
-var atRuleName = (prelude) => {
-  const match = prelude.trim().match(/^@([-\w]+)/);
-  return match ? match[1].toLowerCase() : "";
-};
-function scopeRules(css, tagName) {
-  return splitRules(css).map((rule) => {
-    if (rule.body === null) return rule.raw;
-    const name = atRuleName(rule.prelude);
-    if (name && !NESTING_AT_RULES.has(name)) return rule.raw;
-    if (name) return `${rule.prelude}{${scopeRules(rule.body, tagName)}}`;
-    const selectors = splitSelectors(rule.prelude).map((part) => scopeSelector(part, tagName)).join(",");
-    return `${selectors}{${rule.body}}`;
-  }).join("");
-}
-var scopeStyles = (css, tagName, shadow) => {
-  if (!css) return "";
-  if (!shadow) return scopeRules(css, tagName);
-  return withLiteralsStashed(css, (stashed) => stashed.replace(SELF_SELECTOR_RE, ":host"));
-};
-
-// src/server/sanitize.js
-var DANGEROUS_TAGS = /* @__PURE__ */ new Set(["script", "iframe", "object", "embed", "link", "meta", "base", "style"]);
-var URL_ATTRS = /* @__PURE__ */ new Set(["href", "src", "xlink:href", "action", "formaction", "srcdoc", "data"]);
-var SHADOW_ATTRS = /* @__PURE__ */ new Set(["shadowrootmode", "shadowroot"]);
-var EVENT_ATTR_PREFIX = "on";
-var isDangerousUrl = (value) => {
-  if (typeof value !== "string") return false;
-  const v = value.trim().toLowerCase();
-  return v.startsWith("javascript:") || v.startsWith("data:text/html") || v.startsWith("vbscript:");
-};
-var keepAttr = (tag, name, value) => {
-  const lower = name.toLowerCase();
-  if (lower.startsWith(EVENT_ATTR_PREFIX)) return false;
-  if (tag === "template" && SHADOW_ATTRS.has(lower)) return false;
-  return !(URL_ATTRS.has(lower) && isDangerousUrl(value));
-};
-var cleanNode = (node) => {
-  if (node.type !== "el") return node;
-  return {
-    type: "el",
-    tag: node.tag,
-    attrs: node.attrs.filter(([name, value]) => keepAttr(node.tag, name, value)),
-    children: cleanNodes(node.children)
-  };
-};
-function cleanNodes(nodes) {
-  return nodes.filter((node) => node.type !== "el" || !DANGEROUS_TAGS.has(node.tag)).map(cleanNode);
-}
-var sanitizeHTML = (html, label = "b-html.safe") => {
-  if (typeof html !== "string" || html === "") return html;
-  try {
-    return serialize(cleanNodes(parseHTML(html, label, { lenient: true })));
-  } catch (err) {
-    return escapeText(html);
-  }
-};
 
 // src/utils/lru-cache.js
 var LRUCache = class {
@@ -1146,6 +843,479 @@ var compile = (src) => {
   return fn;
 };
 
+// src/directives/b-props.js
+var TYPES = ["String", "Number", "Boolean", "Array", "Object", "Function"];
+var DECL = /^([a-zA-Z_$][\w$]*)\s*(?::\s*([A-Za-z]+))?\s*(?:=\s*([\s\S]+))?$/;
+var splitDeclarations = (body) => {
+  const out = [];
+  let depth = 0;
+  let quote = "";
+  let start = 0;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (quote) {
+      if (ch === "\\") i++;
+      else if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "(" || ch === "[" || ch === "{") depth++;
+    if (ch === ")" || ch === "]" || ch === "}") depth--;
+    if (ch !== "," || depth !== 0) continue;
+    out.push(body.slice(start, i));
+    start = i + 1;
+  }
+  out.push(body.slice(start));
+  return out.map((t) => t.trim()).filter(Boolean);
+};
+var compileDefault = (src, tagName, name) => {
+  if (!src) return null;
+  const blame = (e) => console.error(`[Lego] <${tagName}> prop "${name}" default "${src}":`, e.message);
+  let fn;
+  try {
+    fn = compile(src);
+  } catch (e) {
+    blame(e);
+    return null;
+  }
+  return () => {
+    try {
+      return fn({}, {});
+    } catch (e) {
+      blame(e);
+      return void 0;
+    }
+  };
+};
+var parseProps = (raw, tagName = "<unknown>") => {
+  if (!raw || typeof raw !== "string") return null;
+  let body = raw.trim();
+  if (!body) return null;
+  if (body.startsWith("{") && body.endsWith("}")) {
+    body = body.slice(1, -1).trim();
+    if (!body) return null;
+  }
+  const tokens = splitDeclarations(body);
+  if (tokens.length === 0) return null;
+  const out = [];
+  for (const tok of tokens) {
+    const match = DECL.exec(tok);
+    const type = match && match[2];
+    if (!match || type && !TYPES.includes(type)) {
+      console.error(
+        `[Lego] Invalid b-props on <${tagName}>: "${tok}" is not a valid prop declaration. Write name, name: Type, or either with = default, where Type is one of ${TYPES}.`
+      );
+      return null;
+    }
+    out.push({
+      name: match[1],
+      type: type || null,
+      defaultFn: compileDefault(match[3], tagName, match[1]),
+      // The unevaluated default text, which tooling shows next to a control.
+      defaultSource: match[3] ? match[3].trim() : null,
+      attr: kebabCase(match[1])
+    });
+  }
+  return out;
+};
+
+// src/server/html.js
+var COMMENT_OPEN = "<!--";
+var COMMENT_CLOSE = "-->";
+var SELF_CLOSE = "/>";
+var CLOSE_TAG_OPEN = "</";
+var VOID_ELEMENTS = /* @__PURE__ */ new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "source",
+  "track",
+  "wbr"
+]);
+var RAW_TEXT_ELEMENTS = /* @__PURE__ */ new Set(["style", "script", "textarea", "title"]);
+var TAG_NAME_START = /[a-zA-Z]/;
+var TAG_NAME_CHAR = /[a-zA-Z0-9-]/;
+var AFTER_TAG_NAME = /[\s/>]/;
+var SPACE = /\s/;
+var ATTR_NAME_END = /[\s/>=]/;
+var TEXT_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
+var ATTR_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+var escapeText = (value) => String(value).replace(/[&<>]/g, (c) => TEXT_ESCAPES[c]);
+var escapeAttr = (value) => String(value).replace(/[&<>"]/g, (c) => ATTR_ESCAPES[c]);
+var skipSpace = (source, from) => {
+  let i = from;
+  while (i < source.length && SPACE.test(source[i])) i++;
+  return i;
+};
+var tagNameEnd = (source, from) => {
+  if (!TAG_NAME_START.test(source[from] || "")) return -1;
+  let i = from + 1;
+  while (i < source.length && TAG_NAME_CHAR.test(source[i])) i++;
+  if (i < source.length && !AFTER_TAG_NAME.test(source[i])) return -1;
+  return i;
+};
+var rawTextClose = (source, from, tag) => {
+  const needle = `${CLOSE_TAG_OPEN}${tag}`;
+  const lower = source.toLowerCase();
+  let at = lower.indexOf(needle, from);
+  while (at >= 0) {
+    const after = source[at + needle.length];
+    if (after === void 0 || AFTER_TAG_NAME.test(after)) return at;
+    at = lower.indexOf(needle, at + needle.length);
+  }
+  return -1;
+};
+var readAttributes = (source, from, fail2) => {
+  const attrs = [];
+  let i = from;
+  for (; ; ) {
+    i = skipSpace(source, i);
+    if (i >= source.length) return fail2("unterminated tag", from);
+    if (source[i] === ">") return { attrs, end: i + 1, selfClosed: false };
+    if (source.startsWith(SELF_CLOSE, i)) {
+      return { attrs, end: i + SELF_CLOSE.length, selfClosed: true };
+    }
+    const nameStart = i;
+    while (i < source.length && !ATTR_NAME_END.test(source[i])) i++;
+    if (i === nameStart) return fail2(`unexpected character "${source[i]}" in tag`, i);
+    const name = source.slice(nameStart, i);
+    const afterName = skipSpace(source, i);
+    if (source[afterName] !== "=") {
+      attrs.push([name, null]);
+      i = afterName;
+      continue;
+    }
+    i = skipSpace(source, afterName + 1);
+    const quote = source[i];
+    if (quote !== '"' && quote !== "'") {
+      const valueStart = i;
+      while (i < source.length && !/[\s>]/.test(source[i])) i++;
+      if (i === valueStart) return fail2(`missing value for attribute "${name}"`, i);
+      attrs.push([name, source.slice(valueStart, i)]);
+      continue;
+    }
+    const close = source.indexOf(quote, i + 1);
+    if (close < 0) return fail2(`unterminated value for attribute "${name}"`, i);
+    const raw = source.slice(i + 1, close);
+    attrs.push([name, quote === "'" ? raw.replace(/"/g, "&quot;") : raw]);
+    i = close + 1;
+  }
+};
+function parseHTML(source, label = "template", options = {}) {
+  const lenient = options.lenient === true;
+  const root = { type: "el", tag: null, attrs: [], children: [] };
+  const stack = [{ node: root, tag: null, start: 0 }];
+  let i = 0;
+  let textStart = 0;
+  const fail2 = (message, at) => {
+    throw new Error(`[Lego SSR] ${label}: ${message} at offset ${at}`);
+  };
+  const top = () => stack[stack.length - 1];
+  const push = (node) => top().node.children.push(node);
+  const flushText = (end) => {
+    if (end <= textStart) return;
+    push({ type: "text", value: source.slice(textStart, end), raw: false });
+  };
+  const closeTo = (tag) => {
+    for (let at = stack.length - 1; at > 0; at--) {
+      if (stack[at].tag !== tag) continue;
+      stack.length = at;
+      return true;
+    }
+    return false;
+  };
+  while (i < source.length) {
+    const lt = source.indexOf("<", i);
+    if (lt < 0) break;
+    if (source.startsWith(COMMENT_OPEN, lt)) {
+      const end = source.indexOf(COMMENT_CLOSE, lt + COMMENT_OPEN.length);
+      if (end < 0) return fail2("unterminated comment", lt);
+      flushText(lt);
+      push({ type: "comment", value: source.slice(lt + COMMENT_OPEN.length, end) });
+      i = end + COMMENT_CLOSE.length;
+      textStart = i;
+      continue;
+    }
+    if (source[lt + 1] === "!") {
+      if (lenient) {
+        i = lt + 1;
+        continue;
+      }
+      return fail2("doctypes and markup declarations are not part of a block template", lt);
+    }
+    if (source.startsWith(CLOSE_TAG_OPEN, lt)) {
+      const nameEnd2 = tagNameEnd(source, lt + CLOSE_TAG_OPEN.length);
+      const gt2 = nameEnd2 < 0 ? -1 : skipSpace(source, nameEnd2);
+      if (nameEnd2 < 0 || source[gt2] !== ">") {
+        if (lenient) {
+          i = lt + 1;
+          continue;
+        }
+        return fail2("malformed closing tag", lt);
+      }
+      const tag2 = source.slice(lt + CLOSE_TAG_OPEN.length, nameEnd2).toLowerCase();
+      flushText(lt);
+      i = gt2 + 1;
+      textStart = i;
+      const open = top();
+      if (open.tag === tag2) {
+        stack.pop();
+        continue;
+      }
+      if (lenient) {
+        closeTo(tag2);
+        continue;
+      }
+      if (open.tag === null) return fail2(`closing tag </${tag2}> matches no open element`, lt);
+      return fail2(`closing tag </${tag2}> does not match the open <${open.tag}> element`, lt);
+    }
+    const nameEnd = tagNameEnd(source, lt + 1);
+    if (nameEnd < 0) {
+      i = lt + 1;
+      continue;
+    }
+    const tag = source.slice(lt + 1, nameEnd).toLowerCase();
+    const read = readAttributes(source, nameEnd, fail2);
+    flushText(lt);
+    const node = { type: "el", tag, attrs: read.attrs, children: [] };
+    push(node);
+    i = read.end;
+    textStart = i;
+    if (VOID_ELEMENTS.has(tag) || read.selfClosed) continue;
+    if (!RAW_TEXT_ELEMENTS.has(tag)) {
+      stack.push({ node, tag, start: lt });
+      continue;
+    }
+    const close = rawTextClose(source, i, tag);
+    if (close < 0) return fail2(`unterminated <${tag}> element`, lt);
+    if (close > i) node.children.push({ type: "text", value: source.slice(i, close), raw: true });
+    const gt = source.indexOf(">", close);
+    if (gt < 0) return fail2(`unterminated closing tag for <${tag}>`, close);
+    i = gt + 1;
+    textStart = i;
+  }
+  flushText(source.length);
+  if (stack.length > 1 && !lenient) {
+    const open = top();
+    return fail2(`unclosed <${open.tag}> element`, open.start);
+  }
+  return root.children;
+}
+var serializeAttrs = (attrs) => attrs.map(([name, value]) => value === null ? ` ${name}` : ` ${name}="${value}"`).join("");
+var serializeNode = (node) => {
+  if (node.type === "text") return node.value;
+  if (node.type === "comment") return `${COMMENT_OPEN}${node.value}${COMMENT_CLOSE}`;
+  const open = `<${node.tag}${serializeAttrs(node.attrs)}>`;
+  if (VOID_ELEMENTS.has(node.tag)) return open;
+  return `${open}${serialize(node.children)}</${node.tag}>`;
+};
+function serialize(nodes) {
+  return nodes.map(serializeNode).join("");
+}
+var attrValue = (node, name) => {
+  const found = node.attrs.find(([attrName]) => attrName === name);
+  return found ? found[1] : void 0;
+};
+var findAttr = (node, base) => {
+  const prefix = `${base}.`;
+  const found = node.attrs.find(([name]) => name === base || name.startsWith(prefix));
+  if (!found) return null;
+  return { name: found[0], value: found[1] === null ? "" : found[1], modifiers: found[0].split(".").slice(1) };
+};
+
+// src/server/css.js
+var COMMENT_OPEN2 = "/*";
+var COMMENT_CLOSE2 = "*/";
+var ESCAPE_SEQUENCE_LENGTH = 2;
+var NESTING_AT_RULES = /* @__PURE__ */ new Set(["media", "supports", "container", "layer"]);
+var SEGMENT_SENTINEL = "__LEGO_SEG_";
+var SEGMENT_RE = /__LEGO_SEG_(\d+)__/g;
+var CSS_LITERAL_RE = /\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g;
+var SELF_SELECTOR_RE = /(?<![-\w])self(?![-\w])/g;
+var SELF_SELECTOR_TEST = /(?<![-\w])self(?![-\w])/;
+var LEAD_BODY_TRAIL = /^(\s*)([\s\S]*?)(\s*)$/;
+var withLiteralsStashed = (source, transform) => {
+  const segments = [];
+  const stashed = source.replace(CSS_LITERAL_RE, (match) => {
+    segments.push(match);
+    return `${SEGMENT_SENTINEL}${segments.length - 1}__`;
+  });
+  return transform(stashed).replace(SEGMENT_RE, (_, index) => segments[Number(index)]);
+};
+var skipString = (css, at) => {
+  const quote = css[at];
+  let i = at + 1;
+  while (i < css.length) {
+    if (css[i] === "\\") {
+      i += ESCAPE_SEQUENCE_LENGTH;
+      continue;
+    }
+    if (css[i] === quote) return i + 1;
+    i++;
+  }
+  return i;
+};
+var skipComment = (css, at) => {
+  const end = css.indexOf(COMMENT_CLOSE2, at + COMMENT_OPEN2.length);
+  return end < 0 ? css.length : end + COMMENT_CLOSE2.length;
+};
+var isCommentStart = (css, at) => css[at] === "/" && css[at + 1] === "*";
+var isQuote = (ch) => ch === '"' || ch === "'";
+var matchingBrace = (css, open) => {
+  let depth = 0;
+  let i = open;
+  while (i < css.length) {
+    const ch = css[i];
+    if (isCommentStart(css, i)) {
+      i = skipComment(css, i);
+      continue;
+    }
+    if (isQuote(ch)) {
+      i = skipString(css, i);
+      continue;
+    }
+    if (ch === "{") depth++;
+    if (ch === "}") {
+      depth--;
+      if (depth === 0) return i;
+    }
+    i++;
+  }
+  return css.length;
+};
+var splitRules = (css) => {
+  const rules = [];
+  let i = 0;
+  let start = 0;
+  while (i < css.length) {
+    const ch = css[i];
+    if (isCommentStart(css, i)) {
+      i = skipComment(css, i);
+      continue;
+    }
+    if (isQuote(ch)) {
+      i = skipString(css, i);
+      continue;
+    }
+    if (ch === ";") {
+      const raw = css.slice(start, i + 1);
+      rules.push({ raw, prelude: raw, body: null });
+      i++;
+      start = i;
+      continue;
+    }
+    if (ch === "{") {
+      const end = matchingBrace(css, i);
+      rules.push({
+        raw: css.slice(start, end + 1),
+        prelude: css.slice(start, i),
+        body: css.slice(i + 1, end)
+      });
+      i = end + 1;
+      start = i;
+      continue;
+    }
+    i++;
+  }
+  const tail = css.slice(start);
+  if (tail) rules.push({ raw: tail, prelude: tail, body: null });
+  return rules;
+};
+var splitSelectors = (prelude) => {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  let i = 0;
+  while (i < prelude.length) {
+    const ch = prelude[i];
+    if (isQuote(ch)) {
+      i = skipString(prelude, i);
+      continue;
+    }
+    if (ch === "(" || ch === "[") depth++;
+    if (ch === ")" || ch === "]") depth--;
+    if (ch === "," && depth === 0) {
+      parts.push(prelude.slice(start, i));
+      start = i + 1;
+    }
+    i++;
+  }
+  parts.push(prelude.slice(start));
+  return parts;
+};
+var scopeSelector = (part, tagName) => {
+  const [, lead, selector, trail] = part.match(LEAD_BODY_TRAIL);
+  if (!selector) return part;
+  const scoped = withLiteralsStashed(selector, (stashed) => SELF_SELECTOR_TEST.test(stashed) ? stashed.replace(SELF_SELECTOR_RE, tagName) : `${tagName} ${stashed}`);
+  return `${lead}${scoped}${trail}`;
+};
+var atRuleName = (prelude) => {
+  const match = prelude.trim().match(/^@([-\w]+)/);
+  return match ? match[1].toLowerCase() : "";
+};
+function scopeRules(css, tagName) {
+  return splitRules(css).map((rule) => {
+    if (rule.body === null) return rule.raw;
+    const name = atRuleName(rule.prelude);
+    if (name && !NESTING_AT_RULES.has(name)) return rule.raw;
+    if (name) return `${rule.prelude}{${scopeRules(rule.body, tagName)}}`;
+    const selectors = splitSelectors(rule.prelude).map((part) => scopeSelector(part, tagName)).join(",");
+    return `${selectors}{${rule.body}}`;
+  }).join("");
+}
+var scopeStyles = (css, tagName, shadow) => {
+  if (!css) return "";
+  if (!shadow) return scopeRules(css, tagName);
+  return withLiteralsStashed(css, (stashed) => stashed.replace(SELF_SELECTOR_RE, ":host"));
+};
+
+// src/server/sanitize.js
+var DANGEROUS_TAGS = /* @__PURE__ */ new Set(["script", "iframe", "object", "embed", "link", "meta", "base", "style"]);
+var URL_ATTRS = /* @__PURE__ */ new Set(["href", "src", "xlink:href", "action", "formaction", "srcdoc", "data"]);
+var SHADOW_ATTRS = /* @__PURE__ */ new Set(["shadowrootmode", "shadowroot"]);
+var EVENT_ATTR_PREFIX = "on";
+var isDangerousUrl = (value) => {
+  if (typeof value !== "string") return false;
+  const v = value.trim().toLowerCase();
+  return v.startsWith("javascript:") || v.startsWith("data:text/html") || v.startsWith("vbscript:");
+};
+var keepAttr = (tag, name, value) => {
+  const lower = name.toLowerCase();
+  if (lower.startsWith(EVENT_ATTR_PREFIX)) return false;
+  if (tag === "template" && SHADOW_ATTRS.has(lower)) return false;
+  return !(URL_ATTRS.has(lower) && isDangerousUrl(value));
+};
+var cleanNode = (node) => {
+  if (node.type !== "el") return node;
+  return {
+    type: "el",
+    tag: node.tag,
+    attrs: node.attrs.filter(([name, value]) => keepAttr(node.tag, name, value)),
+    children: cleanNodes(node.children)
+  };
+};
+function cleanNodes(nodes) {
+  return nodes.filter((node) => node.type !== "el" || !DANGEROUS_TAGS.has(node.tag)).map(cleanNode);
+}
+var sanitizeHTML = (html, label = "b-html.safe") => {
+  if (typeof html !== "string" || html === "") return html;
+  try {
+    return serialize(cleanNodes(parseHTML(html, label, { lenient: true })));
+  } catch (err) {
+    return escapeText(html);
+  }
+};
+
 // src/server/render.js
 var MAX_BLOCK_DEPTH = 32;
 var MAX_REPORTED_SOURCE = 80;
@@ -1185,9 +1355,12 @@ var interpolate = (frame, template, scope, escape) => {
   if (!template.includes(ctx.delimiterStart)) return template;
   return template.replace(ctx.delimiterRe, (_, expr) => escape(asText(evaluate(frame, expr.trim(), scope))));
 };
-var buildState = (logic, props) => {
+var buildState = (logic, props, propDefaults = []) => {
   const state = {};
   mergeDescriptors(logic, state);
+  for (const prop of propDefaults) {
+    if (state[prop.name] === void 0) state[prop.name] = prop.get();
+  }
   mergeDescriptors(props, state);
   return state;
 };
@@ -1238,6 +1411,15 @@ var renderAttributes = (frame, node, scope) => {
     name,
     value === null ? null : interpolate(frame, value, scope, escapeAttr)
   ]);
+  if (!bindsAsProp(node.tag)) {
+    node.attrs.forEach(([name, value]) => {
+      if (name[0] !== ":" || name.length === 1) return;
+      const attrName = name.slice(1);
+      const text2 = boundAttrText(attrName, evaluate(frame, value === null ? "" : value, scope));
+      if (text2 === null) setFlagAttr(attrs, attrName, false);
+      else setAttr(attrs, attrName, text2 === "" ? null : escapeAttr(text2));
+    });
+  }
   const show = findAttr(node, "b-show");
   if (show && !truthy(frame, show.value, scope)) hide(attrs);
   const sync = findAttr(node, "b-sync");
@@ -1419,7 +1601,7 @@ function renderNested(frame, node, scope, def) {
   return renderHost(frame.ctx, node.tag, def, props, slots, attrs, depth);
 }
 function renderHost(ctx, tagName, def, props, slots, hostAttrs, depth) {
-  const state = buildState(def.logic, props);
+  const state = buildState(def.logic, props, def.propDefaults);
   const frame = {
     ctx,
     name: tagName,
@@ -1440,20 +1622,16 @@ var DELIMITERS = { brackets: ["[[", "]]"], mustache: ["{{", "}}"] };
 var escapeForRegex = (raw) => raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 var delimitersFor = (syntax) => DELIMITERS[syntax] || DELIMITERS[config.syntax] || DELIMITERS.brackets;
 var asText2 = (value) => value === void 0 || value === null ? "" : String(value);
-var PROP_IDENT = /^[a-zA-Z_$][\w$]*$/;
-var parsePropNames = (raw, tagName) => {
-  if (Array.isArray(raw)) return raw.slice();
-  if (!raw || typeof raw !== "string") return [];
-  let body = raw.trim();
-  if (body.startsWith("{") && body.endsWith("}")) body = body.slice(1, -1).trim();
-  if (!body) return [];
-  const names = body.split(",").map((token) => token.trim()).filter(Boolean);
-  const invalid = names.find((token) => !PROP_IDENT.test(token));
-  if (!invalid) return names;
-  console.error(
-    `[Lego SSR] <${tagName}>: invalid b-props token "${invalid}". b-props declares names only, use b-logic or a :prop for values.`
-  );
-  return [];
+var parsePropContract = (raw, tagName) => {
+  if (Array.isArray(raw)) return { names: raw.slice(), defaults: [] };
+  const declared = parseProps(raw, tagName);
+  if (!declared) return { names: [], defaults: [] };
+  return {
+    names: declared.map((prop) => prop.name),
+    // Booleans follow attribute semantics on the client: absent means false,
+    // not undefined, so an undeclared default still has a value to render.
+    defaults: declared.filter((prop) => prop.defaultFn || prop.type === "Boolean").map((prop) => ({ name: prop.name, get: prop.defaultFn || (() => false) }))
+  };
 };
 var STYLE_MARKER = "data-lego-style";
 var LEGO_TEMPLATE_TAG = /<template\b((?:\s+(?:[^>"']|"[^"]*"|'[^']*')*)*)>/i;
@@ -1464,15 +1642,12 @@ var shadowFromLegoSource = (source) => {
   const attr = tag[1].match(SHADOW_ATTR);
   return !attr || attr[1] !== "false";
 };
-var DEFAULT_EXPORT = /export\s+default\s+(?:\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*({[\s\S]*})/;
 var serverDb = () => ({ get: () => null });
+var serverLego = { db: serverDb, globals: {}, config };
 var evaluateScript = (script, blockName) => {
   if (!script) return {};
-  const trimmed = script.trim();
-  const match = trimmed.match(DEFAULT_EXPORT);
-  const code = match ? match[1] : trimmed;
   try {
-    return new Function("$db", `return (${code})`)(serverDb) || {};
+    return new Function("Lego", "$db", scriptFunctionBody(script))(serverLego, serverDb) || {};
   } catch (err) {
     throw new Error(
       `[Lego SSR] <${blockName}>: failed evaluating the script section: ${err.message}`,
@@ -1555,13 +1730,15 @@ function createRenderer(options = {}) {
     const template = definition.template || "";
     const shadow = definition.shadow !== false;
     const styles = definition.styles || "";
+    const propContract = parsePropContract(definition.props, tag);
     definitions.set(tag, {
       name: tag,
       template,
       nodes: parseHTML(template, tag),
       logic: definition.logic || {},
       shadow,
-      propNames: parsePropNames(definition.props, tag),
+      propNames: propContract.names,
+      propDefaults: propContract.defaults,
       css: scopeStyles(styles, tag, shadow),
       // A shadow block's style is already encapsulated and needs no marker.
       styleAttrs: shadow ? "" : ` ${STYLE_MARKER}="${escapeAttr(tag)}"`

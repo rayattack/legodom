@@ -23,7 +23,9 @@ When you call `init`, LegoDOM does three critical things:
 -   `styles`: A map of shared stylesheets (see [Styling](/tutorial/blocks#styling-the-host)).
 -   `manifest`: A configuration for pre-registering blocks (see [Manifest Syntax](#manifest-syntax) below).
 -   `loader`: An async function to dynamically fetch blocks NOT in the manifest.
--   `studio`: Enables the visual development environment.
+
+The visual development environment is no longer an `init()` option. It is a
+separate command, `npx lego-studio`, documented in [Lego Studio](/tutorial/studio).
 
 ### Manifest Syntax
 

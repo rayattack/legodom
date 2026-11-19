@@ -3,6 +3,10 @@ import { safeEval } from '../utils/safe-eval.js';
 import { resolve } from '../utils/helpers.js';
 import { syncModelValue, findSyncAttr } from '../utils/dom.js';
 
+const defineLocal = (scope, name, value) => {
+  Object.defineProperty(scope, name, { value, writable: true, configurable: true, enumerable: true });
+};
+
 // Audit fix #39: monotonic counter for fallback item ids. Replaces
 // Math.random() — same WeakMap-stable identity per item, but cheaper to
 // generate and collision-free across the lifetime of the page.
@@ -147,8 +151,13 @@ export const bFor = {
       // *inside* an item reaches the row's own bindings directly, through
       // the effects they own, without the loop hearing about it at all.
       const moved = isNewRow || child._loopItem !== item || child._loopIndex !== i;
-      localScope[itemName] = item;
-      localScope.$index = i;
+      // The loop variable is the row's own binding. A plain assignment would
+      // travel up the prototype chain into the reactive state proxy, whose
+      // set trap writes any key the state already owns onto the state itself,
+      // so `b-for="m in items"` would overwrite a block's own `m`. Defining
+      // the property on the scope keeps the row variable local to the row.
+      defineLocal(localScope, itemName, item);
+      defineLocal(localScope, '$index', i);
       child._loopItem = item;
       child._loopIndex = i;
 

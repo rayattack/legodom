@@ -84,7 +84,22 @@ const compileDefault = (src, tagName, name) => {
   };
 };
 
-const parse = (raw, tagName = '<unknown>') => {
+/**
+ * Parse a `b-props` declaration string into descriptors.
+ *
+ * Exported because the grammar has to have exactly one implementation. The
+ * server renderer needs the same names, types and defaults this produces, and
+ * a second parser over there drifted: it split on bare commas and rejected
+ * anything carrying a type or a default, so a server rendered block declaring
+ * `label: String = 'Save'` lost its whole prop contract. Callers that want the
+ * per-tag registry go through `bProps.register`; callers that only want to
+ * read a declaration call this.
+ *
+ * @param {string} raw - the b-props attribute text, braces optional
+ * @param {string} [tagName] - used only in error messages
+ * @returns {?Array<{name: string, type: ?string, defaultFn: ?Function, defaultSource: ?string, attr: string}>}
+ */
+export const parseProps = (raw, tagName = '<unknown>') => {
   if (!raw || typeof raw !== 'string') return null;
   let body = raw.trim();
   if (!body) return null;
@@ -112,6 +127,8 @@ const parse = (raw, tagName = '<unknown>') => {
       name: match[1],
       type: type || null,
       defaultFn: compileDefault(match[3], tagName, match[1]),
+      // The unevaluated default text, which tooling shows next to a control.
+      defaultSource: match[3] ? match[3].trim() : null,
       attr: kebabCase(match[1])
     });
   }
@@ -146,7 +163,7 @@ export const bProps = {
       declared.delete(tagName);
       return;
     }
-    const parsed = parse(raw, tagName);
+    const parsed = parseProps(raw, tagName);
     if (parsed) declared.set(tagName, parsed);
     else declared.delete(tagName);
   },

@@ -1,0 +1,49 @@
+<ui-card b-hydrate b-id="ui-card">
+  <template shadowrootmode="open">
+    <style>:host {
+    display: block;
+  }
+
+  .card {
+    border: 1px solid #e4e8f0;
+    border-radius: 12px;
+    background: #fff;
+    color: #2b3245;
+    overflow: hidden;
+  }
+
+  .card__head {
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid #eef1f6;
+  }
+
+  .card__title {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .card__body {
+    padding: 1.1rem;
+    line-height: 1.55;
+  }
+
+  .card__foot {
+    padding: 0.75rem 1.1rem;
+    border-top: 1px solid #eef1f6;
+    background: #fbfcfe;
+  }</style>
+    <article class="card">
+      <header class="card__head">
+        <slot name="header">
+          <h3 class="card__title">Untitled</h3>
+        </slot>
+      </header>
+      <div class="card__body">
+        <slot></slot>
+      </div>
+      <footer class="card__foot">
+        <slot name="footer"></slot>
+      </footer>
+    </article>
+  </template>
+</ui-card>

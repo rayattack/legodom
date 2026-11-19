@@ -99,6 +99,29 @@ export default { mounted() { console.log('hi') } }
     expect(escapedCall).toContain('\\`backticks\\`');
   });
 
+  it('should keep a quote nested inside a section attribute value', () => {
+    // A string default is the common case that the old ["']([^"']+)["']
+    // pattern truncated: it stopped at the apostrophe before "Untitled",
+    // leaving b-props declaring a default of `= ` and silently dropping the
+    // rest of the contract.
+    const sfcContent = `
+<template b-props="title: String = 'Untitled', tags: Array = []" b-cascade="theme">
+  <h1>[[ title ]]</h1>
+</template>
+`;
+    const parsed = parseLego(sfcContent, 'quoted-block.lego');
+    expect(parsed.propsAttr).toBe("title: String = 'Untitled', tags: Array = []");
+    expect(parsed.cascadeAttr).toBe('theme');
+  });
+
+  it('should read a single quoted section attribute containing double quotes', () => {
+    const parsed = parseLego(
+      `<template b-props='label: String = "Save"'><b>x</b></template>`,
+      'single-quoted.lego'
+    );
+    expect(parsed.propsAttr).toBe('label: String = "Save"');
+  });
+
   it('should validate lego block names', () => {
     const validResult = validateLego({ blockName: 'valid-name', hasTemplate: true, template: '<div></div>' });
     expect(validResult.valid).toBe(true);

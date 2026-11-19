@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Lego Studio</title>
+    <!--
+      Absolute, not relative. The dev server serves this file at "/" by
+      rewriting to /manager/index.html, so the address bar stays at the root
+      and a "./manager.css" would resolve to "/manager.css" and 404. The
+      preview entry is absolute for the same reason.
+    -->
+    <!--
+      Geist Sans and Geist Mono. Both stacks in manager.css name a real
+      fallback, so a dev server with no network out still boots into a
+      legible manager rather than into Times New Roman: this link is an
+      upgrade, not a dependency.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="/manager/manager.css">
+    <script>
+      /*
+       * Theme, before first paint. There is no picker yet (it lands in the
+       * canvas toolbar seam next to the viewport control), but the override
+       * has to be read here or a stored choice would flash the other theme
+       * on every load. No stored choice means no attribute, which is how the
+       * stylesheet knows to follow the operating system.
+       */
+      try {
+        var saved = JSON.parse(localStorage.getItem('lego-studio:manager') || '{}');
+        if (saved && (saved.theme === 'light' || saved.theme === 'dark')) {
+          document.documentElement.setAttribute('data-theme', saved.theme);
+        }
+      } catch (e) { /* blocked storage is not a reason to fail to boot */ }
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <div class="boot">Loading <code>lego studio</code></div>
+    </div>
+    <script type="module" src="/manager/manager.js"></script>
+  </body>
+</html>

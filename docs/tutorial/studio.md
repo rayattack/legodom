@@ -1,284 +1,262 @@
 # Lego Studio
 
-Lego Studio is a zero-config Lego blocks development environment built into LegoDOM. It provides a visual interface to browse, preview, and inspect your legos during development.
+Lego Studio is a workshop for your blocks. It browses them, renders each one in
+isolation, generates typed controls from `b-props` with nothing authored, logs
+the events a block emits, snapshots every rendering to HTML you can review in a
+pull request, draws the composition graph, and tells you when the server render
+and the client render disagree.
 
-![Lego Studio Interface](https://via.placeholder.com/800x450/1e293b/ffffff?text=Lego+Studio+Screenshot)
+It is a command, not a runtime option:
 
-## Features
+```bash
+npx lego-studio
+```
 
-- **Block Browser** - Browse all registered blocks in your app
-- **Live Preview** - See blocks render in isolation
-- **State Inspector** - View and edit block state in real-time
-- **Hot Reload** - Changes reflect instantly during development
-- **Zero Config** - Enable with a single option
+There is no `studio: true` any more. The old option side-loaded a pinned script
+from a CDN into your running application, which is not a thing a development
+tool should ask of a production bundle.
 
 ---
 
-## Quick Start
+## Quick start
 
-Enable Studio in your app initialization:
+From a project with `.lego` files anywhere under it:
 
-```javascript
-import { Lego } from 'lego-dom';
-
-Lego.init(document.body, {
-  studio: true  // ✨ That's it!
-});
+```bash
+npx lego-studio           # http://localhost:6006
+npx lego-studio --root ./src -p 4321
 ```
 
-Then navigate to `/_/studio` in your browser:
+Studio scans for `.lego` files, registers every block it finds, and serves two
+pages: the manager at `/`, and the preview at `/preview`. The preview is a real
+iframe with its own document, so a block that opts out of Shadow DOM with
+`b-shadow="false"` gets its scoped styles in a head that is actually its own,
+and nothing a previewed block does can reach your studio chrome.
 
-```
-http://localhost:5173/_/studio
-```
+`.lego` files hot reload. Redefining a block re-snaps every live instance,
+including the one on the stage.
 
 ---
 
-## How It Works
-
-When `studio: true` is set, LegoDOM automatically:
-
-1. **Loads the Studio block** from CDN (`@legodom/studio`)
-2. **Registers two routes**:
-   - `/_/studio` - Studio home page
-   - `/_/studio/:block` - Block preview page
-3. **Discovers all blocks** using `Lego.getLegos()`
-
-The Studio runs entirely in your browser - no backend required!
-
----
-
-## Using the Studio
-
-### Browsing Blocks
-
-The left sidebar shows all registered blocks in your app. Use the search box to filter by name.
-
-Click any block to preview it in the center canvas.
-
-### Inspecting State
-
-The right panel shows the block's reactive state as JSON. You can:
-
-- **View** current state values
-- **Edit** state directly in the JSON editor
-- **See changes** reflected in the preview instantly
-
-### URL Deep Linking
-
-Each block has a unique URL:
-
-```
-/_/studio/my-block
-/_/studio/todo-list
-/_/studio/user-card
-```
-
-Share these URLs with your team to showcase specific blocks!
-
----
-
-## Configuration
-
-### CDN Version
-
-By default, Studio loads from unpkg CDN. LegoDOM uses a pinned version for stability:
-
-```javascript
-// In main.js (LegoDOM core)
-script.src = 'https://unpkg.com/@legodom/studio@0.0.2/dist/lego-studio.js';
-```
-
-### Custom Studio URL
-
-If you want to use a different CDN or self-host the Studio, you'll need to manually load it:
-
-```javascript
-// Load Studio manually before Lego.init
-import '@legodom/studio';
-
-Lego.init(document.body, {
-  studio: true
-});
-```
-
----
-
-## Production Builds
-
-**Important:** Studio is designed for **development only**. 
-
-### Disable in Production
-
-```javascript
-Lego.init(document.body, {
-  studio: import.meta.env.DEV  // Only enable in dev mode
-});
-```
-
-Or use environment variables:
-
-```javascript
-Lego.init(document.body, {
-  studio: process.env.NODE_ENV === 'development'
-});
-```
-
-### Why Disable in Production?
-
-- **Security**: Exposes block internals and state
-- **Performance**: Adds ~6KB gzipped overhead
-- **UX**: Users don't need development tools
-
----
-
-## Examples
-
-### Basic Usage
-
-```javascript
-// src/app.js
-import { Lego } from 'lego-dom';
-import './blocks/button.lego';
-import './blocks/card.lego';
-
-Lego.init(document.body, {
-  studio: true
-});
-```
-
-Visit `http://localhost:5173/_/studio` to see your blocks!
-
-### With Vite
-
-Vite provides `import.meta.env.DEV` which is `true` in development:
-
-```javascript
-// src/app.js
-import { Lego } from 'lego-dom';
-
-Lego.init(document.body, {
-  studio: import.meta.env.DEV  // Only enabled in dev mode
-});
-```
-
-### With Routing
-
-Studio routes are automatically registered and won't conflict with your app routes:
-
-```javascript
-Lego.route('/', 'home-page');
-Lego.route('/about', 'about-page');
-
-Lego.init(document.body, {
-  studio: true  // Adds /_/studio routes
-});
-```
-
-Your app routes (`/`, `/about`) and Studio routes (`/_/studio`) coexist peacefully!
-
----
-
-## Troubleshooting
-
-### Studio doesn't load
-
-**Check the console** for errors. Common issues:
-
-1. **CDN blocked** - Check your network/firewall
-2. **Version mismatch** - Ensure LegoDOM and Studio versions are compatible
-3. **Route conflict** - Make sure you don't have a route for `/_/studio`
-
-### Blocks don't appear
-
-Make sure your blocks are registered before navigating to Studio:
-
-```javascript
-// ❌ Wrong - blocks not loaded yet
-Lego.init(document.body, { studio: true });
-import './blocks/button.lego';  // Too late!
-
-// ✅ Correct - load blocks first
-import './blocks/button.lego';
-Lego.init(document.body, { studio: true });
-```
-
-### State changes don't persist
-
-Studio edits are **temporary** and only affect the preview instance. Refresh the page to reset.
-
-This is by design - Studio is for experimentation, not data persistence.
-
----
-
-## Advanced: Custom Studio
-
-You can build your own Studio-like tool using LegoDOM's public APIs:
-
-```javascript
-// Get all registered blocks
-const blocks = Lego.getLegos();
-
-// Create a block instance
-const el = document.createElement('my-block');
-document.body.appendChild(el);
-
-// Initialize it manually
-Lego.snap(el);
-
-// Access its state
-const state = el.state;
-console.log(state);
-
-// Update state
-el.state = { count: 5 };
-```
-
-See [Advanced API](/api/advanced) for more details.
-
----
-
-## FAQ
-
-### Is Studio included in LegoDOM?
-
-No, Studio is a **separate package** (`@legodom/studio`) loaded on-demand from CDN when `studio: true` is set.
-
-### Does it work with CDN usage?
-
-Yes! Studio works with both npm and CDN setups:
+## Stories
+
+Every block is already a story. There is no file to write, no `argTypes` to
+declare, and no decorator to register: Studio reads the block's `b-props`
+contract and renders it with its own declared defaults under the name
+`Default`.
+
+Write a story only when you want a second rendering. Put it next to the block,
+in the same file:
 
 ```html
-<script type="module">
-  import { Lego } from 'https://unpkg.com/lego-dom';
-  
-  Lego.init(document.body, {
-    studio: true  // Works!
-  });
-</script>
+<template b-props="label: String = 'Save', busy: Boolean, variant: String = 'primary'">
+  <button class="button button--[[ variant ]]" @click="press()">
+    <span b-if="busy" class="button__spinner"></span>
+    <span class="button__label">[[ label ]]</span>
+    <slot></slot>
+  </button>
+</template>
+
+<story name="Busy" args="{ busy: true, label: 'Saving' }"></story>
+
+<story name="Danger" args="{ variant: 'danger', label: 'Delete' }">
+  <small>This cannot be undone</small>
+</story>
 ```
 
-### Can I customize the Studio UI?
+A `<story>` takes three attributes and its content:
 
-Not currently. Studio is a pre-built block. If you need customization, consider building your own dev tools using the [Advanced API](/api/advanced).
+| | |
+|---|---|
+| `name` | display name, and the basis of the story id |
+| `args` | an expression, evaluated by the same compiler your templates use |
+| `globals` | an expression, supplying what templates read as `global` |
+| content | slot content, with `slot="name"` on a child for a named slot |
 
-### Does it support TypeScript?
+`<story>` sections never reach production. The parser lifts them out of the
+file and the Vite plugin does not emit them.
 
-Studio itself is JavaScript, but it works with TypeScript projects. Block state is displayed as JSON regardless of the source language.
+For stories that need real JavaScript, add a sibling `<tag>.stories.js`:
+
+```js
+export default {
+  'Long list': { args: { items: Array.from({ length: 50 }, (_, i) => ({ id: i })) } }
+};
+```
 
 ---
 
-## Related
+## Controls
 
-- [Lego.init()](/api/config#init) - Initialization options
-- [Advanced API](/api/advanced) - `Lego.snap()`, `Lego.unsnap()`
-- [Block Development](/tutorial/blocks) - Building blocks
-- [Lifecycle Hooks](/api/lifecycle) - Block lifecycle
+The Controls panel is generated from `b-props` and nothing else.
+
+```
+b-props="label: String = 'Save', count: Number = 0, items: Array = [], busy: Boolean"
+```
+
+gives you a text input, a number input, a JSON editor and a checkbox, each
+labelled with its declared type and its default, and each marked when it
+differs from that default. Editing one writes the value straight onto the live
+block's reactive state, so the change is a real state mutation and not a
+remount.
+
+Props you have not declared appear underneath, read only, under **State
+(undeclared)**. Those are logic keys nothing outside the block can write.
+Declaring one in `b-props` turns it into a control.
+
+This is the part that is hard to copy. Other workshops need a per-framework
+docgen compiler pass to recover prop metadata, and their users still hand-write
+`argTypes` on top of it. LegoDOM parses a real prop contract at runtime, so the
+controls are free and always correct.
 
 ---
 
-## Feedback
+## Snapshots
 
-Studio is in early development. Found a bug or have a feature request?
+```bash
+npx lego-studio snap              # write the baseline
+npx lego-studio snap --check      # fail if anything moved
+npx lego-studio snap --update     # accept the new output
+```
 
-[Open an issue on GitHub](https://github.com/rayattack/LegoDOM/issues) →
+Every story is rendered through `lego-dom/server` into
+`__snapshots__/<block>/<story>.html` and committed. No browser is started, no
+screenshots are taken, and nothing is uploaded, because the server renderer and
+the client run from one definition registry: the HTML is the real output, not a
+picture of it.
+
+The point is the diff. A snapshot is readable markup, so a change shows up in
+review as the lines that changed:
+
+```diff
+   <span class="badge badge--brand">
+     Unread
+-    <b b-if="count > 0" class="badge__count">4</b>
++    <b b-if="count > 0" class="badge__tally">4</b>
+   </span>
+```
+
+`--check` exits 1 when anything is added, changed or removed. That is your CI
+gate.
+
+### Only what changed
+
+```bash
+npx lego-studio snap --check --affected --base origin/main
+```
+
+`--affected` renders only the stories a git diff can have reached. Studio knows
+which blocks each block composes, because a block's markup is a string it can
+read, so changing a button re-renders every story of every block that uses that
+button, at any depth, and nothing else.
+
+It fails open on purpose. A changed file that is not a `.lego` or a
+`.stories.js`, a deleted block, a block outside the include glob, or an
+unusable git diff all widen the answer back to everything, and the run says
+which file caused it. Under-snapshotting silently is the one outcome worth
+avoiding.
+
+---
+
+## The graph
+
+```bash
+npx lego-studio graph
+npx lego-studio graph --json
+npx lego-studio graph --svg blocks.svg
+npx lego-studio graph --affected
+```
+
+```
+ui-panel
+|- ui-avatar
+|- ui-badge
+|- ui-button
+`- ui-card
+ui-stat
+ui-tree
+`- ui-tree (cycle)
+
+7 blocks, 5 edges, 1 cycle
+
+cycles:
+  ui-tree -> ui-tree
+```
+
+The graph is exact rather than inferred from bundler statistics. A block that
+renders its own tag is a legal pattern, so recursion is reported as a cycle and
+marked, not treated as an error.
+
+---
+
+## Hydration
+
+The Hydration panel renders the selected story on the server, asks the preview
+for the DOM it actually produced, and diffs them. Very few frameworks can do
+this honestly, because it needs one definition registry driving both renderers
+in one process, which is exactly what `getDefinitions()` and `lego-dom/server`
+give you.
+
+It found four real divergences the first time it ran on this repository's own
+fixtures, including one where the client rendered a story's slot children in a
+different order than the server.
+
+```bash
+npx lego-studio hydrate
+```
+
+The command validates the server's output contract without a browser: every
+`b-hydrate` host resolves to a real definition, shadow blocks lead with
+`<template shadowrootmode>`, light blocks carry a de-duplicable
+`data-lego-style`, and every `b-for` anchor is followed by keyed rows. It says
+on every run what it did not check. Markup drift is `snap --check`'s job, and
+the client half needs the panel.
+
+---
+
+## Static build
+
+```bash
+npx lego-studio build --out dist-studio
+```
+
+A deployable studio with the manifest inlined and every story pre-rendered, so
+the hydration panel keeps working with no server behind it.
+
+---
+
+## Theme
+
+The manager follows your system theme, and the System / Light / Dark control in
+the canvas toolbar overrides it.
+
+The preview is deliberately not the same. It defaults to a white page whatever
+your operating system says, and only goes dark when you choose Dark. The
+preview is showing your blocks, so its background is part of what you are
+inspecting: a canvas that silently repaints itself because of an OS setting is
+misreporting what your component looks like.
+
+---
+
+## Commands
+
+| | |
+|---|---|
+| `lego-studio [dev]` | the workshop, with hot reload |
+| `lego-studio snap` | render every story to committed HTML |
+| `lego-studio graph` | the block composition graph |
+| `lego-studio hydrate` | check the server output contract |
+| `lego-studio build` | a static, deployable studio |
+
+Common options: `--root`, `--include`, `--exclude`, `--only`, `--affected`,
+`--base`, `--out`, `-p/--port`, `--open`.
+
+---
+
+## If you would rather use Storybook
+
+You can. LegoDOM blocks are ordinary custom elements, so
+`@storybook/web-components` renders them with a normal CSF file. You give up
+the things on this page that come from LegoDOM knowing about itself: controls
+with no docgen step, snapshots with no browser, an exact composition graph, and
+hydration checking. You gain the addon ecosystem. Both are reasonable.

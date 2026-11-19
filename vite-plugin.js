@@ -3,7 +3,7 @@
  * Auto-discovers and transforms .lego files
  */
 
-import { parseLego, generateBlockCall, validateLego } from './src/utils/parser-utils.js';
+import { parseLego, generateBlockCall, validateLego, scriptModule } from './src/utils/parser-utils.js';
 import { globToRegExp } from './src/utils/glob.js';
 import path from 'path';
 import fs from 'fs';
@@ -11,6 +11,9 @@ import { transform } from 'esbuild';
 
 const VIRTUAL_MODULE_ID = 'virtual:lego-blocks';
 const RESOLVED_VIRTUAL_MODULE_ID = '\0' + VIRTUAL_MODULE_ID;
+
+/** What a generated block module calls the app, clear of any author name. */
+const APP = '__lego_app';
 
 /**
  * Vite plugin for Lego SFC support
@@ -161,21 +164,41 @@ if (import.meta.hot) {
         // TypeScript Support
         if (parsed.script && parsed.scriptLang === 'ts') {
           try {
-            const result = await transform(parsed.script, {
-              loader: 'ts',
-              format: 'esm'
-            });
+            // No `format`: with one, esbuild rewrites `export default {…}` to
+            // `export { stdin_default as default }`. Without, module syntax
+            // passes through as written.
+            const result = await transform(parsed.script, { loader: 'ts' });
             parsed.script = result.code;
           } catch (e) {
             throw new Error(`TypeScript compilation failed for ${filename}: ${e.message}`);
           }
         }
 
-        const blockCall = generateBlockCall(parsed);
+        // The script section is emitted as module code, so its imports,
+        // top-level helpers and constants all survive. Only its default
+        // export is rebound, because this module's own default export is the
+        // tag name. The app is imported under a private name and offered to
+        // the script as `Lego` and `$db` unless the script declares them.
+        let script;
+        try {
+          const parse = typeof this.parse === 'function' ? (code) => this.parse(code) : null;
+          script = scriptModule(parsed.script, parse);
+        } catch (e) {
+          throw new Error(`Invalid <script> in ${filename}: ${e.message}`);
+        }
+
+        const provided = [
+          script.declares('Lego') ? '' : `const Lego = ${APP};`,
+          script.declares('$db') ? '' : `const $db = ${APP}.db;`
+        ].filter(Boolean).join('\n');
+
+        const blockCall = generateBlockCall(parsed, { logic: script.logic, app: APP });
 
         return `
-import { Lego } from '${importPath}';
-const $db = Lego.db;
+import { Lego as ${APP} } from '${importPath}';
+${provided}
+
+${script.code}
 
 ${blockCall}
 

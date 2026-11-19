@@ -1,0 +1,49 @@
+<ui-button b-hydrate b-id="ui-button">
+  <template shadowrootmode="open">
+    <style>:host {
+    display: inline-block;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.1rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .button--primary {
+    background: #2f6df6;
+    color: #fff;
+  }
+
+  .button--ghost {
+    background: transparent;
+    border-color: #cfd6e4;
+    color: inherit;
+  }
+
+  .button--danger {
+    background: #d7373f;
+    color: #fff;
+  }
+
+  .button__spinner {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+  }</style>
+    <button class="button button--primary" @click="press()">
+      <span b-if="busy" class="button__spinner" aria-hidden="true"></span>
+      <span class="button__label">Working</span>
+      <slot></slot>
+    </button>
+  </template>
+</ui-button>

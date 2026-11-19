@@ -1,0 +1,69 @@
+<template b-props="user: Object = { name: 'Ada Lovelace', role: 'Engineer' }, size: Number = 40">
+  <button class="avatar" style="--avatar-size: [[size]]px" @click="open()">
+    <span class="avatar__initials">[[initials]]</span>
+    <span class="avatar__meta">
+      <b class="avatar__name">[[user.name]]</b>
+      <small class="avatar__role">[[user.role]]</small>
+    </span>
+  </button>
+</template>
+
+<script>
+  export default {
+    get initials() {
+      const name = (this.user && this.user.name) || '?';
+      return String(name)
+        .split(' ')
+        .map(part => part.charAt(0))
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+    },
+
+    open() {
+      this.$emit('avatar-open', { user: this.user });
+    }
+  }
+</script>
+
+<style>
+  self {
+    display: inline-block;
+  }
+
+  .avatar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.3rem;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .avatar__initials {
+    display: grid;
+    place-items: center;
+    width: var(--avatar-size, 40px);
+    height: var(--avatar-size, 40px);
+    border-radius: 50%;
+    background: #2f6df6;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .avatar__meta {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .avatar__role {
+    color: #7a839b;
+  }
+</style>
+
+<story name="Large" args="{ size: 64, user: { name: 'Grace Hopper', role: 'Rear Admiral' } }"></story>
+<story name="Unknown" args="{ user: { name: '', role: 'Invited' } }"></story>

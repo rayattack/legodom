@@ -18,8 +18,9 @@
  * lru-cache.js. Nothing from core/ or features/, so importing it in a bare
  * Node process is safe.
  */
-import { parseLego } from '../utils/parser-utils.js';
+import { parseLego, scriptFunctionBody } from '../utils/parser-utils.js';
 import { config } from '../utils/helpers.js';
+import { parseProps } from '../directives/b-props.js';
 import { parseHTML, serialize, escapeAttr } from './html.js';
 import { scopeStyles } from './css.js';
 import { sanitizeHTML } from './sanitize.js';
@@ -48,31 +49,31 @@ const asText = (value) => (value === undefined || value === null ? '' : String(v
  * Definitions
  * ------------------------------------------------------------------ */
 
-const PROP_IDENT = /^[a-zA-Z_$][\w$]*$/;
-
 /**
- * Parse a `b-props` declaration, in either of the forms the client accepts:
- * `{ age, name }` or `age, name`. Mirrors src/directives/b-props.js.
+ * Read a `b-props` declaration into the two things the render walk needs: the
+ * set of names a plain attribute may write, and the defaults that fill the
+ * ones nothing supplied.
+ *
+ * The grammar lives in src/directives/b-props.js and is imported rather than
+ * mirrored. That module reaches no further than expression.js and helpers.js,
+ * both of which the server already bundles, so nothing here touches the DOM.
+ *
+ * `raw` may also be the `string[]` of names that `getDefinitions()` hands
+ * over, which carries no type or default information.
  */
-const parsePropNames = (raw, tagName) => {
-  if (Array.isArray(raw)) return raw.slice();
-  if (!raw || typeof raw !== 'string') return [];
-
-  let body = raw.trim();
-  if (body.startsWith('{') && body.endsWith('}')) body = body.slice(1, -1).trim();
-  if (!body) return [];
-
-  const names = body.split(',').map((token) => token.trim()).filter(Boolean);
-  const invalid = names.find((token) => !PROP_IDENT.test(token));
-  if (!invalid) return names;
-
-  console.error(
-    `[Lego SSR] <${tagName}>: invalid b-props token "${invalid}". ` +
-    'b-props declares names only, use b-logic or a :prop for values.'
-  );
-  return [];
+const parsePropContract = (raw, tagName) => {
+  if (Array.isArray(raw)) return { names: raw.slice(), defaults: [] };
+  const declared = parseProps(raw, tagName);
+  if (!declared) return { names: [], defaults: [] };
+  return {
+    names: declared.map(prop => prop.name),
+    // Booleans follow attribute semantics on the client: absent means false,
+    // not undefined, so an undeclared default still has a value to render.
+    defaults: declared
+      .filter(prop => prop.defaultFn || prop.type === 'Boolean')
+      .map(prop => ({ name: prop.name, get: prop.defaultFn || (() => false) }))
+  };
 };
-
 /**
  * The marker a light DOM block's `<style>` carries. Those styles are global,
  * so every instance of the block emits the same rules; the attribute lets the
@@ -96,10 +97,11 @@ const shadowFromLegoSource = (source) => {
   return !attr || attr[1] !== 'false';
 };
 
-const DEFAULT_EXPORT = /export\s+default\s+(?:\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*({[\s\S]*})/;
-
 /** The `$db` a script section sees on the server: present, and inert. */
 const serverDb = () => ({ get: () => null });
+
+/** The `Lego` a script section sees on the server: present, and inert. */
+const serverLego = { db: serverDb, globals: {}, config };
 
 /**
  * Evaluate the `<script>` section of a .lego file.
@@ -110,17 +112,19 @@ const serverDb = () => ({ get: () => null });
  * Template expressions never take this path: they are compiled to closures by
  * expression.js, and no `new Function` is involved.
  *
- * Only the default exported object literal is evaluated, so `import`
- * statements in the script section are not supported. Keep server rendered
- * blocks' script sections to a self contained object.
+ * The script runs as a function body (scriptFunctionBody), so top-level
+ * helpers and constants work, and an `import` fails with a message saying so.
+ * A block whose script imports modules belongs on the other route: build it
+ * with the Vite plugin, which keeps the imports, and hand the definitions
+ * over with `createRenderer({ definitions: Lego.getDefinitions() })`.
  */
 const evaluateScript = (script, blockName) => {
   if (!script) return {};
-  const trimmed = script.trim();
-  const match = trimmed.match(DEFAULT_EXPORT);
-  const code = match ? match[1] : trimmed;
   try {
-    return new Function('$db', `return (${code})`)(serverDb) || {};
+    // The client hands a script section `Lego` and `$db` (src/core/parser.js).
+    // There is no app on this side, so `Lego` is the same inert surface `$db`
+    // already is.
+    return new Function('Lego', '$db', scriptFunctionBody(script))(serverLego, serverDb) || {};
   } catch (err) {
     throw new Error(
       `[Lego SSR] <${blockName}>: failed evaluating the script section: ${err.message}`,
@@ -248,13 +252,15 @@ export function createRenderer(options = {}) {
     const template = definition.template || '';
     const shadow = definition.shadow !== false;
     const styles = definition.styles || '';
+    const propContract = parsePropContract(definition.props, tag);
     definitions.set(tag, {
       name: tag,
       template,
       nodes: parseHTML(template, tag),
       logic: definition.logic || {},
       shadow,
-      propNames: parsePropNames(definition.props, tag),
+      propNames: propContract.names,
+      propDefaults: propContract.defaults,
       css: scopeStyles(styles, tag, shadow),
       // A shadow block's style is already encapsulated and needs no marker.
       styleAttrs: shadow ? '' : ` ${STYLE_MARKER}="${escapeAttr(tag)}"`

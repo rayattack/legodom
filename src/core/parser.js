@@ -1,6 +1,6 @@
 import { registry, legoFileLogic, getPrivateData, canDefine, definitionEntry } from './registry.js';
 import { deriveBlockName } from '../utils/helpers.js';
-import { parseLego } from '../utils/parser-utils.js';
+import { parseLego, scriptFunctionBody } from '../utils/parser-utils.js';
 import { snap } from './lifecycle.js';
 import { bProps } from '../directives/b-props.js';
 
@@ -17,15 +17,13 @@ export const defineLegoFile = (app, content, filename = 'block.lego') => {
 
   if (!canDefine(blockName, app)) return;
 
+  // A runtime-loaded file has no bundler behind it, so its script runs as a
+  // function body: top-level helpers work, and an `import` is reported
+  // through onError instead of being dropped.
   let logicObj = {};
   if (script) {
     try {
-      const trimmed = script.trim();
-      // Allow optional block/line comments between `default` and `{`
-      const match = trimmed.match(/export\s+default\s+(?:\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*({[\s\S]*})/);
-      const code = match ? match[1] : trimmed;
-      // Evaluate script in context of Lego and $db
-      logicObj = new Function('Lego', '$db', `return ${code}`)(app, app.globals.$db);
+      logicObj = new Function('Lego', '$db', scriptFunctionBody(script))(app, app.globals.$db) || {};
     } catch (e) {
       app.config.onError(e, 'script', blockName);
     }

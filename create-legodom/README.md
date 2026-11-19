@@ -27,6 +27,7 @@ The scaffolding tool sets up a complete LegoDOM project with:
 - ✅ **Proper project structure** with `src/` directory
 - ✅ **Development scripts** ready to use
 - ✅ **All dependencies** pre-configured
+- ✅ **Coding agent instructions**: `AGENTS.md` (read by Codex, Cursor, Copilot and others) and a `CLAUDE.md` that imports it
 
 ### Project Structure
 
@@ -36,8 +37,10 @@ my-app/
 │   └── lego.svg
 ├── src/
 │   ├── my-app.lego      # Sample component
-│   ├── main.js          # Entry point
+│   ├── app.js           # Entry point (app.ts for TypeScript)
 │   └── style.css        # Global styles
+├── AGENTS.md            # How to write LegoDOM, for coding agents
+├── CLAUDE.md            # Points Claude Code at AGENTS.md
 ├── index.html
 ├── package.json
 └── vite.config.js       # Pre-configured with LegoDOM plugin

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lego Studio preview</title>
+    <style>
+      /*
+        Deliberately almost nothing. This document is the block's whole world:
+        a light DOM block's scoped <style> lands in this head, so anything
+        opinionated here would show up as a style the block did not ask for.
+        None of the manager's tokens or fonts reach in here, and none should:
+        this surface belongs to the block, not to the studio.
+
+        What it does owe the block is a surface that does not move on its own.
+        This document deliberately ignores prefers-color-scheme, and the line
+        is a boundary rather than a preference: the manager is our chrome and
+        follows the developer's system theme because it is ours to theme, but
+        the preview is content, and its background is part of what is being
+        inspected. A workshop that repaints the canvas because of an operating
+        system setting is lying about what the block looks like.
+
+        So there is no media query here and no "color-scheme: light dark",
+        which would hand the form controls and scrollbars to the OS by the
+        same back door. The default is stated: a white page with black text,
+        which is what a block author assumes when they write no colours at
+        all. The only thing that ever moves it is data-theme on the root,
+        which runtime.js stamps when the manager sends a theme.
+
+        It used to say "color: CanvasText" under "color-scheme: light dark".
+        On a dark OS that resolved to a white foreground while ui-card drew
+        itself on the white background it ships with, and the text vanished.
+        Two separate bugs wearing one coat: this document following the OS,
+        and a block painting a surface without saying what colour sits on it.
+        Both are fixed at their own end, and the fixtures are fixed in
+        studio/fixtures rather than papered over from here, because revealing
+        that class of mistake is what the preview is for.
+      */
+      *, *::before, *::after { box-sizing: border-box; }
+      html {
+        color-scheme: light;
+        background: #ffffff;
+        color: #000000;
+      }
+      /* Stated, not merely defaulted, so a toggle can come back from dark. */
+      html[data-theme="light"] {
+        color-scheme: light;
+        background: #ffffff;
+        color: #000000;
+      }
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        background: #000000;
+        color: #ffffff;
+      }
+      /*
+        Stated on the body as well as the root, rather than left transparent
+        to inherit the root's paint. It costs one duplicated pair and it means
+        the body's own computed background and colour are the answer, which is
+        what anyone inspecting this document will read first. A background
+        sent over the wire still wins over both.
+      */
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--lego-studio-bg, #ffffff);
+        color: #000000;
+      }
+      html[data-theme="dark"] body {
+        background: var(--lego-studio-bg, #000000);
+        color: #ffffff;
+      }
+      #lego-studio-root {
+        min-height: 100vh;
+        padding: var(--lego-studio-pad, 16px);
+      }
+      /*
+        The only loud thing in this document, and it has to stay loud with no
+        colour to spend. It is the exact inverse of the page it covers, which
+        is a thing no block can accidentally look like.
+      */
+      #lego-studio-error {
+        position: fixed;
+        inset: auto 0 0 0;
+        max-height: 60vh;
+        overflow: auto;
+        margin: 0;
+        padding: 16px;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-weight: 500;
+        white-space: pre-wrap;
+        color: #ffffff;
+        background: #000000;
+        z-index: 2147483647;
+      }
+      html[data-theme="dark"] #lego-studio-error {
+        color: #000000;
+        background: #ffffff;
+      }
+      #lego-studio-error[hidden] { display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="lego-studio-root"></div>
+    <!--
+      Absolute, not relative. The dev server rewrites /preview onto this file,
+      so the document's own base URL is /preview and a relative src would
+      resolve one directory too high.
+    -->
+    <script type="module" src="/preview/runtime.js"></script>
+  </body>
+</html>

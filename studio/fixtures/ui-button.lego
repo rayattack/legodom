@@ -1,0 +1,65 @@
+<template b-props="label: String = 'Save', variant: String = 'primary', busy: Boolean">
+  <button class="button button--[[variant]]" @click="press()">
+    <span b-if="busy" class="button__spinner" aria-hidden="true"></span>
+    <span class="button__label">[[busy ? busyLabel : label]]</span>
+    <slot></slot>
+  </button>
+</template>
+
+<script>
+  export default {
+    busyLabel: 'Working',
+
+    press() {
+      if (this.busy) return;
+      this.$emit('press', { label: this.label });
+    }
+  }
+</script>
+
+<style>
+  self {
+    display: inline-block;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.1rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .button--primary {
+    background: #2f6df6;
+    color: #fff;
+  }
+
+  .button--ghost {
+    background: transparent;
+    border-color: #cfd6e4;
+    color: inherit;
+  }
+
+  .button--danger {
+    background: #d7373f;
+    color: #fff;
+  }
+
+  .button__spinner {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+  }
+</style>
+
+<story name="Ghost" args="{ variant: 'ghost', label: 'Cancel' }"></story>
+<story name="Busy" args="{ busy: true, label: 'Save' }"></story>
+<story name="Danger" args="{ variant: 'danger', label: 'Delete forever' }"></story>

@@ -1,0 +1,28 @@
+<ui-tree b-hydrate b-id="ui-tree">
+  <template shadowrootmode="open">
+    <style>:host {
+    display: block;
+  }
+
+  .tree__label {
+    margin: 0;
+    padding: 0.2rem 0;
+    font-weight: 600;
+  }
+
+  .tree__children {
+    margin: 0;
+    padding: 0 0 0 1rem;
+    list-style: none;
+    border-left: 1px solid #e4e8f0;
+  }
+
+  .tree__child {
+    padding-left: 0.4rem;
+  }</style>
+    <div class="tree">
+      <p class="tree__label">Project</p>
+      <!--b-if: depth < 3 && node.children && node.children.length > 0-->
+    </div>
+  </template>
+</ui-tree>

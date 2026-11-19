@@ -70,6 +70,44 @@ Interpolate in any attribute:
 <div style="color: [[ textColor ]]; background: [[ bgColor ]]">...</div>
 ```
 
+### Boolean Attributes: `:name`
+
+An interpolated attribute is always present, and a boolean attribute means
+true whenever it is present, whatever its value. `disabled="[[ busy ]]"`
+therefore leaves the button disabled when `busy` is `false`. Bind the
+attribute with a colon instead:
+
+```html
+<button :disabled="busy">Save</button>
+<details :open="expanded">…</details>
+<input type="checkbox" :checked="todo.done">
+<button :aria-expanded="menuOpen">Menu</button>
+```
+
+`:name="expr"` on a built-in element writes the attribute from the
+expression's value:
+
+| Attribute | Value | Result |
+|---|---|---|
+| Boolean (`disabled`, `hidden`, `checked`, `selected`, `open`, `required`, `readonly`, `multiple`, `inert`, …) | truthy | present (`disabled=""`) |
+| | falsy | removed |
+| Any other | `null` or `undefined` | removed |
+| | anything else | `String(value)`, so `false` writes `"false"` |
+
+That second rule matters for ARIA: `aria-expanded="false"` and no
+`aria-expanded` mean different things to a screen reader.
+
+`:value`, `:checked` and `:selected` also set the element's live property,
+because the attribute stops controlling it once the user has edited the
+control. For two-way binding use [`b-sync`](/api/directives#b-sync).
+
+In strict mode a dangerous URL in `:href`, `:src` and similar attributes is
+dropped, as it is for an interpolated one. The server renderer writes the same
+attribute state, so a hydrated page needs no DOM writes.
+
+On a block (any tag with a hyphen) the colon means something else: it passes a
+[prop](/tutorial/props).
+
 ## Escaping
 
 Lego automatically escapes HTML to prevent XSS:

@@ -454,8 +454,12 @@ input. If your server assembles `.lego` source at request time, JSON-encode
 every value you splice into it (see [Server Side Blocks](/tutorial/server-side)
 for the same warning on the client side).
 
-Only the default exported object literal is evaluated, so `import` statements
-in a script section are not supported. `$db` is passed in as an inert stub.
+The script runs as a function body: top-level helpers and constants work, and
+an `import` statement throws, since there is no bundler on this path to
+resolve it. For blocks whose scripts import modules, load them through Vite's
+`ssrLoadModule`, which runs the same `.lego` plugin as the browser build, and
+hand `Lego.getDefinitions()` to `createRenderer`. `Lego` and `$db` are passed
+in as inert stubs.
 
 Template expressions never take this path. They are compiled to closures by
 LegoDOM's own parser, with no `new Function` anywhere near them.
